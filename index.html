@@ -127,6 +127,9 @@ details.unit .dt{padding:0 0 10px;color:var(--ink2);font-size:14px}
       <div><label data-i="lng"></label><input id="lng" type="number" step="0.0001"></div>
       <div><label data-i="tz"></label><input id="tz" type="text" placeholder="+03:00"></div>
     </div>
+    <label style="display:flex;align-items:center;gap:7px;margin-top:10px;text-transform:none;font-size:13px;color:var(--ink2);cursor:pointer">
+      <input id="showSeconds" type="checkbox" style="width:auto"><span data-i="secondsLabel"></span>
+    </label>
     <div style="margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
       <button class="primary" id="calc" data-i="cast"></button>
       <span class="tiny" data-i="hint"></span>
@@ -197,6 +200,7 @@ const STR = {
   city:{ru:'Город рождения',en:'Birth city'},
   cityph:{ru:'Начните вводить название...',en:'Start typing a name...'},
   hint:{ru:'Смещение UTC подставляется автоматически из часового пояса города для точной даты, исторические переходы учтены.',en:'The UTC offset fills in automatically from the city time zone for the exact date, historical shifts included.'},
+  secondsLabel:{ru:'Показывать угловые секунды в позициях',en:'Show arc-seconds in positions'},
   needdata:{ru:'Заполните дату, время и место.',en:'Fill in date, time and place.'},
   empty:{ru:'Введите данные рождения и постройте карту.',en:'Enter birth data and cast the chart.'},
   natal:{ru:'Натальная карта',en:'Natal chart'},
@@ -562,9 +566,12 @@ function houseOf(lon,cusps){
   }
   return 12;
 }
+let SHOW_SECONDS=localStorage.getItem('astrarium_seconds')==='1';
 function fmtPos(lon){
-  const s=Math.floor(rev(lon)/30),deg=rev(lon)-s*30,dd=Math.floor(deg),mm=Math.floor((deg-dd)*60);
-  return {sign:s,html:`${dd}°<span class="af">${SIGN_GLYPH[s]}</span>${String(mm).padStart(2,'0')}′`};
+  const s=Math.floor(rev(lon)/30),deg=rev(lon)-s*30,dd=Math.floor(deg);
+  const mmF=(deg-dd)*60, mm=Math.floor(mmF);
+  const secPart=SHOW_SECONDS?`${String(Math.round((mmF-mm)*60)).padStart(2,'0')}″`:'';
+  return {sign:s,html:`${dd}°${String(mm).padStart(2,'0')}′${secPart} <span class="af">${SIGN_GLYPH[s]}</span>`};
 }
 function findAspects(pos){
   const out=[];
@@ -1187,6 +1194,12 @@ document.getElementById('calc').addEventListener('click',run);
 document.getElementById('reset').addEventListener('click',()=>{localStorage.removeItem(LKEY);if(CURRENT)renderTransits(CURRENT);});
 document.getElementById('transitDate').addEventListener('change',()=>{if(CURRENT)renderTransits(CURRENT);});
 document.getElementById('transitToday').addEventListener('click',()=>{document.getElementById('transitDate').value=todayStr();if(CURRENT)renderTransits(CURRENT);});
+document.getElementById('showSeconds').checked=SHOW_SECONDS;
+document.getElementById('showSeconds').addEventListener('change',e=>{
+  SHOW_SECONDS=e.target.checked;
+  localStorage.setItem('astrarium_seconds',SHOW_SECONDS?'1':'0');
+  if(CURRENT){ renderPositions(CURRENT); if(ISO) showDetail(ISO,CURRENT); }
+});
 document.querySelectorAll('.lang button').forEach(b=>b.addEventListener('click',()=>{
   LANG=b.dataset.lang; localStorage.setItem('astrarium_lang',LANG); applyStatic(); if(CURRENT)run();
 }));
