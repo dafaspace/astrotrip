@@ -887,6 +887,21 @@ function composeAsc(ch){
    (mini T-square/yod-like lock), not just touched by isolated single lines -
    that changes how load-bearing the karmic theme is, so it's called out. */
 const ASPECT_INLOC_RU={conjunction:'в соединении',sextile:'в секстиле',square:'в квадрате',trine:'в трине',opposition:'в оппозиции'};
+/* Configuration note: when two planets that both reach the North Node also
+   aspect EACH OTHER, that's not just a fact to log - it changes what to do
+   about it (hard aspects can't be worked on separately; harmonious ones risk
+   one-sided drift; a conjunction means treat them as one theme). Three lead
+   variants avoid literal repetition when a chart has several such triangles. */
+const CONFIG_CONSEQUENCE={
+  hard:'тронешь одну тему — тут же отзовётся вторая, разбираться с ними по отдельности не получится, только вместе.',
+  harm:'эта лёгкость вдвоём только усиливается — приятно, но именно поэтому легко застрять в одной раскрученной теме и не заметить перекос.',
+  conj:'они настолько срослись, что работают как одно целое — разделять их смысла нет, это единый узел, а не две темы.'
+};
+const CONFIG_LEAD_TPL=[
+  (p1,p2,l)=>`Ещё деталь: ${p1} и ${p2} сами ${l} друг с другом —`,
+  (p1,p2,l)=>`${p1} и ${p2} здесь не сами по себе: они ${l} друг с другом, и`,
+  (p1,p2,l)=>`Это не разрозненные нити — ${p1} и ${p2} сами ${l} друг с другом, поэтому`
+];
 function composeNodeAxis(ch){
   if(!CORPUS||!ch.pos.NNode) return '';
   const ns=Math.floor(rev(ch.pos.NNode.lon)/30), nh=houseOf(ch.pos.NNode.lon,ch.houses.cusps);
@@ -902,13 +917,13 @@ function composeNodeAxis(ch){
       const p1=asN[i].p2, p2=asN[j].p2;
       let diff=Math.abs(rev(ch.pos[p1].lon-ch.pos[p2].lon)); if(diff>180)diff=360-diff;
       const hit=ASPECTS.find(asp=>Math.abs(diff-asp.angle)<=asp.orb);
-      if(hit) parts.push(`Это не разрозненные нити: ${PN(p1)} и ${PN(p2)} сами ${ASPECT_INLOC_RU[hit.name]} друг с другом — узел встроен в замкнутую конфигурацию, а это утяжеляет и закрепляет тему, а не просто задевает её по касательной.`);
+      if(hit) parts.push(`${CONFIG_LEAD_TPL[hashIdx(p1+p2+'cfg',3)](PN(p1),PN(p2),ASPECT_INLOC_RU[hit.name])} ${CONFIG_CONSEQUENCE[hit.kind]}`);
     }
   } else {
     parts.push('Крупных аспектов к узлам нет: кармическая тема работает сама по себе, без давления или поддержки со стороны других планет.');
   }
   const asS=aspectsInvolving(ch,'SNode').filter(a=>a.p2!=='NNode'&&!asN.some(b=>b.p2===a.p2)).slice(0,2);
-  if(asS.length) parts.push(`К Южному узлу отдельно обращены: ${asS.map(a=>`${PN(a.p2)} (${ASPECT_NAME.ru[a.asp.name]})`).join(', ')}.`);
+  asS.forEach(a=>{ const c=aspectClause(a,'SNode',ch); if(c) parts.push(c); });
   return parts.join(' ');
 }
 /* Whole-chart synthesis: merges Sun+Moon+Ascendant+node axis into one
