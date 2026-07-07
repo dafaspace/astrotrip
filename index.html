@@ -711,8 +711,56 @@ const PLANET_FUNC={
   NNode:'растёте и осваиваете непривычное',
   SNode:'действуете на автомате, по старой памяти',
   Lilith:'поддаётесь соблазнам',
-  Selena:'получаете поддержку и лёгкость'
+  Selena:'получаете поддержку и лёгкость',
+  ASC:'выглядите со стороны и начинаете новое',
+  MC:'строите карьеру и репутацию'
 };
+/* Portrait opener: one second-person sentence, as future colleagues or a
+   future partner would describe this person. Asc = first impression,
+   Sun sign = how they work, Moon sign = what they're like up close.
+   Phrasing is gender-neutral (relative clauses and plural-polite forms). */
+const ASC_IMPR=[
+  'включается первым и говорит прямо',
+  'никуда не торопится, и которого трудно сдвинуть с места',
+  'легко заговорит с кем угодно',
+  'бережёт своё и не пускает внутрь сразу',
+  'держится с достоинством, и которого замечают в любой комнате',
+  'замечает детали и не любит беспорядка',
+  'умеет сгладить любой острый угол',
+  'держит дистанцию и не раскрывает карт',
+  'смотрит широко и легко увлекает за собой',
+  'знает, чего хочет, и не тратит слов впустую',
+  'живёт по своим правилам и мыслит не как все',
+  'чувствует больше, чем говорит'
+];
+const SUN_WORK=[
+  'берётесь сразу и тащите первым рывком',
+  'делаете медленно, но так, что не приходится переделывать',
+  'ведёте несколько дел сразу и быстро схватываете новое',
+  'работаете по чувству и бережёте своих',
+  'делаете с размахом и любите, чтобы результат было видно',
+  'доводите до ума каждую мелочь',
+  'ищете решение, которое устроит всех',
+  'копаете до сути и не бросаете на полпути',
+  'зажигаетесь большой целью и заражаете ею других',
+  'строите вдолгую и берёте упорством',
+  'предлагаете то, до чего другие не додумались',
+  'чувствуете ситуацию раньше, чем она сложится'
+];
+const MOON_CLOSE=[
+  'вспыхиваете быстро и так же быстро отходите',
+  'привязываетесь крепко и цените постоянство',
+  'нуждаетесь в разговоре больше, чем в клятвах',
+  'заботитесь глубоко, но раскрываетесь не сразу',
+  'щедры на тепло и ждёте искреннего отклика',
+  'проявляете любовь заботой и делом, а не словами',
+  'вам важен мир в доме и ощущение, что вас слышат',
+  'любите на всю глубину и тяжело прощаете',
+  'вам нужен воздух и общее движение вперёд',
+  'сдержанны снаружи, но надёжны как мало кто',
+  'цените дружбу внутри любви и личную свободу',
+  'растворяетесь в близком человеке и чувствуете его без слов'
+];
 const SIGN_MANNER=[
   'резко и сразу, без разгона',
   'медленно, основательно, наверняка',
@@ -991,7 +1039,9 @@ function composeNodeAxis(ch){
   const ns=Math.floor(rev(ch.pos.NNode.lon)/30), nh=houseOf(ch.pos.NNode.lon,ch.houses.cusps);
   const ss=Math.floor(rev(ch.pos.SNode.lon)/30), sh=houseOf(ch.pos.SNode.lon,ch.houses.cusps);
   const N=CORPUS.planets.NNode, S=CORPUS.planets.SNode;
-  const parts=[`Кармическая ось начинается в прошлом, ${SIGN_LOC.ru[ss]} (${sh}-й дом): ${lc(S.plain)} А ведёт туда, где рост, ${SIGN_LOC.ru[ns]} (${nh}-й дом): ${lc(N.plain)}`];
+  /* Concrete rut/growth pair + one usable rule, not "the karmic axis begins
+     in the past". Terms stay in the parentheses. */
+  const parts=[`Ваша наезженная колея: делать всё ${SIGN_MANNER[ss]}, чаще всего ${HOUSE_ARENA[sh-1]} (Южный узел ${SIGN_LOC.ru[ss]}, ${sh}-й дом). Это опора, и она никуда не денется. Расти вам в обратную сторону: учиться действовать ${SIGN_MANNER[ns]}, и пробовать это ${HOUSE_ARENA[nh-1]} (Северный узел ${SIGN_LOC.ru[ns]}, ${nh}-й дом). Простое правило: когда есть выбор между этими двумя способами, чаще берите непривычный.`];
   // the nodes are always exactly opposite each other by definition - not a
   // meaningful aspect, so it's excluded from both lists below
   const asN=aspectsInvolving(ch,'NNode').filter(a=>a.p2!=='SNode').slice(0,3);
@@ -1024,13 +1074,9 @@ function composePortrait(ch){
   addSc(sun.score,1.1); addSc(moon.score,1.1); addSc(asc.score,0.9); addSc(nodeRead&&nodeRead.score,0.8);
   const short=Object.entries(score).sort((a,b)=>b[1]-a[1]).slice(0,6).map(e=>e[0]).join(', ');
   const ascSignIdx=Math.floor(rev(ch.asc)/30);
-  const ascPlain=CORPUS.signs[SIGN_KEYS[ascSignIdx]].plain;
   const sunS=Math.floor(rev(ch.pos.Sun.lon)/30), moonS=Math.floor(rev(ch.pos.Moon.lon)/30);
-  /* Chart-specific, not textbook: fold each luminary's sign manner into the
-     sentence instead of reciting what the Sun or Moon means in general. */
-  const parts=[ascPlain,
-    `В основе характера: решения вы принимаете и своего добиваетесь ${SIGN_MANNER[sunS]}.`,
-    `А чувствуете и восстанавливаете силы вы ${SIGN_MANNER[moonS]}.`];
+  /* One sentence, as future colleagues and a future partner would put it. */
+  const parts=[`Вы производите впечатление человека, который ${ASC_IMPR[ascSignIdx]}; в деле вы ${SUN_WORK[sunS]}; в близких отношениях ${MOON_CLOSE[moonS]}.`];
   const all=findAspects(ch.pos).sort((a,b)=>a.orb-b.orb);
   if(all.length){
     const a=all[0], A=CORPUS.aspects[a.asp.name];
@@ -1208,15 +1254,46 @@ function personalWeight(o,h){
   return base*intensity*personal;
 }
 const sig=h=>`${h.tp}.${h.asp.name}.${h.np}`;
+/* Transit reading = weather (what the sky is doing) + which side of you it
+   touches + concrete advice: what to do or refrain from. No bare "square to
+   your Sun" statements; the technical signature lives in the small line. */
+const T_WEATHER={
+  Sun:'Энергия и внимание этих дней',
+  Moon:'Настроение дня',
+  Mercury:'Полоса разговоров, писем и мелких дел',
+  Venus:'Полоса про отношения, вкус и удовольствия',
+  Mars:'Полоса напора: спешка, споры, лишний адреналин',
+  Jupiter:'Полоса возможностей и щедрых предложений',
+  Saturn:'Полоса проверки на прочность: сроки, обязанности, ограничения',
+  Uranus:'Период внезапных поворотов',
+  Neptune:'Период тумана: мечты, путаница, тонкие чувства',
+  Pluto:'Период глубокой перестройки: старое уходит'
+};
+const T_DO={
+  Sun:{hard:'Не выясняйте, кто главный: отложите самоутверждение и сделайте дело тихо.',harm:'Хороший момент заявить о себе: инициатива сейчас встречает поддержку.',conj:'Эта сторона подсвечена: покажите её, но не пережимайте.'},
+  Moon:{hard:'Настроение может качать: не принимайте решений на пике эмоции.',harm:'День мягкий: хорошо для дома, отдыха и близких.',conj:'Чувствуется всё острее обычного: делайте скидку на это в оценках.'},
+  Mercury:{hard:'Перепроверяйте письма и договорённости, не подписывайте важное на бегу.',harm:'Разговоры идут легко: назначайте встречи, пишите, договаривайтесь.',conj:'Информации много и сразу: записывайте, иначе половина потеряется.'},
+  Venus:{hard:'Не решайте про деньги и отношения на эмоциях: захочется купить или пообещать лишнее.',harm:'Тёплые дни для встреч, примирений и красивых вещей: пользуйтесь.',conj:'Тянет к приятному: позвольте себе, но в рамках, о которых не пожалеете.'},
+  Mars:{hard:'Легко вспыхнуть и наломать дров: не начинайте споров, слейте напряжение движением или физической работой.',harm:'Сил больше обычного: возьмите самое трудное дело из списка именно сейчас.',conj:'Энергия бьёт через край: дайте ей конкретную работу, иначе она найдёт выход сама.'},
+  Jupiter:{hard:'Соблазн замахнуться и пообещать больше, чем вытянете: режьте планы пополам.',harm:'Двери приоткрыты: просите, предлагайте, подавайте заявки именно в эти дни.',conj:'Всё кажется крупнее и важнее, чем есть: пользуйтесь подъёмом, но сверяйте масштаб.'},
+  Saturn:{hard:'Время медленное и строгое: не форсируйте, закрывайте долги и хвосты. Ответ «подождать» сейчас правильный.',harm:'Хорошее время закрепить результат: договоры, планы вдолгую, наведение порядка.',conj:'Ответственность здесь сейчас двойная: делайте меньше, но надёжнее.'},
+  Uranus:{hard:'Возможны резкие сюрпризы: держите запасной вариант и не принимайте необратимых решений в момент встряски.',harm:'Свежий ветер: попробуйте нестандартный ход, сейчас он может сработать.',conj:'Тянет поменять всё разом: меняйте, но по одному, а не всё сразу.'},
+  Neptune:{hard:'Легко обмануться или размякнуть: отложите крупные решения, проверяйте факты дважды.',harm:'Тонкое, вдохновлённое время: хорошо для творчества, отдыха и разговоров по душам.',conj:'Границы размыты: не давайте обещаний вслепую и высыпайтесь.'},
+  Pluto:{hard:'Что-то здесь отживает: не цепляйтесь силой, не входите в силовые игры, отпускайте по частям.',harm:'Хорошее время расчистить завалы: то, что отпустите сейчас, уйдёт легко.',conj:'Тема перестраивается изнутри: не форсируйте и не сопротивляйтесь, дайте процессу срок.'}
+};
+const T_TOUCH={hard:'Сильнее всего это трёт то, как вы',harm:'Сильнее всего это поддерживает то, как вы',conj:'Точнее всего это включается в том, как вы'};
 function transitText(o,h){
-  const v=(learnedVal(o,'tp:'+h.tp)+learnedVal(o,'np:'+h.np))/2, hard=h.asp.kind==='hard';
-  let frame;
+  const v=(learnedVal(o,'tp:'+h.tp)+learnedVal(o,'np:'+h.np))/2;
+  const kind=h.asp.kind==='hard'?'hard':h.asp.kind==='conj'?'conj':'harm';
   if(LANG==='ru'){
-    if(v<=-0.6) frame=hard?'обычно ощущается тяжело именно у вас, берегите силы':'мягкий подъём, который вам обычно в радость';
-    else if(v>=0.6) frame=hard?'вы проживаете это как продуктивное давление, а не как надрыв':'лёгкое, заряжающее окно для вас';
-    else frame=hard?'точка трения, требующая настройки':'поддерживающее, текучее влияние';
-    return `${PN(h.tp)}: ${ASPECT_NAME.ru[h.asp.name]} к вашему «${PN(h.np)}» - ${frame}.`;
+    const func=PLANET_FUNC[h.np]||lc(PN(h.np));
+    let text=`${T_WEATHER[h.tp]||PN(h.tp)}. ${T_TOUCH[kind]} ${func}. ${(T_DO[h.tp]&&T_DO[h.tp][kind])||''}`;
+    if(v<=-0.6) text+=' По вашим прошлым отметкам такие дни даются вам тяжелее обычного: планируйте мягче.';
+    else if(v>=0.6) text+=' По вашим прошлым отметкам вы проходите такие дни хорошо: можно брать больше.';
+    return text.trim();
   } else {
+    const hard=kind==='hard';
+    let frame;
     if(v<=-0.6) frame=hard?'tends to land heavily for you, protect your energy':'a smooth lift you usually enjoy';
     else if(v>=0.6) frame=hard?'you experience this as productive pressure, not strain':'an easy, energizing window for you';
     else frame=hard?'a friction point that asks for adjustment':'a supportive, flowing influence';
@@ -1232,17 +1309,14 @@ function recall(o,s){
    tokens (weighted by personal weight) into one tagline, then leads with the
    single strongest transit's own sentence - a real summary, not a list header. */
 function daySynthesis(o,hits){
-  if(!hits.length||!CORPUS) return '';
-  const score={};
-  const add=(toks,mult)=>{(toks||[]).forEach(([w,x])=>{score[w]=(score[w]||0)+x*mult;});};
-  hits.slice(0,4).forEach(({h,w})=>{
-    add(CORPUS.planets[h.tp]&&CORPUS.planets[h.tp].tokens, w*0.8);
-    add(CORPUS.planets[h.np]&&CORPUS.planets[h.np].tokens, w*0.5);
-    add(CORPUS.aspects[h.asp.name]&&CORPUS.aspects[h.asp.name].tokens, w*0.6);
-  });
-  const words=Object.entries(score).sort((a,b)=>b[1]-a[1]).slice(0,5).map(e=>e[0]).join(', ');
-  const lead=transitText(o,hits[0].h);
-  return words?`Главное в этот день: ${words}. ${lead}`:lead;
+  if(!hits.length) return '';
+  /* Plain tone verdict from the weighted hard/harm balance of the top hits -
+     corpus tokens stay under the hood (they read as jargon when surfaced). */
+  let hardW=0,harmW=0;
+  hits.slice(0,4).forEach(({h,w})=>{ if(h.asp.kind==='hard')hardW+=w; else if(h.asp.kind==='harm')harmW+=w; else {hardW+=w*0.5;harmW+=w*0.5;} });
+  if(LANG!=='ru') return transitText(o,hits[0].h);
+  const tone=hardW>harmW*1.5?'День скорее напряжённый: важное лучше не форсировать.':harmW>hardW*1.5?'День скорее поддерживающий: хорошее время для дел из списка ниже.':'День смешанный: где-то поддержит, где-то потрёт.';
+  return `${tone} ${transitText(o,hits[0].h)}`;
 }
 function selectedTransitDate(){
   const v=document.getElementById('transitDate').value;
@@ -1263,7 +1337,7 @@ function renderTransits(ch){
     const rated=o.obs.find(x=>x.sig===s&&Date.now()-x.t<86400000*3);
     return `<div class="transit" data-sig="${s}">
       <div class="head"><span class="af" style="font-size:18px">${GLYPH[h.tp]}</span><span class="af" style="font-size:14px;color:var(--ink3)">${ASPECT_GLYPH[h.asp.name]}</span><span class="af" style="font-size:18px">${GLYPH[h.np]||''}</span><span style="margin-left:4px">${transitText(o,h)}</span></div>
-      <div class="tiny">${t('orb')} ${h.orb.toFixed(1)}° · ${t('weight')} ${w.toFixed(2)}</div>
+      <div class="tiny">${PN(h.tp)} ${ASPECT_NAME[LANG][h.asp.name]} ${PN(h.np)} · ${t('orb')} ${h.orb.toFixed(1)}° · ${t('weight')} ${w.toFixed(2)}</div>
       <div class="bar"><i style="width:${Math.round(intensity*100)}%"></i></div>
       ${recall(o,s)}
       <div class="rate">
