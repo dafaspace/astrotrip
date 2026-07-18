@@ -93,3 +93,8 @@ Total offline core budget: **~3.9 MB** — fits one service-worker precache.
   uses the monochrome **Astronomicon** glyph font for the papery aesthetic.
 - Corpus is a stub; the composition engine (scoring, dedup, tension-framing) is designed
   but only partially wired here.
+
+---
+
+© 2026 Daniel Fainberg (dafaspace). All rights reserved.
+Published for transparency, not licensed for reuse or redistribution.
