@@ -1,6 +1,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Astrarium</title>
+<title>AstroTrip</title>
 <style>
 @font-face{
   font-family:'Astro';
@@ -101,7 +101,7 @@ details.unit .dt{padding:0 0 10px;color:var(--ink2);font-size:14px}
 
 <header>
   <div class="ht">
-    <h1>Astrarium</h1>
+    <h1>AstroTrip</h1>
     <p data-i="tagline"></p>
   </div>
   <div class="lang">
@@ -215,7 +215,7 @@ const STR = {
   transintro:{ru:'Транзитные планеты на выбранную дату к вашей натальной карте. Оцените, как каждый реально ощущается, движок подстраивает ранжирование и тон полностью без API.',en:'Transiting planets on the chosen date vs your natal chart. Rate how each one actually lands, the engine adapts ranking and tone with zero API.'},
   transitdate:{ru:'Дата транзита',en:'Transit date'},
   todaybtn:{ru:'Сегодня',en:'Today'},
-  learned:{ru:'Что Astrarium узнал о вас',en:'What Astrarium has learned about you'},
+  learned:{ru:'Что AstroTrip узнал о вас',en:'What AstroTrip has learned about you'},
   forget:{ru:'Забыть всё',en:'Forget everything'},
   landq:{ru:'Зашло?',en:'Did it land?'}, felt:{ru:'Ощущалось:',en:'Felt:'},
   orb:{ru:'орбис',en:'orb'}, weight:{ru:'личный вес',en:'personal weight'}, house:{ru:'дом',en:'house'},
@@ -1487,7 +1487,7 @@ function applyStatic(){
   document.getElementById('detail').textContent=t('tapdetail');
   document.getElementById('city').placeholder=t('cityph');
   if(SELECTED_CITY) document.getElementById('city').value=LANG==='ru'?SELECTED_CITY.r:SELECTED_CITY.e;
-  document.title='Astrarium';
+  document.title='AstroTrip';
 }
 function todayStr(){
   const n=new Date(), p=x=>String(x).padStart(2,'0');

@@ -1,4 +1,4 @@
-# Astrarium — offline astrology core (prototype)
+# AstroTrip — offline astrology core (prototype)
 
 A working vertical slice proving the offline-first thesis: **precise charts + basic
 interpretation + a personalization loop that learns from lived experience — with no
@@ -59,7 +59,7 @@ optional cosmetic bonus.
    it verbatim: "↺ Last time (date) you rated this 3/3 — '…'." Pure local memory, and one
    of the most powerful-feeling features. No model needed.
 
-7. **Fully explainable.** The "What Astrarium has learned about you" panel states the model
+7. **Fully explainable.** The "What AstroTrip has learned about you" panel states the model
    in plain language ("Neptune transits land moderately for you, felt neutrally · 1.7/3").
    The user can read, trust, and correct it — impossible with an opaque LLM.
 
