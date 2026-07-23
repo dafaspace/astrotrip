@@ -10,7 +10,7 @@
    - other same-origin GETs: cache-first with a background refresh, so icons
      and the manifest load instantly and quietly update.
    Bump CACHE on every deploy that changes a precached file. */
-const CACHE = 'astrotrip-v1';
+const CACHE = 'astrotrip-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -18,7 +18,12 @@ const ASSETS = [
   './icon-192.png',
   './icon-512.png',
   './icon-maskable-512.png',
-  './apple-touch-icon.png'
+  './apple-touch-icon.png',
+  // Precached, not optional: without them offline falls back to a platform
+  // font and the layout shifts, which is exactly what self-hosting prevents.
+  './inter-400.woff2',
+  './inter-500.woff2',
+  './literata-500.woff2'
 ];
 
 self.addEventListener('install', e => {
