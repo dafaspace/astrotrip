@@ -1,6 +1,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>AstroTrip</title>
+<link rel="manifest" href="./manifest.json">
+<!-- Browser chrome follows the active scheme, same as the UI itself -->
+<meta name="theme-color" content="#f6f2ea" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#17150f" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="./icon-192.png">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="AstroTrip">
 <style>
 @font-face{
   font-family:'Astro';
@@ -108,7 +117,7 @@ details.unit .dt{padding:0 0 10px;color:var(--ink2);font-size:14px}
 
 /* Response (§1): every interactive surface answers on pointer-DOWN, instantly.
    Compositor-only properties (transform/opacity) so nothing drops a frame. */
-button,.chip,.stars span,details.unit summary,.citylist div,.lang button{
+button,.chip,.stars span,details.unit summary,details.fold>summary,.citylist div,.lang button{
   -webkit-tap-highlight-color:transparent;
   transition:transform 100ms ease-out,background-color 120ms ease-out,
              border-color 120ms ease-out,opacity 120ms ease-out;
@@ -117,6 +126,16 @@ button:active,.lang button:active{transform:scale(.97)}
 .chip:active{transform:scale(.94)}
 .stars span:active{transform:scale(.88)}
 details.unit summary:active .sh{opacity:.55}
+details.fold>summary:active h2{opacity:.55}
+
+/* Collapsible reference card: the heading IS the control, so it carries the
+   disclosure marker and the press feedback above. */
+details.fold>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px}
+details.fold>summary::-webkit-details-marker{display:none}
+details.fold>summary h2{margin:0}
+details.fold>summary::after{content:'+';margin-left:auto;color:var(--ink3);font-size:15px}
+details.fold[open]>summary::after{content:'−'}
+details.fold[open]>summary{margin-bottom:12px}
 .citylist div:active{background:var(--paper3)}
 @media (hover:hover){
   button:hover,.chip:hover{border-color:var(--ink3)}
@@ -221,11 +240,13 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
       <div class="detail empty" id="detail"></div>
     </div>
 
-    <div class="card">
-      <h2 data-i="positions"></h2>
+    <!-- Reference data, collapsed by default: the reading is the point, the
+         raw table is there when you want to check a degree. -->
+    <details class="card fold">
+      <summary><h2 data-i="positions"></h2></summary>
       <div id="positions"></div>
       <div class="tiny" style="margin-top:8px" data-i="posnote"></div>
-    </div>
+    </details>
 
     <div class="card">
       <h2 data-i="reading"></h2>
@@ -1612,4 +1633,11 @@ document.getElementById('date').addEventListener('change',updateTzAuto);
 document.getElementById('time').addEventListener('change',updateTzAuto);
 document.getElementById('tz').addEventListener('input',()=>{TZ_AUTO=false;});
 applyStatic();
+
+/* Offline shell. Registered after load so it never competes with first paint,
+   and failures stay silent: the app works fine without it, it just loses
+   offline. Needs https or localhost, so it is inert on file:// */
+if('serviceWorker' in navigator){
+  addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+}
 </script>
