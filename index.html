@@ -801,12 +801,15 @@ function dignity(p,s){
 /* Dignity is already computed for THIS chart, so the note states the
    consequence + what to do, not textbook theory about strong/weak planets. */
 const DIG_NOTE={
-  ruler:'Это сильная сторона: здесь у вас получается легче, чем у большинства. Чтобы она не простаивала, ей нужно настоящее дело: без нагрузки эта сила скучает и портится.',
-  exalt:'Здесь вам заметно везёт, многое выходит почти само. Ловушка в том, что даровое не ценится: это везение стоит сознательно вкладывать в конкретные результаты.',
-  detriment:'Это неудобное место: привычный напор здесь буксует. Не давите силой - тот же результат достигается обходным путём, медленнее и иначе, чем хочется сначала.',
-  fall:'Здесь ваш голос тише обычного. Это не приговор: просто там, где у других работает само, вам нужно больше сознательного внимания и тренировки.'
-};
-/* Synthetic opening: planet function + sign manner + house arena fused into
+  ruler:['Это сильная сторона: здесь у вас получается легче, чем у большинства. Без настоящей нагрузки эта сила застаивается.',
+         'Тут вы в своей стихии, и это заметно со стороны. Давайте себе задачи по размеру силы, иначе она уходит впустую.'],
+  exalt:['Здесь вам заметно везёт, многое выходит почти само. Ловушка в том, что даровое не ценится: вкладывайте это везение в конкретные результаты.',
+         'Тут вам подыгрывают обстоятельства. Лёгкость эта обманчива: без вашего вклада она никуда не ведёт.'],
+  detriment:['Это неудобное место: привычный напор здесь буксует. Не давите силой, тот же результат достигается обходным путём.',
+             'Тут ваш обычный способ не работает. Придётся действовать медленнее и иначе, чем хочется сначала.'],
+  fall:['Здесь ваш голос тише обычного. Это не приговор: там, где у других выходит само, вам нужно внимание и тренировка.',
+        'Тут вы слабее, чем привыкли о себе думать. Помогает не усилие через силу, а регулярность.']
+};/* Synthetic opening: planet function + sign manner + house arena fused into
    ONE sentence about this specific placement - no "what is the Sun in
    general" lecture, no astro terms in the body (terms live in the card
    title). Written so a 10-year-old could follow. */
@@ -823,8 +826,8 @@ const PLANET_FUNC={
   Pluto:'проходите через кризисы и начинаете заново',
   NNode:'растёте и осваиваете непривычное',
   SNode:'действуете на автомате, по старой памяти',
-  Lilith:'поддаётесь соблазнам',
-  Selena:'получаете поддержку и лёгкость',
+  Lilith:'теряете меру',
+  Selena:'находите опору в трудный момент',
   ASC:'выглядите со стороны и начинаете новое',
   MC:'строите карьеру и репутацию'
 };
@@ -1026,6 +1029,11 @@ const ASPECT_PLANET_FRAME={
    term anywhere in the body - the card title already carries the technical
    name. Two variants per aspect kill word-for-word repeats when a chart has,
    say, two oppositions. */
+/* Render order of the cards. An aspect links two cards, so its full body is
+   printed only in the card that comes first here; the later card keeps just
+   the connecting line. Without this a planet aspecting three points printed
+   the identical diagnosis+advice paragraph three times in one reading. */
+const CARD_ORDER=['Sun','Moon','Mercury','Venus','Mars','Jupiter','Saturn','Uranus','Neptune','Pluto','NNode','SNode','Lilith','Selena'];
 const ASPECT_LINK={
   conjunction:[f=>`К этому намертво припаяно то, как вы ${f}.`,f=>`С этим неразделимо сплавлено то, как вы ${f}.`],
   square:[f=>`С этим то и дело сталкивается то, как вы ${f}.`,f=>`Этому нередко перечит то, как вы ${f}.`],
@@ -1048,25 +1056,16 @@ function aspectClause(a,p,ch,vi){
      plus the clause position vi: within one card two same-type aspects then
      get bases b, b - and vi 0,1 - so (b+0) and (b+1) always differ. Across
      cards a different planet shifts the base, keeping between-card variety. */
-  const L=ASPECT_LINK[a.asp.name], lead=L[(hashIdx(p+a.asp.name,L.length)+vi)%L.length];
-  return `${lead(PLANET_FUNC[other]||lc(PN(other)))} ${specific.d} ${specific.c}`;
-}
-/* Rule-based synthesis, not concatenation: combines dignity strength + the
-   tone of the strongest aspect into ONE verdict sentence. This is the actual
-   "sum" the user asked for - a derived conclusion, not a fourth clause. */
-const SYNTH_TEXT={
-  '-2':'качеству тут непросто со всех сторон - рост идёт только через явное, осознанное усилие.',
-  '-1':'есть заметная нагрузка, но не критичная - с ней вполне можно работать.',
-  '0':'ровное, рабочее состояние без явного перекоса в лёгкость или тяжесть.',
-  '1':'качеству скорее везёт - получается легче, чем у большинства.',
-  '2':'сильная, слаженная сторона характера - здесь всё работает заодно, без внутреннего сопротивления.'
-};
-const SYN_LEAD=['Итог:','В сумме:','Если сложить всё вместе:'];
-function synthesize(dig,strongestAspectKind,vseed){
-  const digScore=(dig==='ruler'||dig==='exalt')?1:(dig==='detriment'||dig==='fall')?-1:0;
-  const aspScore=strongestAspectKind==='hard'?-1:strongestAspectKind==='harm'?1:0;
-  const total=Math.max(-2,Math.min(2,digScore+aspScore));
-  return `${SYN_LEAD[hashIdx(vseed+'syn',3)]} ${SYNTH_TEXT[String(total)]}`;
+  const L=ASPECT_LINK[a.asp.name];
+  const iP=CARD_ORDER.indexOf(p), iO=CARD_ORDER.indexOf(other);
+  const secondary=iP>=0&&iO>=0&&iP>iO;
+  /* The connecting line shows in both cards of a pair, so the later one takes
+     the other phrasing variant deliberately instead of risking a hash collision
+     and printing the same sentence twice in one reading. */
+  const li=(hashIdx(p+a.asp.name,L.length)+vi+(secondary?1:0))%L.length;
+  const line=L[li](PLANET_FUNC[other]||lc(PN(other)));
+  if(secondary) return line;             // body already spelled out in the earlier card
+  return `${line} ${specific.d} ${specific.c}`;
 }
 /* Small deterministic hash so connective phrasing varies between placements
    without being random - same chart always reads the same way, but 14 cards
@@ -1124,9 +1123,8 @@ function buildPlacement(ch,p){
      names the astrology; the body explains what it gives this person. The
      token algebra above stays under the hood for ranking precision. */
   const parts=[FUSED_TPL[hashIdx(p+'fuse',3)](PLANET_FUNC[p]||lc(PN(p)), SIGN_MANNER[s], HOUSE_ARENA[hs-1])];
-  if(dig) parts.push(DIG_NOTE[dig]);
+  if(dig&&DIG_NOTE[dig]) parts.push(DIG_NOTE[dig][hashIdx(p+'dig',DIG_NOTE[dig].length)]);
   myAspects.slice(0,2).forEach((a,i)=>{ const c=aspectClause(a,p,ch,i); if(c) parts.push(c); });
-  parts.push(synthesize(dig, myAspects[0]&&myAspects[0].asp.kind, p));
   const label=`${PN(p)} ${SIGN_LOC.ru[s]}, ${hs}-й дом`;
   return {label,short,detail:parts.join(' '),score};
 }
