@@ -26,12 +26,21 @@ const ASSETS = [
   './literata-500.woff2'
 ];
 
+/* Split by criticality: CRITICAL must all land or the install fails, so the
+   old worker keeps serving and the browser retries later. Silently swallowing
+   a fetch blip here would leave a permanently incomplete v2 cache - offline
+   would fall back to a platform font, the exact layout shift self-hosting
+   exists to prevent. Icons are cosmetic and may miss. */
+const CRITICAL = ASSETS.filter(u => u === './' || u.endsWith('.html') || u.endsWith('.woff2'));
+const OPTIONAL = ASSETS.filter(u => !CRITICAL.includes(u));
+
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE)
-      // addAll rejects the whole install if any single entry 404s, so add
-      // them individually and let a missing optional asset pass.
-      .then(c => Promise.all(ASSETS.map(u => c.add(u).catch(() => {}))))
+      .then(c => Promise.all([
+        c.addAll(CRITICAL),
+        ...OPTIONAL.map(u => c.add(u).catch(() => {}))
+      ]))
       .then(() => self.skipWaiting())
   );
 });
@@ -54,8 +63,18 @@ self.addEventListener('fetch', e => {
     e.respondWith(
       fetch(req)
         .then(res => {
-          const copy = res.clone();
-          caches.open(CACHE).then(c => c.put('./index.html', copy));
+          // Only a real 200 may replace the offline shell. Without this an
+          // error page served mid-deploy overwrites index.html and the app
+          // then boots into that error offline until the next good load.
+          // Redirected/opaque responses are not storable, hence the type check.
+          if (res && res.ok && res.type === 'basic' && !res.redirected) {
+            const copy = res.clone();
+            e.waitUntil(
+              caches.open(CACHE)
+                .then(c => c.put('./index.html', copy))
+                .catch(() => {})
+            );
+          }
           return res;
         })
         .catch(() => caches.match('./index.html').then(r => r || caches.match('./')))

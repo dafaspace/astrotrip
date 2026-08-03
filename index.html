@@ -99,6 +99,10 @@ svg{display:block;width:100%;height:auto;touch-action:manipulation}
 .chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
 .stars{letter-spacing:2px;font-size:18px;cursor:pointer;user-select:none;color:var(--ink3)}
 .stars b{color:var(--accent);font-weight:400}
+/* Only 400/500 are shipped, so every <b> must be pinned to one of them.
+   Left at the default 700 the browser synthesizes a fake bold, which is
+   exactly the cross-platform inconsistency self-hosting is meant to remove. */
+.detail b{font-weight:500}
 .learn-line{padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
 .learn-line:last-child{border:none}
 .learn-line b{color:var(--accent);font-weight:500}
@@ -824,16 +828,6 @@ const PLANET_FUNC={
   ASC:'выглядите со стороны и начинаете новое',
   MC:'строите карьеру и репутацию'
 };
-/* Short everyday noun-labels for the same forces - used in the portrait's
-   plain-language synthesis, where naming planets or aspects would be exactly
-   the jargon the reader can't parse. */
-const PLANET_LABEL={
-  Sun:'воля и цели', Moon:'чувства и умение прийти в себя', Mercury:'ум и общение',
-  Venus:'вкус и привязанности', Mars:'напор', Jupiter:'размах и вера в удачу',
-  Saturn:'самодисциплина', Uranus:'тяга к новому', Neptune:'мечты и чутьё',
-  Pluto:'глубина и умение начинать заново', NNode:'рост', SNode:'старые привычки',
-  Lilith:'слабости и соблазны', Selena:'внутренняя опора'
-};
 /* Portrait opener: one second-person sentence, as future colleagues or a
    future partner would describe this person. Asc = first impression,
    Sun sign = how they work, Moon sign = what they're like up close.
@@ -1157,55 +1151,78 @@ function composeAsc(ch){
    (mini T-square/yod-like lock), not just touched by isolated single lines -
    that changes how load-bearing the karmic theme is, so it's called out. */
 const ASPECT_INLOC_RU={conjunction:'в соединении',sextile:'в секстиле',square:'в квадрате',trine:'в трине',opposition:'в оппозиции'};
-const listRu=arr=>arr.length<=1?(arr[0]||''):arr.join(', ');
-/* Portrait-level synthesis of how the rest of the character pulls on the
-   growth direction. Deliberately jargon-free: no planet names, no aspect
-   terms, no house numbers - those are exactly what a lay reader can't parse.
-   Each force becomes a plain noun-label; tensions and helpers are grouped;
-   the "closed figure" (planets that aspect the axis AND each other) becomes a
-   plain "tight knot" image; closes on one everyday rule. Understandable to a
-   ten-year-old, every sentence following from the last. */
-function composeNodeAxis(ch){
+/* Each force that touches the growth axis gets ONE written sentence: the
+   concrete move it makes against (or around) the growth task, plus what to do
+   about it. Deliberately not a list of noun-labels - naming a planet's domain
+   ("feelings and recovery") states nothing about the person, which is why the
+   old grouped-label version read as empty. Sign-agnostic on purpose: the
+   growth task itself is already stated in the First Impression block, so these
+   describe the planet's characteristic move, which holds under any node sign.
+   hard = square/opposition, collides head-on. soft = trine/sextile/conjunction,
+   comes easy and therefore quietly keeps you where you already are. */
+/* What the tightest pairing in the chart actually does, per aspect kind. */
+const PAIR_NOTE={
+  conjunction:'Они срослись: одно всегда включает другое.',
+  sextile:'Вместе они работают только тогда, когда вы сами их сводите.',
+  square:'Они мешают друг другу чаще, чем помогают.',
+  trine:'Они поддерживают друг друга без усилий с вашей стороны.',
+  opposition:'Они тянут в разные стороны, и выбор между ними повторяется.'
+};
+const NODE_PULL={
+  Sun:{
+    hard:'Когда становится непривычно, вы начинаете доказывать, что справитесь по-своему, и доказательство подменяет сам шаг.',
+    soft:'Воля охотно включается там, где вы и так сильны. Направляйте её туда, где неуверенно, иначе она закрепляет прежнее.'},
+  Moon:{
+    hard:'Когда новое тревожит, вы отходите в знакомое и называете это усталостью. Это не отдых, это отступление.',
+    soft:'Успокаиваетесь вы легко, и это возвращает к прежнему укладу. Покой тут не признак, что менять ничего не нужно.'},
+  Mercury:{
+    hard:'Вы находите убедительное объяснение, почему сейчас не время меняться. Чаще всего такие доводы защищают привычку.',
+    soft:'Понять новое вам легко, и понимание подменяет опыт. Не считайте, что освоили, пока не попробовали.'},
+  Venus:{
+    hard:'Непривычное кажется вам некрасивым, и отказ идёт по вкусу, а не по существу.',
+    soft:'Привычное окружение любит вас таким и не просит меняться. Их одобрение не значит, что вы на своём месте.'},
+  Mars:{
+    hard:'Вы бросаетесь вперёд там, где нужен ровный ход, и выдыхаетесь раньше результата. Здесь берёт продолжение, а не рывок.',
+    soft:'Сил хватает делать по-старому быстро и хорошо, и это удерживает крепче всего остального.'},
+  Jupiter:{
+    hard:'Вы замахиваетесь шире, чем требует ближайший шаг, и большой замысел вытесняет скучное продолжение. Спрашивайте, не бегство ли это от простого.',
+    soft:'Возможности приходят сами и уводят в сторону от намеченного. Открытая дверь ещё не значит ваш путь.'},
+  Saturn:{
+    hard:'Новое кажется безответственным, и вы откладываете его до лучшей подготовки. Готовность тут не наступит, начинайте неготовым.',
+    soft:'Дисциплина работает на то, что вы уже умеете, и тем укрепляет прежний порядок.'},
+  Uranus:{
+    hard:'Вместо ровного движения тянет всё бросить и начать иначе, и так по кругу. Рост требует не нового рывка, а того же дела назавтра.',
+    soft:'Свежие ходы даются легко и делают перемены приятными на вид. Проверяйте, меняете вы существо дела или обстановку.'},
+  Neptune:{
+    hard:'Вы представляете себе перемену вместо того, чтобы её делать, и это приносит почти то же удовольствие.',
+    soft:'Верное направление вы чувствуете легко, но чувство подменяет шаг. Переводите его в одно действие на неделю.'},
+  Pluto:{
+    hard:'Тянет сломать построенное, не дав ему устояться. Прежде чем рушить, дайте этому дожить до результата.',
+    soft:'Крупные перемены даются вам легче мелких скучных шагов, и большой слом чаще откладывает рост, чем ускоряет.'},
+  Lilith:{
+    hard:'Тут вас заносит сильнее всего, и признать это труднее всего. Договаривайтесь о границах заранее, пока спокойны.',
+    soft:'Соблазн мягкий и постоянный, по чуть-чуть. Поодиночке эти уступки незаметны, вместе они и есть результат.'},
+  Selena:{
+    hard:'Помощь приходит неудобным путём, через то, что сперва выглядит помехой.',
+    soft:'Честные шаги тут даются легче, чем ожидаешь, но только на чистых намерениях.'}
+};function composeNodeAxis(ch){
   if(!CORPUS||!ch.pos.NNode) return '';
-  /* Capped at the tightest few: aspectsInvolving is sorted by orb, and without
-     a cap a busy axis turns the sentence into a long undifferentiated list. */
+  /* Capped at the tightest few: aspectsInvolving is sorted by orb, and an
+     uncapped busy axis would bury the point under repetition. */
   const asN=aspectsInvolving(ch,'NNode').filter(a=>a.p2!=='SNode').slice(0,3);
   const asS=aspectsInvolving(ch,'SNode').filter(a=>a.p2!=='NNode'&&!asN.some(b=>b.p2===a.p2)).slice(0,2);
-  const tension=[], help=[], involved=[];
-  const classify=(planet,kind,onNorth)=>{
-    if(involved.includes(planet)) return; involved.push(planet);
-    const lbl=PLANET_LABEL[planet]||lc(PN(planet));
-    // hard = pulls against growth; harmonious = helps; a merge with the growth
-    // point helps, a merge with the old-habit point pulls back
-    if(kind==='hard'||(kind==='conj'&&!onNorth)) tension.push(lbl); else help.push(lbl);
+  const seen=[], out=[];
+  const take=a=>{
+    const p=a.p2;
+    if(seen.includes(p)) return; seen.push(p);
+    const e=NODE_PULL[p]; if(!e) return;
+    out.push(a.asp.kind==='hard'?e.hard:e.soft);
   };
-  asN.forEach(a=>classify(a.p2,a.asp.kind,true));
-  asS.forEach(a=>classify(a.p2,a.asp.kind,false));
-  if(!tension.length&&!help.length){
-    return 'Ваш внутренний рост идёт сам по себе: другие черты характера в него почти не вмешиваются, ни мешают, ни особо помогают. Простое правило на каждый день: где можно поступить привычно или по-новому, чаще выбирайте по-новому.';
-  }
-  const parts=['Ваш рост связан не только с самим собой, но и с другими сторонами характера.'];
-  if(tension.length) parts.push(`Мешает идти вперёд и тянет назад вот что: ${listRu(tension)}.`);
-  if(help.length) parts.push(`А помогает держаться курса вот что: ${listRu(help)}.`);
-  /* Closed figure: collect only the forces that actually aspect ANOTHER
-     involved force. Claiming the whole set is interlocked when a single
-     incidental pair touches would overstate it, so the sentence names just
-     the linked ones and stays silent when fewer than two qualify. */
-  const linked=involved.filter((x,i)=>involved.some((y,j)=>{
-    if(i===j) return false;
-    let d=Math.abs(rev(ch.pos[x].lon-ch.pos[y].lon)); if(d>180)d=360-d;
-    return ASPECTS.some(asp=>Math.abs(d-asp.angle)<=asp.orb);
-  }));
-  if(linked.length>=2){
-    /* When everything named above is linked, say so instead of repeating the
-       same list word for word. */
-    const who=linked.length===involved.length
-      ? 'все они сцеплены'
-      : `сцеплены вот что: ${listRu(linked.map(x=>PLANET_LABEL[x]||lc(PN(x))))}, и они связаны`;
-    parts.push(`Причём ${who} не только с ростом, но и между собой. Тронете одно, отзовётся другое, поэтому разбирать их лучше вместе, а не поодиночке.`);
-  }
-  parts.push('Простое правило на каждый день: где можно поступить привычно или по-новому, чаще выбирайте по-новому.');
-  return parts.join(' ');
+  asN.forEach(take); asS.forEach(take);
+  if(!out.length) return '';
+  /* One short bridge so the sentences below are not orphaned: the growth
+     direction itself is stated in the First Impression block just above. */
+  return 'Вот что вмешивается в этот рост. '+out.join(' ');
 }
 /* Whole-chart synthesis: merges Sun+Moon+Ascendant+node axis into one
    portrait, plus the single tightest aspect in the whole chart (the one
@@ -1223,8 +1240,12 @@ function composePortrait(ch){
   const parts=[];
   const all=findAspects(ch.pos).sort((a,b)=>a.orb-b.orb);
   if(all.length){
-    const a=all[0], A=CORPUS.aspects[a.asp.name];
-    if(A) parts.push(`Самое заметное в характере: то, как вы ${PLANET_FUNC[a.p1]||lc(PN(a.p1))}, тесно связано с тем, как вы ${PLANET_FUNC[a.p2]||lc(PN(a.p2))}. ${uc(A.plain||A.short)}`);
+    const a=all[0];
+    /* Written per aspect kind instead of the generic corpus .plain, which
+       stated a property ("способность есть") rather than what this specific
+       pairing does - the same label-not-claim defect cleaned out of the nodes. */
+    const note=PAIR_NOTE[a.asp.name];
+    if(note) parts.push(`Самое заметное в характере: то, как вы ${PLANET_FUNC[a.p1]||lc(PN(a.p1))}, тесно связано с тем, как вы ${PLANET_FUNC[a.p2]||lc(PN(a.p2))}. ${note}`);
   }
   const nodeText=composeNodeAxis(ch);
   if(nodeText) parts.push(nodeText);
@@ -1311,7 +1332,7 @@ function drawWheel(ch){
   [[cusps[0],'Asc','var(--axis)'],[cusps[6],'Dsc','var(--axis)'],[cusps[9],'MC','var(--mc)'],[cusps[3],'IC','var(--mc)']].forEach(([lon,lbl,col])=>{
     const [lx,ly]=polar(lon,rHouOut+1);
     const dx=lx-C, anchor=Math.abs(dx)<30?'middle':(dx>0?'start':'end');
-    s+=`<text x="${lx.toFixed(1)}" y="${(ly+(ly>C?9:-3)).toFixed(1)}" text-anchor="${anchor}" font-size="10" font-weight="600" fill="${col}">${lbl}</text>`;
+    s+=`<text x="${lx.toFixed(1)}" y="${(ly+(ly>C?9:-3)).toFixed(1)}" text-anchor="${anchor}" font-size="10" font-weight="500" fill="${col}">${lbl}</text>`;
   });
   // --- zodiac ring (12 x 30°) ---
   for(let i=0;i<12;i++){
