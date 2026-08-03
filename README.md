@@ -1,4 +1,4 @@
-# AstroTrip — offline astrology core (prototype)
+# AstroTrip - offline astrology core (prototype)
 
 A working vertical slice proving the offline-first thesis: **precise charts + basic
 interpretation + a personalization loop that learns from lived experience — with no
@@ -23,7 +23,7 @@ network — verify in dev tools.
 
 ## The key idea: personalization WITHOUT any API
 
-The differentiator — "adapt interpretations to how transits actually landed for *this*
+The differentiator - "adapt interpretations to how transits actually landed for *this*
 user" — was assumed to need an LLM. It does **not**. An LLM was only ever doing prose
 polish. The *learning* is a transparent on-device statistical model over structured
 feedback plus variant selection. So the API can be dropped entirely and kept only as an
