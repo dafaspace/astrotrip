@@ -3,8 +3,8 @@
 <title>AstroTrip</title>
 <link rel="manifest" href="./manifest.json">
 <!-- Browser chrome follows the active scheme, same as the UI itself -->
-<meta name="theme-color" content="#f6f2ea" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#17150f" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f9f7f3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#100f17" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="./icon-192.png">
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -29,9 +29,13 @@
 @font-face{font-family:'Literata';src:url(./literata-500.woff2) format('woff2');
   font-weight:500;font-style:normal;font-display:swap}
 :root{
-  --paper:#f6f2ea; --paper2:#efe9dd; --paper3:#e6dece; --line:#d8cfba;
-  --ink:#211d18; --ink2:#5f574a; --ink3:#9a8f7c;
-  --accent:#b5714a; --axis:#c04f86; --mc:#3f6ea5;
+  /* Palette solved for contrast, not picked by eye: every text/background pair
+     clears WCAG AA. The old one failed twice, labels at 2.63:1 in light and the
+     primary button's white text at 2.70:1 in dark, against 4.5:1 required. */
+  --paper:#f9f7f3; --paper2:#f4f0e9; --paper3:#ede7da; --line:#e1d8c6;
+  --ink:#201d18; --ink2:#686050; --ink3:#746c5b;
+  --accent:#9d5d25; --accentBtn:#aa6428; --accentInk:#ffffff;
+  --axis:#c04f86; --mc:#3f6ea5;
   --harm:#3f6ea5; --hard:#c0685c; --conj:#7d8a6a;
   --wheelbg:#eef4f5;
   --fire:#e39a86; --earth:#a9c99a; --air:#e6d38a; --water:#8fc7d4;
@@ -40,12 +44,16 @@
 }
 @media (prefers-color-scheme: dark){
   :root{
-    --paper:#17150f; --paper2:#1f1c15; --paper3:#272319; --line:#38321f;
-    --ink:#efe7d6; --ink2:#b3a892; --ink3:#7c7360;
-    --accent:#d68c60; --wheelbg:#12171a;
+    /* Night sky rather than dark paper: deep indigo, no pure black, surfaces
+       lifted step by step. Button text is dark on the light accent, which is
+       what fixes the 2.70:1 failure and reads better besides. */
+    --paper:#100f17; --paper2:#171520; --paper3:#201e2c; --line:#332f43;
+    --ink:#e7e6ea; --ink2:#9693a6; --ink3:#827e93;
+    --accent:#bc773a; --accentBtn:#bc773a; --accentInk:#12101e;
+    --wheelbg:#0e1320;
     --axis:#d67aa6; --mc:#6f9fd0; --harm:#6f9fd0;
     --fire:#a86a58; --earth:#6f8a62; --air:#a89454; --water:#5c8a94;
-    --glass:rgba(23,21,15,.72);
+    --glass:rgba(16,15,23,.72);
   }
 }
 *{box-sizing:border-box}
@@ -71,10 +79,10 @@ input,select{
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
 button{font:inherit;cursor:pointer;border-radius:10px;border:1px solid var(--line);background:var(--paper3);color:var(--ink);padding:9px 14px}
-button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button.primary{background:var(--accentBtn);border-color:var(--accentBtn);color:var(--accentInk)}
 .lang{display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;flex:none}
 .lang button{border:none;border-radius:0;padding:6px 11px;background:var(--paper2);font-size:13px}
-.lang button.on{background:var(--accent);color:#fff}
+.lang button.on{background:var(--accentBtn);color:var(--accentInk)}
 .mono,.deg{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
 svg{display:block;width:100%;height:auto;touch-action:manipulation}
 .af{font-family:'Astro','Segoe UI Symbol','Apple Symbols',serif;font-style:normal}
@@ -96,7 +104,7 @@ svg{display:block;width:100%;height:auto;touch-action:manipulation}
 .transit .bar i{display:block;height:100%;background:var(--accent)}
 .rate{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;align-items:center}
 .chip{padding:5px 9px;border:1px solid var(--line);border-radius:999px;font-size:12px;cursor:pointer;background:var(--paper2);user-select:none}
-.chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.chip.on{background:var(--accentBtn);border-color:var(--accentBtn);color:var(--accentInk)}
 .stars{letter-spacing:2px;font-size:18px;cursor:pointer;user-select:none;color:var(--ink3)}
 .stars b{color:var(--accent);font-weight:400}
 /* Only 400/500 are shipped, so every <b> must be pinned to one of them.
