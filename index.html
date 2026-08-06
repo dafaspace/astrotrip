@@ -824,7 +824,7 @@ const PLANET_NOUN={
   Saturn:['ваша выдержка',0], Uranus:['ваша тяга к новому',0],
   Neptune:['ваше воображение',0], Pluto:['ваша глубина',0],
   NNode:['ваш рост',0], SNode:['ваши привычки',1],
-  Lilith:['ваши слабости',1], Selena:['ваша опора',0],
+  Lilith:['ваш соблазн',0], Selena:['ваша защита',0],
   ASC:['ваш облик',0], MC:['ваше дело',0]
 };
 const nounOf=p=>(PLANET_NOUN[p]||[lc(PN(p)),0]);
@@ -1282,6 +1282,20 @@ const PAIR_TEXT={
 };
 const pairKey=(a,b)=>{const ia=CARD_ORDER.indexOf(a),ib=CARD_ORDER.indexOf(b);
   return (ia<0||ib<0)?(a<b?a+'|'+b:b+'|'+a):(ia<ib?a+'|'+b:b+'|'+a);};
+/* Lilith and Selena are not functions that help or hinder, they are
+   tendencies, so the generic help/hinder connector produced nonsense like
+   'выручают тут и ваши слабости' for a trine. Here the aspect kind changes
+   HOW the tendency shows up, not whether it is on your side. */
+const POINT_LINK={
+  Lilith:{
+    conj:'Вплотную к этому подходит ваш соблазн.',
+    hard:'Рядом всё время ходит соблазн.',
+    harm:'Тут соблазн подходит незаметно и кажется безобидным.'},
+  Selena:{
+    conj:'Тут же рядом то, что вас бережёт.',
+    hard:'Защита тут приходит неудобным путём.',
+    harm:'Тут вас негласно страхует ваша защита.'}
+};
 const ASPECT_LINK={
   conjunction:[(n,pl)=>`Тут же неотрывно ${pl?'действуют':'действует'} ${n}.`,(n,pl)=>`Заодно с этим всегда ${pl?'идут':'идёт'} ${n}.`],
   square:[(n,pl)=>`${pl?'Мешают':'Мешает'} вам тут ${n}.`,(n,pl)=>`${pl?'Спорят':'Спорит'} с этим ${n}.`],
@@ -1314,8 +1328,9 @@ function aspectClause(a,p,ch,vi){
      in one card always take different variants. The secondary flip is not
      applied here: it cancelled vi and printed the same connector twice. */
   const li=(hashIdx(p+a.asp.name,L.length)+vi)%L.length;
+  const pl=POINT_LINK[other];
   const on=nounOf(other);
-  const line=L[li](on[0],on[1]);
+  const line=pl?(pl[a.asp.kind]||pl.harm):L[li](on[0],on[1]);
   if(secondary) return line;             // body already spelled out in the earlier card
   const pt=PAIR_TEXT[pairKey(p,other)];
   const body=(pt&&pt[a.asp.name])||`${specific.d} ${specific.c}`;
