@@ -1,6 +1,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>AstroTrip</title>
+<script>
+/* Runs before any paint so the page never flashes the wrong theme. Stores an
+   explicit choice; 'auto' means follow the system and keep following it. */
+(function(){var s=localStorage.getItem('astrarium_theme')||'auto';
+ var d=s==='dark'||(s==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches);
+ document.documentElement.dataset.theme=d?'dark':'light';})();
+</script>
 <link rel="manifest" href="./manifest.json">
 <!-- Browser chrome follows the active scheme, same as the UI itself -->
 <meta name="theme-color" content="#f9f7f3" media="(prefers-color-scheme: light)">
@@ -35,26 +42,28 @@
   --paper:#f9f7f3; --paper2:#f4f0e9; --paper3:#ede7da; --line:#e1d8c6;
   --ink:#201d18; --ink2:#686050; --ink3:#746c5b;
   --accent:#9d5d25; --accentBtn:#aa6428; --accentInk:#ffffff;
-  --axis:#c04f86; --mc:#3f6ea5;
-  --harm:#3f6ea5; --hard:#c0685c; --conj:#7d8a6a;
-  --wheelbg:#eef4f5;
-  --fire:#e39a86; --earth:#a9c99a; --air:#e6d38a; --water:#8fc7d4;
+  /* Chart colours solved the same way: lines hold 3.5:1 against the wheel
+     ground, sector fills keep glyphs above 12:1. MC was identical to harm
+     before, so the MC axis and harmonious aspects were the same colour. */
+  --axis:#ce5692; --mc:#976bd4;
+  --harm:#4683c9; --hard:#cb614c; --conj:#2a9256;
+  --wheelbg:#f4f2ee;
+  --fire:#e6cdc1; --earth:#b1dead; --air:#dbd3a8; --water:#b9d7e2;
   --radius:16px;
   --glass:rgba(246,242,234,.72);
 }
-@media (prefers-color-scheme: dark){
-  :root{
+:root[data-theme="dark"]{
     /* Night sky rather than dark paper: deep indigo, no pure black, surfaces
        lifted step by step. Button text is dark on the light accent, which is
        what fixes the 2.70:1 failure and reads better besides. */
     --paper:#100f17; --paper2:#171520; --paper3:#201e2c; --line:#332f43;
     --ink:#e7e6ea; --ink2:#9693a6; --ink3:#827e93;
     --accent:#bc773a; --accentBtn:#bc773a; --accentInk:#12101e;
-    --wheelbg:#0e1320;
-    --axis:#d67aa6; --mc:#6f9fd0; --harm:#6f9fd0;
-    --fire:#a86a58; --earth:#6f8a62; --air:#a89454; --water:#5c8a94;
+    --wheelbg:#0f0d19;
+    --axis:#b13e78; --mc:#7f50c2; --harm:#3a6ba4;
+    --hard:#a94e3b; --conj:#2a774a;
+    --fire:#38271e; --earth:#1b301a; --air:#2f2b19; --water:#1c2d34;
     --glass:rgba(16,15,23,.72);
-  }
 }
 *{box-sizing:border-box}
 html,body{margin:0}
@@ -83,6 +92,8 @@ button.primary{background:var(--accentBtn);border-color:var(--accentBtn);color:v
 .lang{display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;flex:none}
 .lang button{border:none;border-radius:0;padding:6px 11px;background:var(--paper2);font-size:13px}
 .lang button.on{background:var(--accentBtn);color:var(--accentInk)}
+.lang.theme button{padding:6px 8px;display:grid;place-items:center;color:var(--ink2)}
+.lang.theme button.on{color:var(--accentInk)}
 .mono,.deg{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
 svg{display:block;width:100%;height:auto;touch-action:manipulation}
 .af{font-family:'Astro','Segoe UI Symbol','Apple Symbols',serif;font-style:normal}
@@ -224,6 +235,9 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
     <h1>AstroTrip</h1>
     <p data-i="tagline"></p>
   </div>
+  <div class="lang theme" id="themeSw">
+    <button data-theme-set="auto" title="Как в системе" aria-label="Как в системе"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M8 2a6 6 0 0 0 0 12z" fill="currentColor"/></svg></button><button data-theme-set="light" title="Светлая" aria-label="Светлая"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><circle cx="8" cy="8" r="3.2" fill="none" stroke="currentColor" stroke-width="1.4"/><g stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M8 1v1.8M8 13.2V15M1 8h1.8M13.2 8H15M3 3l1.3 1.3M11.7 11.7L13 13M13 3l-1.3 1.3M4.3 11.7L3 13"/></g></svg></button><button data-theme-set="dark" title="Тёмная" aria-label="Тёмная"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M13 9.5A5.6 5.6 0 0 1 6.5 3a5.6 5.6 0 1 0 6.5 6.5z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg></button>
+  </div>
   <div class="lang">
     <button data-lang="ru">RU</button><button data-lang="en">EN</button>
   </div>
@@ -312,7 +326,9 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
    ============================================================ */
 
 /* ---------- i18n ---------- */
-let LANG = localStorage.getItem('astrarium_lang') || 'ru';
+/* Validated, not just defaulted: a stored value could be anything, and a
+   bad one would propagate into every lookup keyed by language. */
+let LANG = ['ru','en'].includes(localStorage.getItem('astrarium_lang')) ? localStorage.getItem('astrarium_lang') : 'ru';
 const STR = {
   tagline:{ru:'Офлайновое ядро расчёта и интерпретации. Ни сети, ни API.', en:'Offline calculation + interpretation core. No network, no API.'},
   birth:{ru:'Данные рождения',en:'Birth data'},
@@ -1948,7 +1964,7 @@ function selectCity(c){
 }
 function applyStatic(){
   document.querySelectorAll('[data-i]').forEach(el=>el.textContent=t(el.dataset.i));
-  document.querySelectorAll('.lang button').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG));
+  document.querySelectorAll('.lang button[data-lang]').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG));
   document.getElementById('detail').textContent=t('tapdetail');
   document.getElementById('city').placeholder=t('cityph');
   if(SELECTED_CITY) document.getElementById('city').value=LANG==='ru'?SELECTED_CITY.r:SELECTED_CITY.e;
@@ -1986,7 +2002,8 @@ document.getElementById('showSeconds').addEventListener('change',e=>{
   localStorage.setItem('astrarium_seconds',SHOW_SECONDS?'1':'0');
   if(CURRENT){ renderPositions(CURRENT); if(ISO) showDetail(ISO,CURRENT); }
 });
-document.querySelectorAll('.lang button').forEach(b=>b.addEventListener('click',()=>{
+/* Must not match the theme switcher, which shares the .lang styling. */
+ document.querySelectorAll('.lang button[data-lang]').forEach(b=>b.addEventListener('click',()=>{
   LANG=b.dataset.lang; localStorage.setItem('astrarium_lang',LANG); applyStatic(); if(CURRENT)run();
 }));
 document.getElementById('city').addEventListener('input',e=>renderCityList(searchCities(e.target.value)));
@@ -1995,6 +2012,27 @@ document.getElementById('city').addEventListener('blur',()=>{setTimeout(()=>{doc
 document.getElementById('date').addEventListener('change',updateTzAuto);
 document.getElementById('time').addEventListener('change',updateTzAuto);
 document.getElementById('tz').addEventListener('input',()=>{TZ_AUTO=false;});
+
+/* Theme: an explicit choice wins, 'auto' keeps following the system live. The
+   meta theme-color tags are media-based and cannot see a manual override, so
+   they are rewritten here to keep the browser chrome in step. */
+function applyTheme(){
+  const pref=localStorage.getItem('astrarium_theme')||'auto';
+  const dark=pref==='dark'||(pref==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches);
+  document.documentElement.dataset.theme=dark?'dark':'light';
+  document.querySelectorAll('#themeSw button').forEach(b=>
+    b.classList.toggle('on',b.dataset.themeSet===pref));
+  document.querySelectorAll('meta[name=theme-color]').forEach(m=>m.remove());
+  const m=document.createElement('meta');
+  m.name='theme-color'; m.content=dark?'#100f17':'#f9f7f3';
+  document.head.appendChild(m);
+}
+document.getElementById('themeSw').addEventListener('click',e=>{
+  const b=e.target.closest('button[data-theme-set]'); if(!b)return;
+  localStorage.setItem('astrarium_theme',b.dataset.themeSet); applyTheme();
+});
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',applyTheme);
+applyTheme();
 applyStatic();
 
 /* Offline shell. Registered after load so it never competes with first paint,
