@@ -2,10 +2,15 @@
 
 A working vertical slice proving the offline-first thesis: **precise charts + basic
 interpretation + a personalization loop that learns from lived experience — with no
-network and no API at all.** Single `index.html`, no build step (same pattern as Hum).
+network and no API at all.** No build step: the app is `index.html` plus a handful
+of static files it loads (three subset web fonts, `manifest.json`, `sw.js`, icons).
 
-Open `index.html` in a browser, or serve the folder statically. Nothing contacts the
-network — verify in dev tools.
+**Serve the folder, do not open the file directly.** `python3 -m http.server` in this
+directory is enough. Over `file://` a service worker cannot register at all, so there
+is no offline shell and no install; Chrome and Safari additionally refuse the
+self-hosted fonts, since a file origin is opaque, and the type falls back to a system
+face. Served, it installs to the home screen and runs with the network off. Nothing
+contacts the network — verify in dev tools.
 
 ## What the slice already does
 
@@ -98,3 +103,7 @@ Total offline core budget: **~3.9 MB** — fits one service-worker precache.
 
 © 2026 Daniel Fainberg (dafaspace). All rights reserved.
 Published for transparency, not licensed for reuse or redistribution.
+
+Exception: the three bundled web fonts (`inter-400.woff2`, `inter-500.woff2`,
+`literata-500.woff2`) are subsets of Inter and Literata, both under the SIL Open
+Font License 1.1. See [OFL.txt](OFL.txt).
