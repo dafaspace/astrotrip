@@ -813,6 +813,21 @@ const DIG_NOTE={
    ONE sentence about this specific placement - no "what is the Sun in
    general" lecture, no astro terms in the body (terms live in the card
    title). Written so a 10-year-old could follow. */
+/* Short nouns for the same forces. The earlier periphrasis ("то, как вы
+   принимаете решения и добиваетесь своего") avoided astro terms but turned
+   one idea into a six-word subordinate clause, and four of them per card made
+   the text unreadable. Second value marks plural so the verb agrees; every
+   template below picks its verb from it, which also sidesteps gender. */
+const PLANET_NOUN={
+  Sun:['ваша воля',0], Moon:['ваши чувства',1], Mercury:['ваш ум',0],
+  Venus:['ваш вкус',0], Mars:['ваш напор',0], Jupiter:['ваш размах',0],
+  Saturn:['ваша выдержка',0], Uranus:['ваша тяга к новому',0],
+  Neptune:['ваше воображение',0], Pluto:['ваша глубина',0],
+  NNode:['ваш рост',0], SNode:['ваши привычки',1],
+  Lilith:['ваши слабости',1], Selena:['ваша опора',0],
+  ASC:['ваш облик',0], MC:['ваше дело',0]
+};
+const nounOf=p=>(PLANET_NOUN[p]||[lc(PN(p)),0]);
 const PLANET_FUNC={
   Sun:'принимаете решения и добиваетесь своего',
   Moon:'чувствуете и восстанавливаете силы',
@@ -881,7 +896,7 @@ const SIGN_MANNER=[
   'резко и сразу, без разгона',
   'медленно, основательно, наверняка',
   'быстро, легко и на несколько дел сразу',
-  'осторожно, через чувство и память',
+  'осторожно, с оглядкой на прошлое',
   'ярко, с размахом и на публику',
   'точно, с разбором каждой мелочи',
   'с оглядкой на другого и поиском равновесия',
@@ -892,7 +907,7 @@ const SIGN_MANNER=[
   'мягко, по наитию, без жёсткого плана'
 ];
 const HOUSE_ARENA=[
-  'в том, как вы держитесь и начинаете новое',
+  'в манере держаться и начинать новое',
   'в деньгах, вещах и ощущении опоры',
   'в разговорах, коротких поездках и ближнем круге',
   'дома, в семье и в вопросе корней',
@@ -925,9 +940,9 @@ const NODE_AXIS=[
   'Вам легко всё держать под контролем, придираться и тревожиться о мелочах. Расти вы будете в отпускающую сторону: больше доверять, смягчаться и принимать несовершенство.'
 ];
 const FUSED_TPL=[
-  (f,m,ar)=>`То, как вы ${f}, устроено ${m}, и главная сцена для этого ${ar}.`,
-  (f,m,ar)=>`То, как вы ${f}, идёт ${m}, и заметнее всего это ${ar}.`,
-  (f,m,ar)=>`То, как вы ${f}, работает ${m}. Сильнее всего это проявляется ${ar}.`
+  (n,pl,m,ar)=>`${uc(n)} ${pl?'работают':'работает'} ${m}. Сильнее всего это проявляется ${ar}.`,
+  (n,pl,m,ar)=>`${uc(n)} ${pl?'действуют':'действует'} ${m}, и заметнее всего это ${ar}.`,
+  (n,pl,m,ar)=>`${uc(n)} ${pl?'проявляются':'проявляется'} ${m}, и главная сцена для этого ${ar}.`
 ];
 const firstSent=s=>{const m=/^[^.!?]*[.!?]/.exec(s||'');return m?m[0].trim():(s||'');};
 const lc=s=>s?s.charAt(0).toLowerCase()+s.slice(1):s;
@@ -1268,11 +1283,11 @@ const PAIR_TEXT={
 const pairKey=(a,b)=>{const ia=CARD_ORDER.indexOf(a),ib=CARD_ORDER.indexOf(b);
   return (ia<0||ib<0)?(a<b?a+'|'+b:b+'|'+a):(ia<ib?a+'|'+b:b+'|'+a);};
 const ASPECT_LINK={
-  conjunction:[f=>`Неотделимо от этого работает то, как вы ${f}.`,f=>`Здесь с вами накрепко связано то, как вы ${f}.`],
-  square:[f=>`Помехой тут становится то, как вы ${f}.`,f=>`Тут вы сами себе мешаете тем, как вы ${f}.`],
-  opposition:[f=>`На другой чаше весов то, как вы ${f}.`,f=>`В обратную сторону тянет то, как вы ${f}.`],
-  trine:[f=>`Без всяких усилий вам помогает то, как вы ${f}.`,f=>`Сюда же, не требуя внимания, подключается то, как вы ${f}.`],
-  sextile:[f=>`Может выручить то, как вы ${f}.`,f=>`Есть и подмога: то, как вы ${f}.`]
+  conjunction:[(n,pl)=>`Тут же неотрывно ${pl?'действуют':'действует'} ${n}.`,(n,pl)=>`Заодно с этим всегда ${pl?'идут':'идёт'} ${n}.`],
+  square:[(n,pl)=>`${pl?'Мешают':'Мешает'} вам тут ${n}.`,(n,pl)=>`${pl?'Спорят':'Спорит'} с этим ${n}.`],
+  opposition:[(n,pl)=>`${pl?'Тянут':'Тянет'} вас в обратную сторону ${n}.`,(n,pl)=>`На другой чаше весов ${pl?'стоят':'стоит'} ${n}.`],
+  trine:[(n,pl)=>`Без всяких усилий вам тут ${pl?'помогают':'помогает'} ${n}.`,(n,pl)=>`Сюда же, ничего не требуя, ${pl?'подключаются':'подключается'} ${n}.`],
+  sextile:[(n,pl)=>`${pl?'Могут':'Может'} выручить тут ${n}.`,(n,pl)=>`${pl?'Выручают':'Выручает'} тут и ${n}.`]
 };
 function aspectClause(a,p,ch,vi){
   /* vi = position of this clause in its paragraph; folding it into the
@@ -1299,7 +1314,8 @@ function aspectClause(a,p,ch,vi){
      in one card always take different variants. The secondary flip is not
      applied here: it cancelled vi and printed the same connector twice. */
   const li=(hashIdx(p+a.asp.name,L.length)+vi)%L.length;
-  const line=L[li](PLANET_FUNC[other]||lc(PN(other)));
+  const on=nounOf(other);
+  const line=L[li](on[0],on[1]);
   if(secondary) return line;             // body already spelled out in the earlier card
   const pt=PAIR_TEXT[pairKey(p,other)];
   const body=(pt&&pt[a.asp.name])||`${specific.d} ${specific.c}`;
@@ -1360,7 +1376,8 @@ function buildPlacement(ch,p){
      derived synthesis. No "planet in general" lecture - the title already
      names the astrology; the body explains what it gives this person. The
      token algebra above stays under the hood for ranking precision. */
-  const parts=[FUSED_TPL[hashIdx(p+'fuse',3)](PLANET_FUNC[p]||lc(PN(p)), SIGN_MANNER[s], HOUSE_ARENA[hs-1])];
+  const nn=nounOf(p);
+  const parts=[FUSED_TPL[hashIdx(p+'fuse',3)](nn[0], nn[1], SIGN_MANNER[s], HOUSE_ARENA[hs-1])];
   if(dig&&DIG_NOTE[dig]) parts.push(DIG_NOTE[dig][hashIdx(p+'dig',DIG_NOTE[dig].length)]);
   /* Aspects to the ten classical planets come first: they carry the written
      pair readings and are what the card is really about. Sorting purely by orb
@@ -1492,7 +1509,7 @@ function composePortrait(ch){
        stated a property ("способность есть") rather than what this specific
        pairing does - the same label-not-claim defect cleaned out of the nodes. */
     const note=PAIR_NOTE[a.asp.name];
-    if(note) parts.push(`Самое заметное в характере: то, как вы ${PLANET_FUNC[a.p1]||lc(PN(a.p1))}, тесно связано с тем, как вы ${PLANET_FUNC[a.p2]||lc(PN(a.p2))}. ${note}`);
+    if(note) parts.push(`Самое заметное в характере: ${nounOf(a.p1)[0]} и ${nounOf(a.p2)[0]}. ${note}`);
   }
   const nodeText=composeNodeAxis(ch);
   if(nodeText) parts.push(nodeText);
@@ -1710,13 +1727,19 @@ const T_DO={
   Neptune:{hard:'Легко обмануться или размякнуть: отложите крупные решения, проверяйте факты дважды.',harm:'Тонкое, вдохновлённое время: хорошо для творчества, отдыха и разговоров по душам.',conj:'Границы размыты: не давайте обещаний вслепую и высыпайтесь.'},
   Pluto:{hard:'Что-то здесь отживает: не цепляйтесь силой, не входите в силовые игры, отпускайте по частям.',harm:'Хорошее время расчистить завалы: то, что отпустите сейчас, уйдёт легко.',conj:'Тема перестраивается изнутри: не форсируйте и не сопротивляйтесь, дайте процессу срок.'}
 };
-const T_TOUCH={hard:'Сильнее всего это задевает то, как вы',harm:'Сильнее всего это поддерживает то, как вы',conj:'Точнее всего это ложится на то, как вы'};
+/* Nominative subjects only, so the verb carries agreement and no case form
+   has to be stored per noun. */
+const T_TOUCH={
+  hard:(n,pl)=>`Сильнее всего тут ${pl?'страдают':'страдает'} ${n}.`,
+  harm:(n,pl)=>`Сильнее всего тут ${pl?'выигрывают':'выигрывает'} ${n}.`,
+  conj:(n,pl)=>`Точнее всего тут ${pl?'отзываются':'отзывается'} ${n}.`
+};
 function transitText(o,h){
   const v=(learnedVal(o,'tp:'+h.tp)+learnedVal(o,'np:'+h.np))/2;
   const kind=h.asp.kind==='hard'?'hard':h.asp.kind==='conj'?'conj':'harm';
   if(LANG==='ru'){
-    const func=PLANET_FUNC[h.np]||lc(PN(h.np));
-    let text=`${T_WEATHER[h.tp]||PN(h.tp)}. ${T_TOUCH[kind]} ${func}. ${(T_DO[h.tp]&&T_DO[h.tp][kind])||''}`;
+    const tn=nounOf(h.np);
+    let text=`${T_WEATHER[h.tp]||PN(h.tp)}. ${T_TOUCH[kind](tn[0],tn[1])} ${(T_DO[h.tp]&&T_DO[h.tp][kind])||''}`;
     if(v<=-0.6) text+=' По вашим прошлым отметкам такие дни даются вам тяжелее обычного: планируйте мягче.';
     else if(v>=0.6) text+=' По вашим прошлым отметкам вы проходите такие дни хорошо: можно брать больше.';
     return text.trim();
