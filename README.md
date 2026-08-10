@@ -38,12 +38,21 @@ collapsing the MC colour into the aspect colour both make it fail by name.
   against real ephemeris for 1990-01-01 Moscow: Sun 10°41′ Cap, Saturn 15°38′ Cap,
   Uranus 5°46′ Cap, Neptune 12°02′ Cap, Pluto 17°05′ Sco - all correct to arc-minutes.
   This is the **seam** where Swiss Ephemeris (WASM) drops in for arc-second grade.
-- **Chart wheel** (SVG) with sign sectors, whole-sign houses, ASC/MC axis, aspect lines
-  (colour + dash by family), and **tap-to-isolate** (tap a planet → its aspects light up,
-  detail sheet opens).
-- **Offline interpretation** composed from a stub corpus (planet-in-sign, aspects).
+- **Chart wheel** (SVG) with sign sectors, Placidus houses, ASC/MC axis, aspect lines
+  coloured and dashed by family, and tap-to-isolate: tapping a planet lights up its
+  aspects and opens a detail sheet. Beyond the polar circle the house calculation
+  falls back to equal houses, since Placidus is undefined there.
+- **Offline interpretation**: 212 readings written for specific planet pairs, one per
+  aspect type, plus per-sign and per-house phrasing. No astrological jargon in the
+  prose; the terms appear only in card titles.
 - **Live transit engine** - today's transits vs the natal chart, ranked by personal weight.
 - **On-device personalization loop** (the point below).
+- **Installs and runs offline.** Manifest, icons and a service worker that precaches the
+  shell. Verified by stopping the server and reloading.
+- **Two themes** with a switch in the header, following the system until it is touched.
+  Every text pair clears WCAG AA in both; the numbers are in the test suite.
+- **Self-hosted type** (Inter and Literata, subset to 101 KB) so the same text renders
+  the same way on every device.
 
 ## The key idea: personalization WITHOUT any API
 
@@ -96,8 +105,9 @@ cached forever per (chart, day, corpus version), so a day is never regenerated.
 
 1. **Swap ephemeris → swisseph-WASM (Moshier mode)** - arc-second accuracy, all house
    systems, Chiron/nodes/asteroids, offline, no data files. (~0.35 MB wasm.)
-2. **Real corpus** (~1,900 units, ~0.7 MB) - generated once with Claude to a strict schema
-   (tone, theme vectors, variants), then human-edited. Shipped static; owned outright.
+2. **Decide the corpus question.** The hand-written tables are now the real corpus. Either
+   widen them (house-in-sign, dignities beyond four buckets) or reconnect the Podvodny
+   material that currently only supplies tags.
 3. **Offline atlas** - GeoNames cities15000 packed (~1.6 MB) + tzdb history tables
    (~0.12 MB) + manual UTC-offset override for pre-1970 births.
 4. **Rectification** - candidate-time scanner (±2 h @ 1-min, ~1.5–3 s on phone), scoring
@@ -109,14 +119,21 @@ cached forever per (chart, day, corpus version), so a day is never regenerated.
 
 Total offline core budget: **~3.9 MB** - fits one service-worker precache.
 
-## Known prototype shortcuts
+## Known limitations
 
-- Positions are arc-minute grade (analytic series), not arc-second (production: swisseph).
-- Houses are whole-sign only (production: Placidus/Koch/etc. from swisseph).
-- Zodiac glyphs in the SVG wheel render as OS colour emoji on some platforms; production
-  uses the monochrome **Astronomicon** glyph font for the papery aesthetic.
-- Corpus is a stub; the composition engine (scoring, dedup, tension-framing) is designed
-  but only partially wired here.
+- Positions are arc-minute grade. The analytic series was checked against an external
+  ephemeris for 1990-01-01 Moscow and matched to within one arc-minute, but Swiss
+  Ephemeris is the standard and this is not it. Item 1 of the roadmap.
+- The interpretation corpus derived from Podvodny (38 KB) no longer produces any prose.
+  It feeds the keyword tags under each card heading and nothing else. The readings the
+  user sees come from tables written by hand. Either the corpus goes back to work or it
+  should be recognised as a tag dictionary and shrunk to one.
+- Development used a single test chart almost throughout. Configurations absent from it,
+  such as stelliums or a planet with no aspects at all, have had little exercise.
+- No synastry, progressions, solar returns or composites. Kerykeion and similar engines
+  have them.
+- Everything lives in one 283 KB file. That has kept the project free of a build step,
+  and it will eventually stop being an advantage.
 
 ---
 
