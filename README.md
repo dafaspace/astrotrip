@@ -124,10 +124,10 @@ Total offline core budget: **~3.9 MB** - fits one service-worker precache.
 - Positions are arc-minute grade. The analytic series was checked against an external
   ephemeris for 1990-01-01 Moscow and matched to within one arc-minute, but Swiss
   Ephemeris is the standard and this is not it. Item 1 of the roadmap.
-- The interpretation corpus derived from Podvodny (38 KB) no longer produces any prose.
-  It feeds the keyword tags under each card heading and nothing else. The readings the
-  user sees come from tables written by hand. Either the corpus goes back to work or it
-  should be recognised as a tag dictionary and shrunk to one.
+- The keyword tags under each card heading come from a small weighted dictionary
+  (`TAG_TOKENS`, 5.5 KB). It began as prose distilled from Podvodny, but the readings
+  are written by hand now and only the weights were ever read, so the unused 32 KB was
+  removed rather than left to look like a source of truth.
 - Development used a single test chart almost throughout. Configurations absent from it,
   such as stelliums or a planet with no aspects at all, have had little exercise.
 - No synastry, progressions, solar returns or composites. Kerykeion and similar engines
