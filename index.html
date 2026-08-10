@@ -270,6 +270,10 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
     <label style="display:flex;align-items:center;gap:7px;margin-top:10px;text-transform:none;font-size:13px;color:var(--ink2);cursor:pointer">
       <input id="showSeconds" type="checkbox" style="width:auto"><span data-i="secondsLabel"></span>
     </label>
+    <div style="margin-top:10px">
+      <label data-i="hsysLabel"></label>
+      <select id="hsys"></select>
+    </div>
     <div style="margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
       <button class="primary" id="calc" data-i="cast"></button>
       <span class="tiny" data-i="hint"></span>
@@ -344,6 +348,7 @@ const STR = {
   city:{ru:'Город рождения',en:'Birth city'},
   cityph:{ru:'Начните вводить название...',en:'Start typing a name...'},
   hint:{ru:'Смещение UTC подставляется автоматически из часового пояса города для точной даты, исторические переходы учтены.',en:'The UTC offset fills in automatically from the city time zone for the exact date, historical shifts included.'},
+  hsysLabel:{ru:'СИСТЕМА ДОМОВ',en:'HOUSE SYSTEM'},
   secondsLabel:{ru:'Показывать угловые секунды в позициях',en:'Show arc-seconds in positions'},
   needdata:{ru:'Заполните дату, время и место.',en:'Fill in date, time and place.'},
   empty:{ru:'Введите данные рождения и постройте карту.',en:'Enter birth data and cast the chart.'},
@@ -670,7 +675,7 @@ function computeChart(y,mo,day,localH,tzOff,lat,lng){
   const mc=atan2d(sind(ramc),cosd(ramc)*cosd(ecl));
   let asc=atan2d(cosd(ramc),-(sind(ramc)*cosd(ecl)+tand(lat)*sind(ecl)));
   if(rev(asc-mc)>180) asc=rev(asc+180);
-  const houses=placidusCusps(ramc,lat,ecl,asc,mc);
+  const houses=HOUSE_SYSTEMS[HSYS].fn(ramc,lat,ecl,asc,mc);
   return {pos,asc,mc,ecl,houses,d};
 }
 
@@ -680,11 +685,46 @@ function computeChart(y,mo,day,localH,tzOff,lat,lng){
    Cusp 11: RA = RAMC + SA_d/3;  cusp 12: RAMC + 2*SA_d/3;
    cusp 2:  RA = RAMC + SA_d + SN/3;  cusp 3: RAMC + SA_d + 2*SN/3.
    Falls back to equal houses beyond the polar circle where Placidus is undefined. */
+/* House systems.
+   Quadrant systems here share one construction: a cusp is the ascendant taken
+   under a modified pole P, so
+     R = RAMC + H - 90,  lon = atan2(cos R, -(sin R cos e + tan P sin e))
+   with H = 30,60,90,120,150 for cusps 11,12,1,2,3. The systems differ only in P:
+     Regiomontanus  tan P = tan(lat) sin H     (equator divided in 30 arcs)
+     Campanus       sin P = sin(lat) sin H     (prime vertical divided instead)
+   Both reduce correctly at the angles: H=90 gives P=lat and the true Ascendant,
+   H=0 gives P=0 and the Midheaven, which is how the formulas were checked.
+   Koch is deliberately absent: its pole definition did not come out of the
+   sources unambiguously, and an unverified house system is worse than none. */
+function ascUnderPole(ramc,pole,ecl,H){
+  const R=rev(ramc+H-90);
+  return rev(atan2d(cosd(R), -(sind(R)*cosd(ecl)+tand(pole)*sind(ecl))));
+}
+function quadrantCusps(ramc,lat,ecl,asc,mc,poleOf,name){
+  const q=[30,60,120,150].map(H=>ascUnderPole(ramc,poleOf(H,lat),ecl,H));
+  const [c11,c12,c2,c3]=q;
+  return {cusps:[asc,c2,c3,rev(mc+180),rev(c11+180),rev(c12+180),
+                 rev(asc+180),rev(c2+180),rev(c3+180),mc,c11,c12],system:name};
+}
+function porphyryCusps(asc,mc){
+  /* Pure ecliptic trisection of each quadrant. Exact, no iteration. */
+  const q1=rev(asc-mc), q2=rev(rev(mc+180)-asc);
+  return {cusps:[asc, rev(asc+q2/3), rev(asc+2*q2/3), rev(mc+180),
+                 rev(mc+180+q1/3), rev(mc+180+2*q1/3), rev(asc+180),
+                 rev(asc+180+q2/3), rev(asc+180+2*q2/3), mc,
+                 rev(mc+q1/3), rev(mc+2*q1/3)],system:'porphyry'};
+}
+function equalCusps(asc){
+  const c=[];for(let i=0;i<12;i++)c[i]=rev(asc+i*30);
+  return {cusps:c,system:'equal'};
+}
+function wholeSignCusps(asc){
+  const start=Math.floor(rev(asc)/30)*30, c=[];
+  for(let i=0;i<12;i++)c[i]=rev(start+i*30);
+  return {cusps:c,system:'whole'};
+}
 function placidusCusps(ramc,lat,ecl,asc,mc){
-  if(Math.abs(lat)>66){
-    const c=[];for(let i=0;i<12;i++)c[i]=rev(asc+i*30);
-    return {cusps:c,system:'equal'};
-  }
+  if(Math.abs(lat)>66) return equalCusps(asc);
   function raToLon(ra){ return atan2d(sind(ra), cosd(ra)*cosd(ecl)); }
   function iterCusp(start,f,nocturnal){
     let ra=rev(ramc+start);
@@ -703,6 +743,18 @@ function placidusCusps(ramc,lat,ecl,asc,mc){
   const cusps=[asc,c2,c3,rev(mc+180),rev(c11+180),rev(c12+180),rev(asc+180),rev(c2+180),rev(c3+180),mc,c11,c12];
   return {cusps,system:'placidus'};
 }
+const HOUSE_SYSTEMS={
+  placidus:{ru:'Плацидус',en:'Placidus',fn:(ramc,lat,ecl,asc,mc)=>placidusCusps(ramc,lat,ecl,asc,mc)},
+  regiomontanus:{ru:'Региомонтан',en:'Regiomontanus',fn:(ramc,lat,ecl,asc,mc)=>
+    Math.abs(lat)>88?equalCusps(asc):quadrantCusps(ramc,lat,ecl,asc,mc,(H,la)=>Math.atan(tand(la)*sind(H))*R2D,'regiomontanus')},
+  campanus:{ru:'Кампанус',en:'Campanus',fn:(ramc,lat,ecl,asc,mc)=>
+    Math.abs(lat)>88?equalCusps(asc):quadrantCusps(ramc,lat,ecl,asc,mc,(H,la)=>asind(Math.max(-1,Math.min(1,sind(la)*sind(H)))),'campanus')},
+  porphyry:{ru:'Порфирий',en:'Porphyry',fn:(ramc,lat,ecl,asc,mc)=>porphyryCusps(asc,mc)},
+  equal:{ru:'Равнодомная',en:'Equal',fn:(ramc,lat,ecl,asc)=>equalCusps(asc)},
+  whole:{ru:'Цельнознаковая',en:'Whole sign',fn:(ramc,lat,ecl,asc)=>wholeSignCusps(asc)}
+};
+let HSYS=Object.keys(HOUSE_SYSTEMS).includes(localStorage.getItem('astrarium_hsys'))
+  ? localStorage.getItem('astrarium_hsys') : 'placidus';
 function houseOf(lon,cusps){
   for(let h=0;h<12;h++){
     const a=cusps[h], span=rev(cusps[(h+1)%12]-a);
@@ -1996,7 +2048,9 @@ function run(){
   CURRENT=computeChart(y,mo,da,hh+mi/60,tz,lat,lng); ISO=null;
   document.getElementById('results').style.display='';
   document.getElementById('emptycard').style.display='none';
-  document.getElementById('charttitle').textContent=`${t('natal')} · ${CURRENT.houses.system==='placidus'?t('housesys'):t('housesyseq')}`;
+  const hs=HOUSE_SYSTEMS[CURRENT.houses.system];
+  document.getElementById('charttitle').textContent=
+    `${t('natal')} · ${(hs?hs[LANG]:CURRENT.houses.system)}`;
   drawWheel(CURRENT); renderPositions(CURRENT);
   document.getElementById('reading').innerHTML=natalReading(CURRENT);
   if(!document.getElementById('transitDate').value) document.getElementById('transitDate').value=todayStr();
@@ -2016,7 +2070,7 @@ document.getElementById('showSeconds').addEventListener('change',e=>{
 });
 /* Must not match the theme switcher, which shares the .lang styling. */
  document.querySelectorAll('.lang button[data-lang]').forEach(b=>b.addEventListener('click',()=>{
-  LANG=b.dataset.lang; localStorage.setItem('astrarium_lang',LANG); applyStatic(); if(CURRENT)run();
+  LANG=b.dataset.lang; localStorage.setItem('astrarium_lang',LANG); applyStatic(); fillHsys(); if(CURRENT)run();
 }));
 document.getElementById('city').addEventListener('input',e=>renderCityList(searchCities(e.target.value)));
 document.getElementById('city').addEventListener('focus',e=>renderCityList(searchCities(e.target.value)));
@@ -2024,6 +2078,21 @@ document.getElementById('city').addEventListener('blur',()=>{setTimeout(()=>{doc
 document.getElementById('date').addEventListener('change',updateTzAuto);
 document.getElementById('time').addEventListener('change',updateTzAuto);
 document.getElementById('tz').addEventListener('input',()=>{TZ_AUTO=false;});
+
+/* House system: the choice persists and re-casts the chart in place. Beyond the
+   polar circle Placidus is undefined and the calculation falls back to equal
+   houses, which is why the title reports the system actually used, not the one
+   requested. */
+function fillHsys(){
+  const sel=document.getElementById('hsys');
+  sel.innerHTML=Object.entries(HOUSE_SYSTEMS)
+    .map(([k,v])=>`<option value="${k}"${k===HSYS?' selected':''}>${v[LANG]}</option>`).join('');
+}
+document.getElementById('hsys').addEventListener('change',e=>{
+  HSYS=e.target.value; localStorage.setItem('astrarium_hsys',HSYS);
+  if(CURRENT) run();
+});
+fillHsys();
 
 /* Theme: the system decides until the switch is touched, the stored choice
    after that. The media-based theme-color tags cannot see a manual override,

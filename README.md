@@ -20,9 +20,11 @@ stale build cannot pass, because the harness clears the service worker and its
 caches first. That mattered: before it did, a deliberately broken app passed
 every check.
 
-35 checks in five groups. Ephemeris (one position set verified against an
+42 checks in six groups. Ephemeris (one position set verified against an
 external reference, two regression anchors), robustness (1850-2200, polar
-latitudes, southern hemisphere, equal-house fallback), the reading (no
+latitudes, southern hemisphere), house systems (angles land on the cusps, cusps run
+round the circle without crossing, the quadrant systems coincide at the equator), the
+reading (no
 repeated sentences, no leftover periphrasis, no invented deadlines, full
 pair coverage), contrast (every text pair against WCAG AA, chart lines and
 sector glyphs, in both themes), and interface wiring (the theme switch must
@@ -38,10 +40,15 @@ collapsing the MC colour into the aspect colour both make it fail by name.
   against real ephemeris for 1990-01-01 Moscow: Sun 10°41′ Cap, Saturn 15°38′ Cap,
   Uranus 5°46′ Cap, Neptune 12°02′ Cap, Pluto 17°05′ Sco - all correct to arc-minutes.
   This is the **seam** where Swiss Ephemeris (WASM) drops in for arc-second grade.
-- **Chart wheel** (SVG) with sign sectors, Placidus houses, ASC/MC axis, aspect lines
-  coloured and dashed by family, and tap-to-isolate: tapping a planet lights up its
-  aspects and opens a detail sheet. Beyond the polar circle the house calculation
-  falls back to equal houses, since Placidus is undefined there.
+- **Six house systems**: Placidus, Regiomontanus, Campanus, Porphyry, equal and whole
+  sign, chosen in the form and remembered. Beyond the polar circle Placidus is
+  undefined and the calculation falls back to equal houses, so the chart title names
+  the system actually used rather than the one asked for. Koch is deliberately absent:
+  its pole definition did not come out of the sources unambiguously, and an unverified
+  house system is worse than none.
+- **Chart wheel** (SVG) with sign sectors, ASC/MC axis, aspect lines coloured and
+  dashed by family, and tap-to-isolate: tapping a planet lights up its aspects and
+  opens a detail sheet.
 - **Offline interpretation**: 212 readings written for specific planet pairs, one per
   aspect type, plus per-sign and per-house phrasing. No astrological jargon in the
   prose; the terms appear only in card titles.

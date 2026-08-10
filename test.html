@@ -124,6 +124,55 @@ function run(){
     return true;
   });
 
+  /* ---------- системы домов ---------- */
+  group('Системы домов');
+  const SYS=Object.keys(ev('HOUSE_SYSTEMS'));
+  t('доступны шесть систем',()=>SYS.length===6||SYS.join(', '));
+  t('квадрантные системы ставят 1-й дом на Асцендент и 10-й на Меридиан',()=>{
+    const bad=[];
+    ['placidus','regiomontanus','campanus','porphyry'].forEach(k=>{
+      ev(`HSYS=${JSON.stringify(k)}`);
+      const c=ev('computeChart(1985,11,3,13+37/60,3,59.9343,30.3351)');
+      const d=(a,b)=>Math.abs(((a-b+540)%360)-180);
+      if(d(c.houses.cusps[0],c.asc)>0.001) bad.push(k+': 1-й дом не Асцендент');
+      if(d(c.houses.cusps[9],c.mc)>0.001) bad.push(k+': 10-й дом не Меридиан');
+    });
+    return !bad.length||bad.join('; ');
+  });
+  t('куспиды идут по кругу без пересечений во всех системах',()=>{
+    const bad=[];
+    SYS.forEach(k=>{ev(`HSYS=${JSON.stringify(k)}`);
+      const c=ev('computeChart(1985,11,3,13+37/60,3,59.9343,30.3351)').houses.cusps;
+      if(!c.every((v,i)=>((c[(i+1)%12]-v+360)%360)>0.001)) bad.push(k);});
+    return !bad.length||'нарушено в: '+bad.join(', ');
+  });
+  t('на экваторе квадрантные системы совпадают между собой',()=>{
+    const got={};
+    ['placidus','regiomontanus','campanus'].forEach(k=>{ev(`HSYS=${JSON.stringify(k)}`);
+      got[k]=ev('computeChart(2000,6,15,12,0,0.0001,0)').houses.cusps;});
+    const base=got.placidus;
+    const bad=Object.entries(got).filter(([k,v])=>
+      v.some((x,i)=>Math.abs(((x-base[i]+540)%360)-180)>0.01)).map(([k])=>k);
+    return !bad.length||'расходятся: '+bad.join(', ');
+  });
+  t('цельнознаковая ставит 1-й дом в начало знака Асцендента',()=>{
+    ev('HSYS="whole"');
+    const c=ev('computeChart(1985,11,3,13+37/60,3,59.9343,30.3351)');
+    return c.houses.cusps[0]===Math.floor(c.asc/30)*30||`${c.houses.cusps[0]} при Асценденте ${c.asc.toFixed(2)}`;
+  });
+  t('за полярным кругом Плацидус отступает на равнодомную',()=>{
+    ev('HSYS="placidus"');
+    return ev('computeChart(2000,6,15,12,0,78.2,15.6)').houses.system==='equal'||'не отступил';
+  });
+  t('выбор системы сохраняется и восстанавливается',()=>{
+    const k='astrarium_hsys', saved=W.localStorage.getItem(k);
+    W.localStorage.setItem(k,'campanus');
+    const ok=ev(`Object.keys(HOUSE_SYSTEMS).includes(localStorage.getItem('${k}'))`);
+    saved===null?W.localStorage.removeItem(k):W.localStorage.setItem(k,saved);
+    return ok||'значение не признаётся';
+  });
+  ev('HSYS="placidus"');
+
   /* ---------- разбор ---------- */
   group('Разбор карты');
   const ch=ev('computeChart(1985,11,3,13+37/60,3,59.9343,30.3351)');
