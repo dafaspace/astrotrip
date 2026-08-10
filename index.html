@@ -49,7 +49,7 @@
   --axis:#ce5692; --mc:#976bd4;
   --harm:#4683c9; --hard:#cb614c; --conj:#2a9256;
   --wheelbg:#f4f2ee;
-  --fire:#e6cdc1; --earth:#b1dead; --air:#dbd3a8; --water:#b9d7e2;
+  --fire:#e3bdaa; --earth:#8cd685; --air:#d4c57d; --water:#9cccde;
   --radius:16px;
   --glass:rgba(246,242,234,.72);
 }
@@ -63,7 +63,7 @@
     --wheelbg:#0f0d19;
     --axis:#b13e78; --mc:#7f50c2; --harm:#3a6ba4;
     --hard:#a94e3b; --conj:#2a774a;
-    --fire:#38271e; --earth:#1b301a; --air:#2f2b19; --water:#1c2d34;
+    --fire:#583321; --earth:#1d4519; --air:#433c19; --water:#1d414e;
     --glass:rgba(16,15,23,.72);
 }
 *{box-sizing:border-box}
@@ -93,7 +93,12 @@ button.primary{background:var(--accentBtn);border-color:var(--accentBtn);color:v
 .lang{display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;flex:none}
 .lang button{border:none;border-radius:0;padding:6px 11px;background:var(--paper2);font-size:13px}
 .lang button.on{background:var(--accentBtn);color:var(--accentInk)}
-.lang.theme button{padding:6px 8px;display:grid;place-items:center;color:var(--ink2)}
+/* Both switches are 'pick one of two' controls of equal rank, so they read as
+   siblings: same height, radius and vertical rhythm. Only the horizontal
+   padding differs, because an icon and a two-letter label are not the same
+   width. Before this they stood 28px against 33.5px and looked misaligned. */
+.lang button{min-height:32px;display:inline-flex;align-items:center;justify-content:center}
+.lang.theme button{padding:0 10px;color:var(--ink2)}
 .lang.theme button.on{color:var(--accentInk)}
 .mono,.deg{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
 svg{display:block;width:100%;height:auto;touch-action:manipulation}
@@ -1677,7 +1682,10 @@ function drawWheel(ch){
   });
   // --- zodiac ring (12 x 30°) ---
   for(let i=0;i<12;i++){
-    s+=sector(i*30,(i+1)*30,rZodIn,rHouIn,ELEM_VAR[i%4],0.55);
+    /* Solid, not translucent: the colour is already solved for its contrast
+       against the wheel ground, and drawing it at 0.55 alpha dropped that
+       from 1.55 to 1.15, which is what made the sectors look washed out. */
+    s+=sector(i*30,(i+1)*30,rZodIn,rHouIn,ELEM_VAR[i%4],1);
     const [gx,gy]=polar(i*30+15,(rZodIn+rHouIn)/2);
     s+=`<text x="${gx.toFixed(1)}" y="${(gy+5.5).toFixed(1)}" text-anchor="middle" font-size="15" font-family="Astro" fill="var(--ink)">${SIGN_GLYPH[i]}</text>`;
   }
