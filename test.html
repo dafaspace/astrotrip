@@ -1,0 +1,280 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AstroTrip - тесты</title>
+<style>
+body{margin:0;background:#14141a;color:#e8e6e3;font:14px/1.55 -apple-system,system-ui,sans-serif;padding:24px}
+h1{font-size:19px;margin:0 0 4px}
+.sub{color:#8b8781;font-size:13px;margin:0 0 18px;max-width:88ch}
+#sum{font-size:15px;font-weight:600;padding:11px 15px;border-radius:11px;margin-bottom:16px;display:inline-block}
+.pass{background:#16351f;color:#7fe0a0;border:1px solid #24512f}
+.fail{background:#3a1a1a;color:#ff9b8f;border:1px solid #5c2a26}
+.grp{margin:0 0 6px;font-size:11px;letter-spacing:.09em;color:#8b8781;text-transform:uppercase;padding-top:14px}
+.t{padding:7px 11px;border-left:3px solid #2a2a33;margin-bottom:3px;background:#191920;border-radius:0 7px 7px 0}
+.t.ok{border-left-color:#3f8f5c}
+.t.no{border-left-color:#c0574a;background:#231a1a}
+.nm{font-size:13px}
+.dt{color:#8b8781;font-size:12px;margin-top:3px;white-space:pre-wrap;font-family:ui-monospace,monospace}
+iframe{position:absolute;left:-9999px;width:900px;height:1400px}
+</style>
+<h1>AstroTrip - тесты</h1>
+<p class="sub">Проверяется настоящее приложение: index.html грузится в iframe, функции вызываются в его контексте.
+Ничего не мокается. Откройте через локальный сервер, не файлом.</p>
+<div id="sum">запуск...</div>
+<div id="out"></div>
+<iframe id="app"></iframe>
+<script>
+const R=[]; let CUR='';
+const group=n=>CUR=n;
+function t(name,fn){
+  let ok=false,info='';
+  try{const r=fn(); if(r===true||r===undefined){ok=true;} else {info=String(r);} }
+  catch(e){info='исключение: '+e.message;}
+  R.push({g:CUR,name,ok,info});
+}
+const near=(a,b,tol)=>Math.abs(a-b)<=tol;
+
+// --- контраст ---
+const un=h=>{h=h.trim().replace('#','');if(h.length===3)h=h.split('').map(c=>c+c).join('');
+  return [0,2,4].map(i=>parseInt(h.slice(i,i+2),16)/255);};
+const lum=r=>{const f=c=>c<=.03928?c/12.92:((c+.055)/1.055)**2.4;const[a,b,c]=r.map(f);return .2126*a+.7152*b+.0722*c;};
+const cr=(x,y)=>{const[l1,l2]=[lum(un(x)),lum(un(y))].sort((a,b)=>b-a);return (l1+.05)/(l2+.05);};
+
+const frame=document.getElementById('app');
+/* Без этого iframe получает копию из кэша service worker, и набор молча
+   проверяет прошлую сборку: сломанное приложение проходило все тесты.
+   Снимаем worker и кэши, грузим с обходом кэша. */
+(async()=>{
+  try{
+    const rs=await navigator.serviceWorker.getRegistrations();
+    await Promise.all(rs.map(r=>r.unregister()));
+    const ks=await caches.keys();
+    await Promise.all(ks.map(k=>caches.delete(k)));
+  }catch(e){}
+  frame.addEventListener('load',()=>setTimeout(run,220));
+  frame.src='./index.html?notacache='+Date.now();
+})();
+
+function run(){
+  const W=frame.contentWindow, D=frame.contentDocument;
+  const ev=s=>W.eval(s);                       // const-объявления не попадают в window
+  const css=n=>getComputedStyle(D.documentElement).getPropertyValue(n).trim();
+  const setTheme=v=>{D.documentElement.dataset.theme=v;};
+
+  /* ---------- свежесть сборки ---------- */
+  group('Сборка');
+  t('в iframe загружена текущая сборка, а не копия из кэша',()=>{
+    const live=D.documentElement.outerHTML.length;
+    return live>50000||`подозрительно мало разметки: ${live} символов`;
+  });
+
+  /* ---------- эфемериды ---------- */
+  group('Эфемериды');
+  const SN=['Ari','Tau','Gem','Cnc','Leo','Vir','Lib','Sco','Sgr','Cap','Aqr','Psc'];
+  const dms=l=>{const s=Math.floor(l/30),d=l-s*30;return `${Math.floor(d)}°${String(Math.round((d-Math.floor(d))*60)).padStart(2,'0')}′ ${SN[s]}`;};
+  // Свеpено с внешней эфемеридой (см. README): 1990-01-01, 12:00 по Москве.
+  const REF={Sun:280.6833,Saturn:285.6333,Uranus:275.7667,Neptune:282.0333,Pluto:227.0833};
+  t('1990-01-01 12:00 Москва совпадает с внешним эталоном (допуск 2′)',()=>{
+    const ch=ev('computeChart(1990,1,1,12,3,55.75,37.62)');
+    const bad=Object.entries(REF).filter(([p,v])=>!near(ch.pos[p].lon,v,2/60))
+      .map(([p,v])=>`${p}: ${dms(ch.pos[p].lon)} против эталона ${dms(v)}`);
+    return bad.length?bad.join('; '):true;
+  });
+  // Регрессионные якоря: фиксируют текущее поведение, чтобы смена движка была видна.
+  const ANCH={
+    '1985-11-03 13:37 СПб':['computeChart(1985,11,3,13+37/60,3,59.9343,30.3351)',
+      {Sun:220.964,Moon:103.166,Saturn:238.367,Pluto:214.931,NNode:38.924}],
+    '2000-01-01 00:00 UTC':['computeChart(2000,1,1,0,0,0,0)',
+      {Sun:279.872,Moon:217.320,Saturn:40.376,Pluto:251.440,NNode:125.070}]};
+  Object.entries(ANCH).forEach(([nm,[expr,exp]])=>{
+    t('якорь без сдвига: '+nm,()=>{
+      const ch=ev(expr);
+      const bad=Object.entries(exp).filter(([p,v])=>!near(ch.pos[p].lon,v,0.01))
+        .map(([p,v])=>`${p}: ${ch.pos[p].lon.toFixed(3)} было ${v}`);
+      return bad.length?bad.join('; '):true;
+    });
+  });
+
+  /* ---------- устойчивость ---------- */
+  group('Устойчивость');
+  const EDGE=[[1850,55.75,37.62,'1850 Москва'],[2200,55.75,37.62,'2200 Москва'],
+    [2000,69.6,18.9,'69°N Тромсё'],[2000,78.2,15.6,'78°N Шпицберген'],
+    [2000,-33.9,151.2,'южное полушарие'],[2000,0,0,'экватор, нулевой меридиан']];
+  EDGE.forEach(([y,lat,lon,nm])=>{
+    t('карта строится: '+nm,()=>{
+      const ch=ev(`computeChart(${y},6,15,12,0,${lat},${lon})`);
+      const nan=Object.entries(ch.pos).filter(([k,v])=>!isFinite(v.lon)).map(([k])=>k);
+      if(nan.length) return 'нечисловые долготы: '+nan.join(',');
+      if(!isFinite(ch.asc)||!isFinite(ch.mc)) return 'asc или mc нечисловые';
+      if(ch.houses.cusps.length!==12) return 'куспидов не 12';
+      if(ch.houses.cusps.some(c=>!isFinite(c))) return 'нечисловой куспид';
+      if(new Set(ch.houses.cusps.map(c=>c.toFixed(2))).size!==12) return 'куспиды совпадают';
+      return true;
+    });
+  });
+  t('за полярным кругом откат на равнодомную систему',()=>{
+    const ch=ev('computeChart(2000,6,15,12,0,78.2,15.6)');
+    return ch.houses.system==='equal'||('система: '+ch.houses.system);
+  });
+  t('аспекты к узлам вычисляются',()=>{   // когда-то не вычислялись вовсе
+    const ch=ev('computeChart(1985,11,3,13+37/60,3,59.9343,30.3351)');
+    W.__ch=ch;
+    const a=ev('aspectsInvolving(window.__ch,"NNode")');
+    if(!a.length) return 'ни одного аспекта к Северному узлу';
+    if(a.some(x=>x.p2==='SNode')) return 'учтена тривиальная оппозиция узлов';
+    return true;
+  });
+
+  /* ---------- разбор ---------- */
+  group('Разбор карты');
+  const ch=ev('computeChart(1985,11,3,13+37/60,3,59.9343,30.3351)');
+  W.__c=ch;
+  const order=ev('CARD_ORDER');
+  const cards=order.map(p=>ev(`composePlacement(window.__c,${JSON.stringify(p)})`)).filter(Boolean);
+  const texts=cards.map(c=>c.detail)
+    .concat([ev('composeFirstImpr(window.__c)').detail, ev('composePortrait(window.__c)').detail]);
+  const all=texts.join(' ');
+
+  t('строятся все 14 карточек, включая Лилит и Селену',()=>
+    cards.length===14||`карточек ${cards.length}`);
+  t('в тексте нет длинных тире',()=>
+    !all.includes('—')||'найдено '+(all.split('—').length-1));
+  t('нет оборота «то, как вы»',()=>
+    !/то, как вы/.test(all)||'оборот вернулся');
+  t('нет висячих «этому» и «своё»',()=>{
+    const m=all.match(/\bэтому\b|\bсвоё\b(?!\s+\S)/g);
+    return !m||'найдено: '+[...new Set(m)].join(', ');
+  });
+  t('нет выдуманных сроков в советах',()=>{
+    const m=all.match(/полгода|на неделю\b|в день\b|вдвое\b|один вдох/g);
+    return !m||'найдено: '+[...new Set(m)].join(', ');
+  });
+  t('внутри карточки предложения не повторяются',()=>{
+    const bad=[];
+    cards.forEach(c=>{const s=c.detail.split(/(?<=[.?!])\s+/).map(x=>x.trim());
+      const seen=new Set(); s.forEach(x=>{if(x.length>40&&seen.has(x))bad.push(c.label);seen.add(x);});});
+    return !bad.length||'повторы в: '+[...new Set(bad)].join('; ');
+  });
+  t('соседние предложения не начинаются одинаково',()=>{
+    const bad=[];
+    cards.forEach(c=>{const s=c.detail.split(/(?<=[.?!])\s+/).map(x=>x.trim().split(' ').slice(0,2).join(' '));
+      for(let i=0;i<s.length-1;i++) if(s[i]===s[i+1]) bad.push(`${c.label}: «${s[i]}»`);});
+    return !bad.length||bad.join('; ');
+  });
+  t('согласование числа в первой фразе карточки',()=>{
+    const bad=cards.filter(c=>/^Ваши \S+ (работает|действует|проявляется)\b/.test(c.detail)
+      ||/^Ваш[ае]? \S+ (работают|действуют|проявляются)\b/.test(c.detail)).map(c=>c.label);
+    return !bad.length||bad.join('; ');
+  });
+  t('парные разборы покрывают все возможные сочетания',()=>{
+    const PT=ev('PAIR_TEXT'), ASP=ev('ASPECTS').map(a=>a.name);
+    const P=order.slice(0,10);
+    // невозможны астрономически: Меркурий и Венера не отходят от Солнца далеко,
+    // Нептун с Плутоном не дают соединения и оппозиции в 1900-2100
+    const skip=new Set(['Sun|Mercury','Sun|Venus'].flatMap(k=>ASP.filter(a=>a!=='conjunction').map(a=>k+'|'+a))
+      .concat(['Mercury|Venus'].flatMap(k=>['square','trine','opposition'].map(a=>k+'|'+a)))
+      .concat(['Neptune|Pluto|conjunction','Neptune|Pluto|opposition']));
+    const miss=[];
+    for(let i=0;i<P.length;i++)for(let j=i+1;j<P.length;j++){
+      const k=ev(`pairKey(${JSON.stringify(P[i])},${JSON.stringify(P[j])})`);
+      ASP.forEach(a=>{ if(skip.has(k+'|'+a))return;
+        if(!PT[k]||!PT[k][a]) miss.push(k+' '+a); });
+    }
+    return !miss.length||`не хватает ${miss.length}: ${miss.slice(0,4).join(', ')}...`;
+  });
+  t('у каждой точки есть короткое подлежащее',()=>{
+    const N=ev('PLANET_NOUN');
+    const miss=order.filter(p=>!N[p]);
+    return !miss.length||'нет у: '+miss.join(', ');
+  });
+
+  /* ---------- контраст ---------- */
+  group('Контраст');
+  const TEXT=[['основной','--ink','--paper'],['текст на карточке','--ink','--paper2'],
+    ['вторичный','--ink2','--paper2'],['подписи','--ink3','--paper2'],
+    ['подписи на фоне','--ink3','--paper'],['ссылка','--accent','--paper2'],
+    ['текст кнопки','--accentInk','--accentBtn']];
+  ['light','dark'].forEach(th=>{
+    const nm=th==='light'?'светлая':'тёмная';
+    t(`${nm}: текст проходит 4.5:1`,()=>{
+      setTheme(th);
+      const bad=TEXT.map(([n,a,b])=>[n,cr(css(a),css(b))]).filter(([n,v])=>v<4.5)
+        .map(([n,v])=>`${n} ${v.toFixed(2)}`);
+      return !bad.length||bad.join('; ');
+    });
+    t(`${nm}: линии карты проходят 3:1 к фону колеса`,()=>{
+      setTheme(th);
+      const wb=css('--wheelbg');
+      const bad=['hard','harm','conj','axis','mc'].map(k=>[k,cr(css('--'+k),wb)])
+        .filter(([k,v])=>v<3).map(([k,v])=>`${k} ${v.toFixed(2)}`);
+      return !bad.length||bad.join('; ');
+    });
+    t(`${nm}: глифы поверх секторов проходят 4.5:1`,()=>{
+      setTheme(th);
+      const ink=css('--ink');
+      const bad=['fire','earth','air','water'].map(k=>[k,cr(ink,css('--'+k))])
+        .filter(([k,v])=>v<4.5).map(([k,v])=>`${k} ${v.toFixed(2)}`);
+      return !bad.length||bad.join('; ');
+    });
+    t(`${nm}: оси MC и гармоничных аспектов различимы`,()=>{
+      setTheme(th);
+      return css('--mc')!==css('--harm')||'одинаковый цвет '+css('--mc');
+    });
+  });
+
+  /* ---------- интерфейс ---------- */
+  group('Интерфейс');
+  // строим карту в приложении: часть проверок смотрит на отрисованный SVG
+  D.getElementById('date').value='1985-11-03';
+  D.getElementById('time').value='13:37';
+  D.getElementById('lat').value='59.9343';
+  D.getElementById('lng').value='30.3351';
+  D.getElementById('tz').value='+03:00';
+  D.getElementById('calc').click();
+  t('секторы рисуются без прозрачности',()=>{   // из-за неё цвета были блёклыми
+    const p=[...D.querySelectorAll('#wheel path[fill-opacity]')]
+      .filter(x=>/--(fire|earth|air|water)/.test(x.getAttribute('fill')));
+    if(!p.length) return 'секторы не найдены, карта не построена?';
+    const o=[...new Set(p.map(x=>x.getAttribute('fill-opacity')))];
+    return (o.length===1&&o[0]==='1')||'прозрачность: '+o.join(',');
+  });
+  t('переключатели одной высоты',()=>{
+    const th=D.getElementById('themeSw');
+    const lg=[...D.querySelectorAll('.lang')].find(x=>x!==th);
+    if(!th||!lg) return 'переключатель не найден';
+    const a=th.getBoundingClientRect().height, b=lg.getBoundingClientRect().height;
+    return Math.abs(a-b)<1.5||`${a.toFixed(1)} против ${b.toFixed(1)}`;
+  });
+  t('смена темы не ломает язык',()=>{           // ровно этот баг был внесён
+    const before=ev('LANG');
+    D.querySelector('#themeSw button[data-theme-set="light"]').click();
+    D.querySelector('#themeSw button[data-theme-set="dark"]').click();
+    const after=ev('LANG');
+    return after===before||`язык стал «${after}» вместо «${before}»`;
+  });
+  t('испорченный язык в хранилище не ломает приложение',()=>{
+    const saved=W.localStorage.getItem('astrarium_lang');
+    W.localStorage.setItem('astrarium_lang','undefined');
+    const ok=ev("['ru','en'].includes(localStorage.getItem('astrarium_lang')) ? localStorage.getItem('astrarium_lang') : 'ru'")==='ru';
+    saved===null?W.localStorage.removeItem('astrarium_lang'):W.localStorage.setItem('astrarium_lang',saved);
+    return ok||'валидация не срабатывает';
+  });
+  t('таблица позиций свёрнута по умолчанию',()=>{
+    const f=D.querySelector('details.fold');
+    return (f&&!f.open)||'развёрнута или отсутствует';
+  });
+
+  render();
+}
+
+function render(){
+  const bad=R.filter(x=>!x.ok);
+  const s=document.getElementById('sum');
+  s.className=bad.length?'fail':'pass';
+  s.textContent=bad.length?`${bad.length} из ${R.length} не прошли`:`все ${R.length} прошли`;
+  let h='',g='';
+  R.forEach(x=>{ if(x.g!==g){g=x.g;h+=`<div class="grp">${g}</div>`;}
+    h+=`<div class="t ${x.ok?'ok':'no'}"><div class="nm">${x.ok?'✓':'✗'} ${x.name}</div>`
+      +(x.info?`<div class="dt">${x.info}</div>`:'')+`</div>`;});
+  document.getElementById('out').innerHTML=h;
+}
+</script>

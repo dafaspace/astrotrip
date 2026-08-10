@@ -12,6 +12,25 @@ self-hosted fonts, since a file origin is opaque, and the type falls back to a s
 face. Served, it installs to the home screen and runs with the network off. Nothing
 contacts the network - verify in dev tools.
 
+## Tests
+
+Open `test.html` through the same local server. It loads the real `index.html`
+in an iframe and calls its functions in that context: nothing is mocked, and a
+stale build cannot pass, because the harness clears the service worker and its
+caches first. That mattered: before it did, a deliberately broken app passed
+every check.
+
+35 checks in five groups. Ephemeris (one position set verified against an
+external reference, two regression anchors), robustness (1850-2200, polar
+latitudes, southern hemisphere, equal-house fallback), the reading (no
+repeated sentences, no leftover periphrasis, no invented deadlines, full
+pair coverage), contrast (every text pair against WCAG AA, chart lines and
+sector glyphs, in both themes), and interface wiring (the theme switch must
+not corrupt the language, which it once did).
+
+The suite is falsified, not just green: reintroducing the sector alpha and
+collapsing the MC colour into the aspect colour both make it fail by name.
+
 ## What the slice already does
 
 - **Real ephemeris, offline.** Compact analytic series (Schlyter) computes geocentric
