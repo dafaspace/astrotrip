@@ -20,7 +20,7 @@ stale build cannot pass, because the harness clears the service worker and its
 caches first. That mattered: before it did, a deliberately broken app passed
 every check.
 
-48 checks in seven groups. Ephemeris (one position set verified against an
+50 checks in seven groups. Ephemeris (one position set verified against an
 external reference, two regression anchors), robustness (1850-2200, polar
 latitudes, southern hemisphere), house systems (angles land on the cusps, cusps run
 round the circle without crossing, the quadrant systems coincide at the equator), the
@@ -56,8 +56,8 @@ collapsing the MC colour into the aspect colour both make it fail by name.
   prose; the terms appear only in card titles.
 - **Live transit engine** - today's transits vs the natal chart, ranked by personal weight.
 - **On-device personalization loop** (the point below).
-- **Chart library**: twelve composers, classical and film, plus your own charts saved
-  to this device. Each entry carries a Rodden rating. Only Mozart's time is documented
+- **Chart library**: twelve composers, classical and film, plus your own charts saved to this
+  device under a name you give them. Each entry carries a Rodden rating. Only Mozart's time is documented
   (from the baptismal record); for the rest the time is unknown, so the chart is cast
   for noon and labelled as such, since the Ascendant, the houses and the Moon's degree
   mean nothing without it. Historical entries use local mean time rather than a zone

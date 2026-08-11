@@ -293,7 +293,10 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
     <details class="card fold" id="libCard">
       <summary><h2 data-i="libTitle"></h2></summary>
       <div class="row" style="margin-bottom:10px">
+        <input id="chartName" style="width:auto;flex:1;min-width:150px">
         <button id="saveChart" data-i="saveChart"></button>
+      </div>
+      <div class="row" style="margin-bottom:10px">
         <span class="tiny" data-i="libNote"></span>
       </div>
       <div id="libList"></div>
@@ -367,6 +370,7 @@ const STR = {
   hint:{ru:'Смещение UTC подставляется автоматически из часового пояса города для точной даты, исторические переходы учтены.',en:'The UTC offset fills in automatically from the city time zone for the exact date, historical shifts included.'},
   libTitle:{ru:'Библиотека карт',en:'Chart library'},
   saveChart:{ru:'Сохранить текущую',en:'Save current'},
+  namePh:{ru:'Чья это карта? Например, «я» или «мама»',en:'Whose chart is this? For example, me or mum'},
   libNote:{ru:'Сохранённые карты хранятся только на этом устройстве',en:'Saved charts stay on this device only'},
   noTime:{ru:'время неизвестно, карта на полдень',en:'birth time unknown, cast for noon'},
   rrKnown:{ru:'время из документа',en:'time from a document'},
@@ -2120,7 +2124,7 @@ document.getElementById('showSeconds').addEventListener('change',e=>{
 });
 /* Must not match the theme switcher, which shares the .lang styling. */
  document.querySelectorAll('.lang button[data-lang]').forEach(b=>b.addEventListener('click',()=>{
-  LANG=b.dataset.lang; localStorage.setItem('astrarium_lang',LANG); applyStatic(); fillHsys(); renderLibrary(); if(CURRENT)run();
+  LANG=b.dataset.lang; localStorage.setItem('astrarium_lang',LANG); applyStatic(); fillHsys(); fillNamePh(); renderLibrary(); if(CURRENT)run();
 }));
 document.getElementById('city').addEventListener('input',e=>renderCityList(searchCities(e.target.value)));
 document.getElementById('city').addEventListener('focus',e=>renderCityList(searchCities(e.target.value)));
@@ -2133,6 +2137,9 @@ document.getElementById('tz').addEventListener('input',()=>{TZ_AUTO=false;});
    polar circle Placidus is undefined and the calculation falls back to equal
    houses, which is why the title reports the system actually used, not the one
    requested. */
+function fillNamePh(){
+  const el=document.getElementById('chartName'); if(el) el.placeholder=t('namePh');
+}
 function fillHsys(){
   const sel=document.getElementById('hsys');
   sel.innerHTML=Object.entries(HOUSE_SYSTEMS)
@@ -2143,6 +2150,7 @@ document.getElementById('hsys').addEventListener('change',e=>{
   if(CURRENT) run();
 });
 fillHsys();
+fillNamePh();
 
 /* Theme: the system decides until the switch is touched, the stored choice
    after that. The media-based theme-color tags cannot see a manual override,
@@ -2185,7 +2193,10 @@ function libRow(e,own){
     : `<span class="libmeta">${String(Math.floor(e.t)).padStart(2,'0')}:${String(Math.round((e.t%1)*60)).padStart(2,'0')}</span>`
       + (e.rr==='AA'?` <span class="libwarn">${t('rrKnown')}</span>`:'');
   const del=own?`<button class="libdel" data-del="${e.id}">${t('delChart')}</button>`:'';
-  return `<div class="libitem" data-id="${e.id}" data-own="${own?1:0}" title="${own?'':(e.src||'')}"><span class="libname">${nm}</span><span class="libmeta">${date} · ${city}</span>${time}${del}</div>`;
+  /* City is dropped when it repeats the name, which it does whenever a chart was
+     saved without one and fell back to the city. */
+  const place=(city&&city!==nm)?` · ${city}`:'';
+  return `<div class="libitem" data-id="${e.id}" data-own="${own?1:0}" title="${own?'':(e.src||'')}"><span class="libname">${nm}</span><span class="libmeta">${date}${place}</span>${time}${del}</div>`;
 }
 function renderLibrary(){
   const box=document.getElementById('libList'); if(!box) return;
@@ -2219,12 +2230,15 @@ document.getElementById('saveChart').addEventListener('click',function(){
   const d=document.getElementById('date').value, tm=document.getElementById('time').value;
   if(!d||!tm) return;
   const p=d.split('-').map(Number), q=tm.split(':').map(Number);
-  const nm=(document.getElementById('city').value||'').trim();
+  const cityV=(document.getElementById('city').value||'').trim();
+  const nameEl=document.getElementById('chartName');
+  const nm=(nameEl.value||'').trim()||cityV||`${p[2]}.${p[1]}.${p[0]}`;
   const list=savedCharts();
-  list.unshift({id:'u'+Date.now(), name:nm||`${p[2]}.${p[1]}.${p[0]}`,
+  list.unshift({id:'u'+Date.now(), name:nm,
     y:p[0], mo:p[1], d:p[2], t:q[0]+q[1]/60,
     lat:+document.getElementById('lat').value, lon:+document.getElementById('lng').value,
-    tz:parseOffset(document.getElementById('tz').value), city:nm, rr:'A', src:''});
+    tz:parseOffset(document.getElementById('tz').value), city:cityV, rr:'A', src:''});
+  nameEl.value='';
   localStorage.setItem(LKEY_CHARTS,JSON.stringify(list.slice(0,50)));
   renderLibrary();
 });

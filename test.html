@@ -301,6 +301,56 @@ function run(){
     return !bad.length||`${bad.length} замечаний: `+bad.slice(0,3).join('; ');
   });
 
+  t('свои карты сохраняются, переживают перезагрузку и удаляются',()=>{
+    const K='astrarium_charts';
+    const backup=W.localStorage.getItem(K);
+    try{
+      W.localStorage.removeItem(K); ev('renderLibrary()');
+      const base=D.querySelectorAll('#libList .libitem').length;
+      const set=(id,v)=>{D.getElementById(id).value=v;};
+      set('date','1985-11-03'); set('time','13:37'); set('lat','59.9343');
+      set('lng','30.3351'); set('tz','+03:00'); set('city','Санкт-Петербург');
+      set('chartName','я');
+      D.getElementById('saveChart').click();
+      if(D.querySelectorAll('#libList .libitem').length!==base+1) return 'строка не появилась';
+      const stored=JSON.parse(W.localStorage.getItem(K)||'[]');
+      if(stored.length!==1) return 'в хранилище '+stored.length;
+      if(stored[0].name!=='я') return 'имя не сохранилось: '+stored[0].name;
+      if(Math.abs(stored[0].t-13.6167)>0.01) return 'время не сохранилось: '+stored[0].t;
+      if(D.getElementById('chartName').value!=='') return 'поле имени не очистилось';
+      // имя не должно дублироваться местом
+      const row=D.querySelector('#libList .libitem[data-own="1"]').textContent;
+      if((row.match(/Санкт-Петербург/g)||[]).length>1) return 'город продублирован';
+      // загрузка обратно
+      set('date',''); D.querySelector('#libList .libitem[data-own="1"]').click();
+      if(D.getElementById('date').value!=='1985-11-03') return 'не загрузилась обратно';
+      // удаление
+      D.querySelector('#libList .libdel').click();
+      if(JSON.parse(W.localStorage.getItem(K)||'[]').length!==0) return 'не удалилась';
+      return true;
+    } finally {
+      backup===null?W.localStorage.removeItem(K):W.localStorage.setItem(K,backup);
+      ev('renderLibrary()');
+    }
+  });
+  t('карта без имени берёт название города и не повторяет его',()=>{
+    const K='astrarium_charts', backup=W.localStorage.getItem(K);
+    try{
+      W.localStorage.removeItem(K); ev('renderLibrary()');
+      const set=(id,v)=>{D.getElementById(id).value=v;};
+      set('date','1990-06-15'); set('time','08:20'); set('lat','55.75');
+      set('lng','37.62'); set('tz','+03:00'); set('city','Москва'); set('chartName','');
+      D.getElementById('saveChart').click();
+      const e=JSON.parse(W.localStorage.getItem(K))[0];
+      if(e.name!=='Москва') return 'имя: '+e.name;
+      const row=D.querySelector('#libList .libitem[data-own="1"]').textContent;
+      return (row.match(/Москва/g)||[]).length===1||'город показан дважды';
+    } finally {
+      backup===null?W.localStorage.removeItem(K):W.localStorage.setItem(K,backup);
+      ev('renderLibrary()');
+    }
+  });
+
   /* ---------- контраст ---------- */
   group('Контраст');
   const TEXT=[['основной','--ink','--paper'],['текст на карточке','--ink','--paper2'],

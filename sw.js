@@ -10,7 +10,7 @@
    - other same-origin GETs: cache-first with a background refresh, so icons
      and the manifest load instantly and quietly update.
    Bump CACHE on every deploy that changes a precached file. */
-const CACHE = 'astrotrip-v9';
+const CACHE = 'astrotrip-v10';
 const ASSETS = [
   './',
   './index.html',
