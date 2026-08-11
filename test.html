@@ -82,19 +82,43 @@ function run(){
       .map(([p,v])=>`${p}: ${dms(ch.pos[p].lon)} против эталона ${dms(v)}`);
     return bad.length?bad.join('; '):true;
   });
-  // Регрессионные якоря: фиксируют текущее поведение, чтобы смена движка была видна.
-  const ANCH={
+  /* Видимые геоцентрические долготы на эклиптику даты, JPL Horizons,
+     QUANTITIES=31 - ровно та величина, которую считает приложение.
+     Это не «как было вчера», а внешняя истина: если движок начнёт врать,
+     тест назовёт тело и величину расхождения в секундах дуги. */
+  const JPL={
     '1985-11-03 13:37 СПб':['computeChart(1985,11,3,13+37/60,3,59.9343,30.3351)',
-      {Sun:220.964,Moon:103.166,Saturn:238.367,Pluto:214.931,NNode:38.924}],
+      {Sun:220.9525481,Mercury:243.4017088,Venus:202.2638516,Mars:184.2654749,
+       Jupiter:308.6764555,Saturn:238.3979717,Uranus:256.0500345,Neptune:271.5696007},
+      {Moon:103.2036436,Pluto:214.9345982}],
     '2000-01-01 00:00 UTC':['computeChart(2000,1,1,0,0,0,0)',
-      {Sun:279.872,Moon:217.320,Saturn:40.376,Pluto:251.440,NNode:125.070}]};
-  Object.entries(ANCH).forEach(([nm,[expr,exp]])=>{
-    t('якорь без сдвига: '+nm,()=>{
+      {Sun:279.8592049,Mercury:271.1117994,Venus:240.9614017,Mars:327.5754592,
+       Jupiter:25.2331157,Saturn:40.4058500,Uranus:314.7840584,Neptune:303.1752420},
+      {Moon:217.2933209,Pluto:251.4371500}]};
+  const arcsec=(a,b)=>Math.abs(((a-b+540)%360)-180)*3600;
+  Object.entries(JPL).forEach(([nm,[expr,tight]])=>{
+    t('совпадает с JPL Horizons до 2″: '+nm,()=>{
       const ch=ev(expr);
-      const bad=Object.entries(exp).filter(([p,v])=>!near(ch.pos[p].lon,v,0.01))
-        .map(([p,v])=>`${p}: ${ch.pos[p].lon.toFixed(3)} было ${v}`);
-      return bad.length?bad.join('; '):true;
+      const bad=Object.entries(tight).map(([p,v])=>[p,arcsec(ch.pos[p].lon,v)])
+        .filter(([p,e])=>e>2).map(([p,e])=>`${p} на ${e.toFixed(1)}″`);
+      return bad.length?bad.join(', '):true;
     });
+  });
+  /* Луна и Плутон не входят в VSOP87 и остались на старом ряду. Порог здесь
+     не цель, а измеренная правда о них: пока он такой, это самое слабое
+     место карты, и тест обязан это показывать, а не молчать. */
+  t('Луна и Плутон на старом ряду: Луна хуже 2′, Плутон лучше 20″',()=>{
+    const out=[];
+    Object.entries(JPL).forEach(([nm,[expr,,loose]])=>{
+      const ch=ev(expr);
+      out.push(['Moon',arcsec(ch.pos.Moon.lon,loose.Moon)],
+               ['Pluto',arcsec(ch.pos.Pluto.lon,loose.Pluto)]);
+    });
+    const moon=Math.max(...out.filter(x=>x[0]==='Moon').map(x=>x[1]));
+    const plu =Math.max(...out.filter(x=>x[0]==='Pluto').map(x=>x[1]));
+    if(moon>300) return `Луна ушла на ${(moon/60).toFixed(1)}′, это хуже, чем было`;
+    if(plu>20)   return `Плутон ушёл на ${plu.toFixed(0)}″`;
+    return true;
   });
 
   /* ---------- устойчивость ---------- */

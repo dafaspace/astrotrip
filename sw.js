@@ -12,10 +12,13 @@
    Bump CACHE on every deploy that changes a precached file, and keep it equal
    to APP_VERSION in index.html: the number shown next to the title is how a
    stale install is spotted, so it has to name the same release as this cache. */
-const CACHE = 'astrotrip-v0.4.0';
+const CACHE = 'astrotrip-v0.5.0';
 const ASSETS = [
   './',
   './index.html',
+  // The ephemeris series. Without it the app cannot cast anything at all,
+  // so it is as critical as the document itself.
+  './vsop87d.js',
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
@@ -33,7 +36,8 @@ const ASSETS = [
    a fetch blip here would leave a permanently incomplete v2 cache - offline
    would fall back to a platform font, the exact layout shift self-hosting
    exists to prevent. Icons are cosmetic and may miss. */
-const CRITICAL = ASSETS.filter(u => u === './' || u.endsWith('.html') || u.endsWith('.woff2'));
+const CRITICAL = ASSETS.filter(u => u === './' || u.endsWith('.html')
+  || u.endsWith('.woff2') || u === './vsop87d.js');
 const OPTIONAL = ASSETS.filter(u => !CRITICAL.includes(u));
 
 self.addEventListener('install', e => {
