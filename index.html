@@ -362,7 +362,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
 <div class="foot" data-i="foot"></div>
 
-<script src="./vsop87d.js"></script>
+<script src="./ephemeris.js"></script>
 <script>
 "use strict";
 /* ============================================================
@@ -371,7 +371,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
 /* Bump together with CACHE in sw.js: the two are the same release, and the
    number on screen is how you tell from a phone which one you are looking at. */
-const APP_VERSION='0.6.0';
+const APP_VERSION='0.7.0';
 document.getElementById('ver').textContent=APP_VERSION;
 
 /* ---------- i18n ---------- */
@@ -417,7 +417,7 @@ const STR = {
   lasttime:{ru:'В прошлый раз',en:'Last time'}, noaspects:{ru:'Крупных аспектов в орбисе нет.',en:'No major aspects within orb.'},
   notransits:{ru:'Сейчас транзитов в орбисе нет.',en:'No transits within orb right now.'},
   learnempty:{ru:'Оцените несколько транзитов выше. Движок строит приватную модель того, как циклы реально проживаются именно вами, ранжирование и тон подстраиваются целиком на этом устройстве.',en:'Rate a few transits above. The engine builds a private model of how cycles actually land for you, ranking and tone adapt entirely on this device.'},
-  foot:{ru:'Планеты считаются по ряду VSOP87 и сверены с JPL Horizons: расхождение меньше секунды дуги. Луна и Плутон пока точны до угловых минут. Ничто здесь не выходит в сеть.',en:'Planets come from the VSOP87 series, checked against JPL Horizons and agreeing to under an arcsecond. Moon and Pluto are still arc-minute grade. Nothing here contacts the network.'}
+  foot:{ru:'Положения сверены с JPL Horizons на всех картах библиотеки: расхождение меньше четырёх секунд дуги, для XX века меньше половины. Ничто здесь не выходит в сеть.',en:'Positions are checked against JPL Horizons on every chart in the library, agreeing to within four arcseconds and to half of one for the twentieth century. Nothing here contacts the network.'}
 };
 function t(k){const s=STR[k];return s?(s[LANG]!==undefined?s[LANG]:s.en):k;}
 
@@ -427,18 +427,6 @@ const sind=x=>Math.sin(x*D2R), cosd=x=>Math.cos(x*D2R), tand=x=>Math.tan(x*D2R);
 const atan2d=(y,x)=>rev(Math.atan2(y,x)*R2D);
 const asind=x=>Math.asin(x)*R2D;
 
-/* ---------- ephemeris (Schlyter analytic series) ---------- */
-function eccAnom(M,e){
-  M=rev(M); const ed=e*R2D; let E=M+ed*sind(M)*(1+e*cosd(M));
-  for(let k=0;k<8;k++){const dE=(E-ed*sind(E)-M)/(1-e*cosd(E));E-=dE;if(Math.abs(dE)<1e-8)break;}
-  return E;
-}
-/* Days from 1999-12-31 00:00 UT (JD 2451543.5).
-   The compact integer form this used to carry counts a leap year every fourth
-   year with no exception, so it silently loses the skipped century days: it
-   was three days out for 1685 and one for 2199, which is three degrees of Sun
-   and forty of Moon. It only ever agreed with the calendar between 1900 and
-   2100. Standard Gregorian Julian Day instead. */
 function dayNumber(y,m,day,utHours){
   let yy=y, mm=m;
   if(mm<=2){ yy-=1; mm+=12; }
@@ -446,35 +434,6 @@ function dayNumber(y,m,day,utHours){
   const jd=Math.floor(365.25*(yy+4716))+Math.floor(30.6001*(mm+1))+day+B-1524.5;
   return jd-2451543.5+utHours/24;
 }
-function sunPos(d){
-  const w=282.9404+4.70935e-5*d,e=0.016709-1.151e-9*d,M=356.0470+0.9856002585*d;
-  const E=eccAnom(M,e),xv=cosd(E)-e,yv=Math.sqrt(1-e*e)*sind(E);
-  const v=atan2d(yv,xv),r=Math.sqrt(xv*xv+yv*yv),lon=rev(v+w);
-  return {lon,r,xs:r*cosd(lon),ys:r*sind(lon),Ls:rev(w+M),Msun:rev(M)};
-}
-function moonPos(d,sun){
-  const N=125.1228-0.0529538083*d,i=5.1454,w=318.0634+0.1643573223*d,a=60.2666,e=0.054900,M=115.3654+13.0649929509*d;
-  const E=eccAnom(M,e),xv=a*(cosd(E)-e),yv=a*Math.sqrt(1-e*e)*sind(E);
-  const v=atan2d(yv,xv),r=Math.sqrt(xv*xv+yv*yv);
-  let xh=r*(cosd(N)*cosd(v+w)-sind(N)*sind(v+w)*cosd(i));
-  let yh=r*(sind(N)*cosd(v+w)+cosd(N)*sind(v+w)*cosd(i));
-  let zh=r*(sind(v+w)*sind(i));
-  let lon=atan2d(yh,xh),lat=asind(zh/r);
-  const Ls=sun.Ls,Ms=sun.Msun,Lm=rev(N+w+M),Mm=rev(M),Dp=rev(Lm-Ls),F=rev(Lm-N);
-  lon+=-1.274*sind(Mm-2*Dp)+0.658*sind(2*Dp)-0.186*sind(Ms)-0.059*sind(2*Mm-2*Dp)
-    -0.057*sind(Mm-2*Dp+Ms)+0.053*sind(Mm+2*Dp)+0.046*sind(2*Dp-Ms)+0.041*sind(Mm-Ms)
-    -0.035*sind(Dp)-0.031*sind(Mm+Ms)-0.015*sind(2*F-2*Dp)+0.011*sind(Mm-4*Dp);
-  return {lon:rev(lon),lat,node:rev(N)};
-}
-function plutoPos(d,sun){
-  const P=rev(238.95+0.003968789*d)*D2R,S=rev(50.03+0.033459652*d)*D2R;
-  let lon=238.9508+0.00400703*d-19.799*Math.sin(P)+19.848*Math.cos(P)+0.897*Math.sin(2*P)-4.956*Math.cos(2*P)+0.610*Math.sin(3*P)+1.211*Math.cos(3*P)-0.341*Math.sin(4*P)-0.190*Math.cos(4*P)+0.128*Math.sin(5*P)-0.034*Math.cos(5*P)-0.038*Math.sin(6*P)+0.031*Math.cos(6*P)+0.020*Math.sin(S-P)-0.010*Math.cos(S-P);
-  let lat=-3.9082-5.453*Math.sin(P)-14.975*Math.cos(P)+3.527*Math.sin(2*P)+1.673*Math.cos(2*P)-1.051*Math.sin(3*P)+0.328*Math.cos(3*P)+0.179*Math.sin(4*P)-0.292*Math.cos(4*P)+0.019*Math.sin(5*P)+0.100*Math.cos(5*P)-0.031*Math.sin(6*P)-0.026*Math.cos(6*P)+0.011*Math.cos(S-P);
-  let r=40.72+6.68*Math.sin(P)+6.90*Math.cos(P)-1.18*Math.sin(2*P)-0.03*Math.cos(2*P)+0.15*Math.sin(3*P)-0.14*Math.cos(3*P);
-  const xh=r*cosd(lon)*cosd(lat),yh=r*sind(lon)*cosd(lat);
-  return {lon:atan2d(yh+sun.ys,xh+sun.xs)};
-}
-
 /* ---------- ephemeris: VSOP87D reduced to apparent geocentric ---------- */
 /* vsop87d.js holds the series; it gives heliocentric ecliptic coordinates of
    date, good to about 0.4". Four corrections stand between that and the
@@ -522,7 +481,7 @@ function deltaTsec(y,mo){
 }
 
 /* VSOP87D series evaluation. VS/VF come from vsop87d.js. */
-const VKEY={Sun:'ea',Mercury:'me',Venus:'ve',Mars:'ma',Jupiter:'ju',Saturn:'sa',Uranus:'ur',Neptune:'ne'};
+const VKEY={Sun:'ea',Pluto:'pl',Mercury:'me',Venus:'ve',Mars:'ma',Jupiter:'ju',Saturn:'sa',Uranus:'ur',Neptune:'ne'};
 function vsSum(a,t){
   let s=0;
   for(let i=0;i<a.length;i+=3){ const f=a[i+2]; s+=a[i]*Math.cos(a[i+1]+(f<0?0:VF[f]*t)); }
@@ -586,7 +545,7 @@ function apparent(name,t,dpsi,E,V){
     const k=VKEY[name];
     let tau=0;
     for(let i=0;i<3;i++){
-      const P=helioXYZ(k,t-tau/MIL);
+      const P=k==='pl'?plutoXYZ(t-tau/MIL):helioXYZ(k,t-tau/MIL);
       v=[P[0]-E[0],P[1]-E[1],P[2]-E[2]];
       tau=Math.hypot(v[0],v[1],v[2])/C_AUD;
     }
@@ -607,6 +566,110 @@ function gastDeg(jdUT,Tc,dpsi,eps){
   const gmst=era+(0.014506+4612.15739966*Tc+1.39667721*Tc*Tc
     -0.00009344*Tc*Tc*Tc+0.00001882*Math.pow(Tc,4))/3600;
   return rev(gmst+dpsi*R2D*Math.cos(eps));
+}
+
+/* ---------- the Moon: ELP82B, truncated ---------- */
+/* MT rows are [coordinate, amplitude, phase, power of t, "slot:multiplier ..."].
+   Parsed once here rather than on every chart: 607 terms times a string split
+   is the difference between a chart that appears and a chart that arrives. */
+const MTP=MT.map(r=>({c:r[0], a:+r[1], ph:+r[2], tp:r[3],
+  m:r[4]?r[4].split(' ').map(p=>{const i=p.indexOf(':');return [+p.slice(0,i),+p.slice(i+1)];}):[]}));
+/* Seventeen arguments. Slots 0-3 are the high-order Delaunay forms the main
+   problem needs; 4-7 the linear forms the perturbation series were built on.
+   They are not interchangeable, which is why both are here. */
+function elpArgs(t){
+  return [
+    5.198466741027443+(7771.377146811758+(-0.00002844935162118868+(3.1973462269173895e-8-1.5436467606527627e-10*t)*t)*t)*t,
+    -0.04312518020812495+(628.301955168488+(-0.000002680534842854624+(7.126761112310179e-10+7.272205216643039e-13*t)*t)*t)*t,
+    2.3555558982657994+(8328.691426955555+(0.00015702775761561094+(2.504111144298864e-7-1.1863390776750345e-9*t)*t)*t)*t,
+    1.627905233371468+(8433.466158130539+(-0.0000593921000043237+(-4.949947684128362e-9+2.021673050226763e-11*t)*t)*t)*t,
+    5.198466741027443+7771.377146811758*t,
+    -0.04312518020812495+628.301955168488*t,
+    2.3555558982657994+8328.691426955555*t,
+    1.627905233371468+8433.466158130539*t,
+    3.810344430588308+8399.709113522267*t,
+    4.4026088424029615+2608.7903141574106*t,
+    3.1761466969075944+1021.3285546211089*t,
+    1.753470343150658+628.3075849621554*t,
+    6.203480913399945+334.06124314922965*t,
+    0.5995464973886735+52.96909650947205*t,
+    0.8740167565184808+21.329909543800007*t,
+    5.481293871604991+7.4781598567143535*t,
+    5.311886286783467+3.813303563758456*t];
+}
+/* Geocentric rectangular position, kilometres, mean ecliptic of J2000. */
+function moonXYZ(t){
+  const A=elpArgs(t), s=[0,0,0];
+  for(let i=0;i<MTP.length;i++){
+    const r=MTP[i]; let y=r.ph;
+    for(let j=0;j<r.m.length;j++) y+=r.m[j][1]*A[r.m[j][0]];
+    let x=r.a;
+    if(r.tp===1) x*=t; else if(r.tp===2) x*=t*t;
+    s[r.c]+=x*Math.sin(y);
+  }
+  const RAD=648000/Math.PI, a0=384747.9806448954, ath=384747.9806743165;
+  const L=s[0]/RAD+3.810344430588308+8399.684731773914*t-0.000028547283984772807*t*t
+    +3.201709550047375e-8*t*t*t-1.5363745554361197e-10*t*t*t*t;
+  const B=s[1]/RAD, R=s[2]*a0/ath;
+  let x1=R*Math.cos(B); const x2=x1*Math.sin(L); x1=x1*Math.cos(L);
+  const x3=R*Math.sin(B);
+  /* ELP's own rotation out of its inertial frame into J2000 */
+  let pw=(0.10180391e-4+0.47020439e-6*t-0.5417367e-9*t*t-0.2507948e-11*t*t*t+0.463486e-14*t*t*t*t)*t;
+  let qw=(-0.113469002e-3+0.12372674e-6*t+0.1265417e-8*t*t-0.1371808e-11*t*t*t-0.320334e-14*t*t*t*t)*t;
+  const ra=2*Math.sqrt(1-pw*pw-qw*qw), pwqw=2*pw*qw, pw2=1-2*pw*pw, qw2=1-2*qw*qw;
+  pw*=ra; qw*=ra;
+  return [pw2*x1+pwqw*x2+pw*x3, pwqw*x1+qw2*x2-qw*x3, -pw*x1+qw*x2+(pw2+qw2-1)*x3];
+}
+/* Ecliptic coordinates from the J2000 equinox to the equinox of date
+   (Meeus 21.4). Needed because ELP and the Pluto fit both speak J2000 while
+   VSOP87D already speaks the date. */
+const ASR=Math.PI/648000;
+function precessEcl(lon,lat,T){
+  const eta=(47.0029*T-0.03302*T*T+0.000060*T*T*T)*ASR;
+  const P0=(174.876384*3600-869.8089*T+0.03536*T*T)*ASR;
+  const p=(5029.0966*T+1.11113*T*T-0.000006*T*T*T)*ASR;
+  const sP=Math.sin(P0-lon), cb=Math.cos(lat), sb=Math.sin(lat);
+  const A=Math.cos(eta)*cb*sP-Math.sin(eta)*sb;
+  const B=cb*Math.cos(P0-lon);
+  const C=Math.cos(eta)*sb+Math.sin(eta)*cb*sP;
+  return [p+P0-Math.atan2(A,B), Math.asin(C)];
+}
+/* Apparent geocentric Moon. Annual aberration is absent on purpose: the Moon
+   carries Earth's orbital velocity with us, so it cancels, and what remains
+   is the Moon's own 1.3-second light-time, worth 0.7". */
+const C_KMD=299792.458*86400;
+function moonApparent(T,dpsi){
+  let r=moonXYZ(T);
+  const tau=Math.hypot(r[0],r[1],r[2])/C_KMD/36525;
+  r=moonXYZ(T-tau);
+  const d=Math.hypot(r[0],r[1],r[2]);
+  const [l2,b2]=precessEcl(Math.atan2(r[1],r[0]),Math.asin(r[2]/d),T);
+  return {lon:rev((l2+dpsi)*R2D), lat:b2*R2D, dist:d};
+}
+/* Mean lunar node (Meeus 47.7). The mean node, not the true one - the same
+   point the app has always shown, now on a formula that does not drift. */
+function meanNode(T){
+  return rev(125.0445479-1934.1362891*T+0.0020754*T*T+T*T*T/467441-Math.pow(T,4)/60616000);
+}
+
+/* ---------- Pluto: Chebyshev fit to JPL ---------- */
+/* Heliocentric rectangular, AU, already on the ecliptic of date - the fit was
+   made after precessing, so this drops straight into the planet pipeline. */
+function chebEval(c,u){
+  let t0=1,t1=u,s=c[0]+c[1]*u;
+  for(let k=2;k<c.length;k++){ const t2=2*u*t1-t0; s+=c[k]*t2; t0=t1; t1=t2; }
+  return s;
+}
+function plutoXYZ(tm){
+  const jd=2451545.0+tm*365250;
+  let s=Math.floor((jd-PLJD0)/PLSEG);
+  s=Math.max(0,Math.min(PLNSEG-1,s));
+  /* The fit covers 1550-2250 and a degree-16 polynomial diverges the moment
+     it is asked to extrapolate, so outside that span the argument is clamped:
+     Pluto stops at the edge instead of flying off. Wrong either way, but a
+     frozen Pluto is bounded and a runaway one poisons the whole chart. */
+  const u=Math.max(-1,Math.min(1,2*(jd-(PLJD0+s*PLSEG))/PLSEG-1));
+  return [chebEval(PLC[s][0],u),chebEval(PLC[s][1],u),chebEval(PLC[s][2],u)];
 }
 
 /* Mean Black Moon Lilith = mean lunar apogee (Meeus 45.7: perigee 83.3532465° @J2000,
@@ -836,15 +899,11 @@ function computeChart(y,mo,day,localH,tzOff,lat,lng){
   const Tc=(jdTT-2451545.0)/36525, tm=(jdTT-2451545.0)/365250;
   const [dpsi,deps]=nutation(Tc), eps=meanObliq(Tc)+deps, ecl=eps*R2D;
   const E=helioXYZ('ea',tm), V=earthVel(tm);
-  ['Sun','Mercury','Venus','Mars','Jupiter','Saturn','Uranus','Neptune']
+  ['Sun','Mercury','Venus','Mars','Jupiter','Saturn','Uranus','Neptune','Pluto']
     .forEach(n=>pos[n]=apparent(n,tm,dpsi,E,V));
-  /* Moon and Pluto are not in VSOP87 and still run on the old analytic
-     series, so they remain the arc-minute bodies in an arc-second chart.
-     sunPos survives only to feed them. */
-  const sun=sunPos(d);
-  const mp=moonPos(d,sun); pos.Moon={lon:mp.lon};
-  pos.Pluto=plutoPos(d,sun);
-  pos.NNode={lon:mp.node}; pos.SNode={lon:rev(mp.node+180)};
+  pos.Moon=moonApparent(Tc,dpsi);
+  const nd=meanNode(Tc);
+  pos.NNode={lon:nd}; pos.SNode={lon:rev(nd+180)};
   pos.Lilith={lon:lilithLon(d)};
   const sel=selenaLon(d); if(sel!=null) pos.Selena={lon:sel};
   const ramc=rev(gastDeg(jdUT,Tc,dpsi,eps)+lng);
