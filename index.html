@@ -172,6 +172,8 @@ button,.chip,.stars span,details.unit summary,details.fold>summary,.citylist div
              border-color 120ms ease-out,opacity 120ms ease-out;
 }
 button:active,.lang button:active{transform:scale(.97)}
+button:disabled{opacity:.42;cursor:default}
+button:disabled:active{transform:none}
 .chip:active{transform:scale(.94)}
 .stars span:active{transform:scale(.88)}
 details.unit summary:active .sh{opacity:.55}
@@ -250,7 +252,11 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
     <p data-i="tagline"></p>
   </div>
   <div class="lang theme" id="themeSw">
-    <button data-theme-set="light" title="Светлая" aria-label="Светлая тема"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><circle cx="8" cy="8" r="3.2" fill="none" stroke="currentColor" stroke-width="1.4"/><g stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M8 1v1.8M8 13.2V15M1 8h1.8M13.2 8H15M3 3l1.3 1.3M11.7 11.7L13 13M13 3l-1.3 1.3M4.3 11.7L3 13"/></g></svg></button><button data-theme-set="dark" title="Тёмная" aria-label="Тёмная тема"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M13 9.5A5.6 5.6 0 0 1 6.5 3a5.6 5.6 0 1 0 6.5 6.5z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg></button>
+    <!-- Both glyphs are drawn about (8,8) on the same 16 grid: the sun spans 13
+         units tip to tip, the crescent 12.4. The sun is allowed the wider span
+         because thin rays read lighter than a closed shape, so equal spans
+         would make the moon look the larger of the two. -->
+    <button data-theme-set="light" title="Светлая" aria-label="Светлая тема"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="3.1"/><g stroke-linecap="round"><path d="M8 3.1V1.5M8 12.9v1.6M3.1 8H1.5M12.9 8h1.6M4.54 4.54 3.4 3.4M11.46 11.46l1.14 1.14M11.46 4.54 12.6 3.4M4.54 11.46 3.4 12.6"/></g></svg></button><button data-theme-set="dark" title="Тёмная" aria-label="Тёмная тема"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M14.2 8.54A6.2 6.2 0 1 1 7.46 1.8 4.82 4.82 0 0 0 14.2 8.54z" stroke-linejoin="round"/></svg></button>
   </div>
   <div class="lang">
     <button data-lang="ru">RU</button><button data-lang="en">EN</button>
@@ -288,19 +294,22 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
     </div>
   </div>
 
-  <div id="results" style="display:none">
+  <!-- The library sits with the form, not with the results: it is the way you
+       avoid filling the form, so hiding it behind a cast chart made it
+       unreachable on a fresh open. -->
+  <details class="card fold" id="libCard">
+    <summary><h2 data-i="libTitle"></h2><span class="tiny" id="libCount"></span></summary>
+    <!-- The name gets its own line: beside the button its placeholder was cut
+         off mid-word on a phone. -->
+    <input id="chartName" style="margin-bottom:10px">
+    <div class="row" style="margin-bottom:10px">
+      <button id="saveChart" data-i="saveChart"></button>
+      <span class="tiny" data-i="libNote"></span>
+    </div>
+    <div id="libList"></div>
+  </details>
 
-    <details class="card fold" id="libCard">
-      <summary><h2 data-i="libTitle"></h2></summary>
-      <div class="row" style="margin-bottom:10px">
-        <input id="chartName" style="width:auto;flex:1;min-width:150px">
-        <button id="saveChart" data-i="saveChart"></button>
-      </div>
-      <div class="row" style="margin-bottom:10px">
-        <span class="tiny" data-i="libNote"></span>
-      </div>
-      <div id="libList"></div>
-    </details>
+  <div id="results" style="display:none">
 
     <div class="card">
       <h2 id="charttitle"></h2>
@@ -370,7 +379,7 @@ const STR = {
   hint:{ru:'Смещение UTC подставляется автоматически из часового пояса города для точной даты, исторические переходы учтены.',en:'The UTC offset fills in automatically from the city time zone for the exact date, historical shifts included.'},
   libTitle:{ru:'Библиотека карт',en:'Chart library'},
   saveChart:{ru:'Сохранить текущую',en:'Save current'},
-  namePh:{ru:'Чья это карта? Например, «я» или «мама»',en:'Whose chart is this? For example, me or mum'},
+  namePh:{ru:'Чья это карта? Например, «мама»',en:'Whose chart is this? For example, mum'},
   libNote:{ru:'Сохранённые карты хранятся только на этом устройстве',en:'Saved charts stay on this device only'},
   noTime:{ru:'время неизвестно, карта на полдень',en:'birth time unknown, cast for noon'},
   rrKnown:{ru:'время из документа',en:'time from a document'},
@@ -2198,10 +2207,23 @@ function libRow(e,own){
   const place=(city&&city!==nm)?` · ${city}`:'';
   return `<div class="libitem" data-id="${e.id}" data-own="${own?1:0}" title="${own?'':(e.src||'')}"><span class="libname">${nm}</span><span class="libmeta">${date}${place}</span>${time}${del}</div>`;
 }
+/* Russian needs three forms where English needs two, so the count cannot be
+   a single STR entry. */
+function libCountText(n){
+  if(LANG==='en') return n+(n===1?' chart':' charts');
+  const a=n%10, b=n%100;
+  return n+' '+(a===1&&b!==11 ? 'карта'
+    : (a>=2&&a<=4&&(b<12||b>14) ? 'карты' : 'карт'));
+}
 function renderLibrary(){
   const box=document.getElementById('libList'); if(!box) return;
-  box.innerHTML=savedCharts().map(e=>libRow(e,true)).join('')
+  const own=savedCharts();
+  box.innerHTML=own.map(e=>libRow(e,true)).join('')
     + CHART_LIBRARY.map(e=>libRow(e,false)).join('');
+  /* The count is on the closed summary so the section reads as full rather
+     than as one more empty fold to skip. */
+  const c=document.getElementById('libCount');
+  if(c) c.textContent=libCountText(own.length+CHART_LIBRARY.length);
 }
 function loadChartEntry(e,own){
   const tz=own?e.tz:libTz(e);
@@ -2213,6 +2235,11 @@ function loadChartEntry(e,own){
   document.getElementById('tz').value=formatOffset(tz);
   document.getElementById('city').value=own?e.city:e.city[LANG];
   TZ_AUTO=false;
+  /* Fold the list away, otherwise picking a chart leaves the whole library
+     between you and the wheel you just asked for. */
+  const card=document.getElementById('libCard'); if(card) card.open=false;
+  /* Setting .value does not fire input, so the save button has to be told. */
+  syncSaveBtn();
   document.getElementById('calc').click();
 }
 document.getElementById('libList').addEventListener('click',function(ev){
@@ -2226,6 +2253,14 @@ document.getElementById('libList').addEventListener('click',function(ev){
               : CHART_LIBRARY.find(x=>x.id===it.dataset.id);
   if(e) loadChartEntry(e,own);
 });
+/* Without a date and a time there is nothing to save, and a button that does
+   nothing when pressed reads as broken rather than as unavailable. */
+function syncSaveBtn(){
+  const b=document.getElementById('saveChart'); if(!b) return;
+  b.disabled=!(document.getElementById('date').value && document.getElementById('time').value);
+}
+['date','time'].forEach(id=>document.getElementById(id).addEventListener('input',syncSaveBtn));
+syncSaveBtn();
 document.getElementById('saveChart').addEventListener('click',function(){
   const d=document.getElementById('date').value, tm=document.getElementById('time').value;
   if(!d||!tm) return;

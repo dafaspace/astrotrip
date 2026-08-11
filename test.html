@@ -307,7 +307,13 @@ function run(){
     try{
       W.localStorage.removeItem(K); ev('renderLibrary()');
       const base=D.querySelectorAll('#libList .libitem').length;
-      const set=(id,v)=>{D.getElementById(id).value=v;};
+      /* Assigning .value fires nothing, typing fires input, and the save
+         button is enabled off input - so a test that only assigns would find
+         it disabled and click a dead button. City is assigned rather than
+         typed: typing there opens the suggestion list, which would overwrite
+         the coordinates set on the next line. */
+      const set=(id,v)=>{const el=D.getElementById(id); el.value=v;
+        if(id==='date'||id==='time') el.dispatchEvent(new W.Event('input',{bubbles:true}));};
       set('date','1985-11-03'); set('time','13:37'); set('lat','59.9343');
       set('lng','30.3351'); set('tz','+03:00'); set('city','Санкт-Петербург');
       set('chartName','я');
@@ -337,7 +343,13 @@ function run(){
     const K='astrarium_charts', backup=W.localStorage.getItem(K);
     try{
       W.localStorage.removeItem(K); ev('renderLibrary()');
-      const set=(id,v)=>{D.getElementById(id).value=v;};
+      /* Assigning .value fires nothing, typing fires input, and the save
+         button is enabled off input - so a test that only assigns would find
+         it disabled and click a dead button. City is assigned rather than
+         typed: typing there opens the suggestion list, which would overwrite
+         the coordinates set on the next line. */
+      const set=(id,v)=>{const el=D.getElementById(id); el.value=v;
+        if(id==='date'||id==='time') el.dispatchEvent(new W.Event('input',{bubbles:true}));};
       set('date','1990-06-15'); set('time','08:20'); set('lat','55.75');
       set('lng','37.62'); set('tz','+03:00'); set('city','Москва'); set('chartName','');
       D.getElementById('saveChart').click();
@@ -425,6 +437,24 @@ function run(){
   t('таблица позиций свёрнута по умолчанию',()=>{
     const f=D.querySelector('details.fold');
     return (f&&!f.open)||'развёрнута или отсутствует';
+  });
+  /* The library is how you avoid filling the form, so it has to be reachable
+     before a chart exists. It once sat inside the results block, which is
+     hidden until the first cast, and so could not be opened at all. */
+  t('библиотека доступна до первого расчёта',()=>{
+    const card=D.getElementById('libCard');
+    if(!card) return 'блока нет';
+    if(card.closest('#results')) return 'спрятан внутри результатов';
+    return card.getBoundingClientRect().height>0 || 'нулевая высота';
+  });
+  t('на пустой форме кнопка сохранения выключена',()=>{
+    const d=D.getElementById('date').value, tm=D.getElementById('time').value;
+    const b=D.getElementById('saveChart');
+    ev("['date','time'].forEach(i=>{document.getElementById(i).value='';});syncSaveBtn()");
+    const off=b.disabled;
+    ev(`document.getElementById('date').value=${JSON.stringify(d)};`
+      +`document.getElementById('time').value=${JSON.stringify(tm)};syncSaveBtn()`);
+    return off || 'кнопка активна, но нажатие ничего не делает';
   });
 
   render();
