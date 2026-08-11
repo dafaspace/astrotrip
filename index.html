@@ -148,6 +148,14 @@ details.unit summary .sh{font-weight:500}
 details.unit summary::after{content:'+';margin-left:auto;color:var(--ink3);font-size:15px}
 details.unit[open] summary::after{content:'−'}
 details.unit .dt{padding:0 0 10px;color:var(--ink2);font-size:14px}
+.libitem{display:flex;align-items:baseline;gap:9px;padding:8px 0;border-bottom:1px solid var(--line);cursor:pointer;flex-wrap:wrap}
+.libitem:last-child{border-bottom:none}
+.libitem:hover .libname{color:var(--accent)}
+.libname{font-weight:500}
+.libmeta{color:var(--ink3);font-size:12px}
+.libwarn{color:var(--ink3);font-size:11px;border:1px solid var(--line);border-radius:999px;padding:1px 7px;white-space:nowrap}
+.libdel{margin-left:auto;color:var(--ink3);font-size:11px;background:none;border:none;cursor:pointer;padding:4px 6px}
+.libdel:hover{color:var(--hard)}
 .emptystate{color:var(--ink3);font-style:italic;padding:12px 0}
 
 /* ---------- craft layer (Apple design principles) ----------
@@ -282,6 +290,15 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
   <div id="results" style="display:none">
 
+    <details class="card fold" id="libCard">
+      <summary><h2 data-i="libTitle"></h2></summary>
+      <div class="row" style="margin-bottom:10px">
+        <button id="saveChart" data-i="saveChart"></button>
+        <span class="tiny" data-i="libNote"></span>
+      </div>
+      <div id="libList"></div>
+    </details>
+
     <div class="card">
       <h2 id="charttitle"></h2>
       <div id="wheel"></div>
@@ -348,6 +365,12 @@ const STR = {
   city:{ru:'Город рождения',en:'Birth city'},
   cityph:{ru:'Начните вводить название...',en:'Start typing a name...'},
   hint:{ru:'Смещение UTC подставляется автоматически из часового пояса города для точной даты, исторические переходы учтены.',en:'The UTC offset fills in automatically from the city time zone for the exact date, historical shifts included.'},
+  libTitle:{ru:'Библиотека карт',en:'Chart library'},
+  saveChart:{ru:'Сохранить текущую',en:'Save current'},
+  libNote:{ru:'Сохранённые карты хранятся только на этом устройстве',en:'Saved charts stay on this device only'},
+  noTime:{ru:'время неизвестно, карта на полдень',en:'birth time unknown, cast for noon'},
+  rrKnown:{ru:'время из документа',en:'time from a document'},
+  delChart:{ru:'удалить',en:'delete'},
   hsysLabel:{ru:'СИСТЕМА ДОМОВ',en:'HOUSE SYSTEM'},
   secondsLabel:{ru:'Показывать угловые секунды в позициях',en:'Show arc-seconds in positions'},
   needdata:{ru:'Заполните дату, время и место.',en:'Fill in date, time and place.'},
@@ -743,6 +766,33 @@ function placidusCusps(ramc,lat,ecl,asc,mc){
   const cusps=[asc,c2,c3,rev(mc+180),rev(c11+180),rev(c12+180),rev(asc+180),rev(c2+180),rev(c3+180),mc,c11,c12];
   return {cusps,system:'placidus'};
 }
+/* Chart library. Dates and places are solid history; birth TIMES mostly are
+   not, and that is recorded rather than papered over. rr is the Rodden rating
+   in the usual sense: AA from a document, A from the person or family, X no
+   time known. Where the time is unknown the chart is cast for noon and the app
+   says so, because the Ascendant, the houses and the Moon's exact degree are
+   then meaningless.
+   Before standard time zones a birth was recorded in local mean time, so
+   historical entries carry tz = longitude/15 rather than a zone offset.
+   Russian dates before 1918 and German dates before 1700 are given in the
+   Gregorian calendar, with the original Julian date noted in `src`. */
+const LMT=lon=>Math.round(lon/15*60)/60;
+const CHART_LIBRARY=[
+ {id:'bach',name:{ru:'Иоганн Себастьян Бах',en:'J. S. Bach'},y:1685,mo:3,d:31,t:null,lat:50.974,lon:10.324,city:{ru:'Айзенах',en:'Eisenach'},rr:'X',src:'21 марта по юлианскому календарю'},
+ {id:'mozart',name:{ru:'Вольфганг Амадей Моцарт',en:'W. A. Mozart'},y:1756,mo:1,d:27,t:20,lat:47.801,lon:13.045,city:{ru:'Зальцбург',en:'Salzburg'},rr:'AA',src:'время из записи о крещении: родился накануне в 20:00'},
+ {id:'beethoven',name:{ru:'Людвиг ван Бетховен',en:'Beethoven'},y:1770,mo:12,d:16,t:null,lat:50.735,lon:7.100,city:{ru:'Бонн',en:'Bonn'},rr:'X',src:'крещён 17 декабря, дата рождения предположительна'},
+ {id:'chopin',name:{ru:'Фридерик Шопен',en:'Chopin'},y:1810,mo:3,d:1,t:null,lat:52.240,lon:20.283,city:{ru:'Желязова-Воля',en:'Zelazowa Wola'},rr:'X',src:'сам композитор называл 1 марта, метрика указывает 22 февраля'},
+ {id:'wagner',name:{ru:'Рихард Вагнер',en:'Wagner'},y:1813,mo:5,d:22,t:null,lat:51.340,lon:12.375,city:{ru:'Лейпциг',en:'Leipzig'},rr:'X',src:'источники говорят «на рассвете», это не время'},
+ {id:'tchaikov',name:{ru:'Пётр Чайковский',en:'Tchaikovsky'},y:1840,mo:5,d:7,t:null,lat:57.050,lon:53.990,city:{ru:'Воткинск',en:'Votkinsk'},rr:'X',src:'25 апреля по юлианскому календарю'},
+ {id:'debussy',name:{ru:'Клод Дебюсси',en:'Debussy'},y:1862,mo:8,d:22,t:null,lat:48.899,lon:2.094,city:{ru:'Сен-Жермен-ан-Ле',en:'Saint-Germain-en-Laye'},rr:'X',src:''},
+ {id:'rachmanin',name:{ru:'Сергей Рахманинов',en:'Rachmaninoff'},y:1873,mo:4,d:1,t:null,lat:58.520,lon:31.270,city:{ru:'Онег, Новгородская губерния',en:'Oneg, Novgorod'},rr:'X',src:'20 марта по юлианскому календарю'},
+ {id:'stravinsky',name:{ru:'Игорь Стравинский',en:'Stravinsky'},y:1882,mo:6,d:17,t:null,lat:59.906,lon:29.772,city:{ru:'Ораниенбаум',en:'Oranienbaum'},rr:'X',src:'5 июня по юлианскому календарю'},
+ {id:'morricone',name:{ru:'Эннио Морриконе',en:'Ennio Morricone'},y:1928,mo:11,d:10,t:null,lat:41.902,lon:12.496,city:{ru:'Рим',en:'Rome'},rr:'X',src:''},
+ {id:'jwilliams',name:{ru:'Джон Уильямс',en:'John Williams'},y:1932,mo:2,d:8,t:null,lat:40.728,lon:-73.794,city:{ru:'Куинс, Нью-Йорк',en:'Queens, New York'},rr:'X',src:'время не указано и в астрологических базах'},
+ {id:'zimmer',name:{ru:'Ханс Циммер',en:'Hans Zimmer'},y:1957,mo:9,d:12,t:null,lat:50.111,lon:8.682,city:{ru:'Франкфурт-на-Майне',en:'Frankfurt am Main'},rr:'X',src:'в Astro-Databank помечено как непроверенное'}
+];
+/* Historical entries predate zone time, so their offset is local mean time. */
+const libTz=e=>e.y<1900?LMT(e.lon):(e.id==='morricone'?1:e.id==='jwilliams'?-5:e.id==='zimmer'?2:LMT(e.lon));
 const HOUSE_SYSTEMS={
   placidus:{ru:'Плацидус',en:'Placidus',fn:(ramc,lat,ecl,asc,mc)=>placidusCusps(ramc,lat,ecl,asc,mc)},
   regiomontanus:{ru:'Региомонтан',en:'Regiomontanus',fn:(ramc,lat,ecl,asc,mc)=>
@@ -2070,7 +2120,7 @@ document.getElementById('showSeconds').addEventListener('change',e=>{
 });
 /* Must not match the theme switcher, which shares the .lang styling. */
  document.querySelectorAll('.lang button[data-lang]').forEach(b=>b.addEventListener('click',()=>{
-  LANG=b.dataset.lang; localStorage.setItem('astrarium_lang',LANG); applyStatic(); fillHsys(); if(CURRENT)run();
+  LANG=b.dataset.lang; localStorage.setItem('astrarium_lang',LANG); applyStatic(); fillHsys(); renderLibrary(); if(CURRENT)run();
 }));
 document.getElementById('city').addEventListener('input',e=>renderCityList(searchCities(e.target.value)));
 document.getElementById('city').addEventListener('focus',e=>renderCityList(searchCities(e.target.value)));
@@ -2118,6 +2168,67 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{
 });
 applyTheme();
 applyStatic();
+
+
+/* Chart library. Built-in entries are historical figures; saved charts are the
+   user's own and live only in this browser. A chart with no known birth time is
+   cast for noon and labelled, since its Ascendant, houses and Moon degree carry
+   no information. */
+const LKEY_CHARTS='astrarium_charts';
+function savedCharts(){ try{ return JSON.parse(localStorage.getItem(LKEY_CHARTS))||[] }catch(e){ return [] } }
+function libRow(e,own){
+  const nm=own?e.name:e.name[LANG];
+  const city=own?e.city:e.city[LANG];
+  const date=`${String(e.d).padStart(2,'0')}.${String(e.mo).padStart(2,'0')}.${e.y}`;
+  const time=e.t==null
+    ? `<span class="libwarn">${t('noTime')}</span>`
+    : `<span class="libmeta">${String(Math.floor(e.t)).padStart(2,'0')}:${String(Math.round((e.t%1)*60)).padStart(2,'0')}</span>`
+      + (e.rr==='AA'?` <span class="libwarn">${t('rrKnown')}</span>`:'');
+  const del=own?`<button class="libdel" data-del="${e.id}">${t('delChart')}</button>`:'';
+  return `<div class="libitem" data-id="${e.id}" data-own="${own?1:0}" title="${own?'':(e.src||'')}"><span class="libname">${nm}</span><span class="libmeta">${date} · ${city}</span>${time}${del}</div>`;
+}
+function renderLibrary(){
+  const box=document.getElementById('libList'); if(!box) return;
+  box.innerHTML=savedCharts().map(e=>libRow(e,true)).join('')
+    + CHART_LIBRARY.map(e=>libRow(e,false)).join('');
+}
+function loadChartEntry(e,own){
+  const tz=own?e.tz:libTz(e);
+  const hh=e.t==null?12:e.t;
+  document.getElementById('date').value=`${e.y}-${String(e.mo).padStart(2,'0')}-${String(e.d).padStart(2,'0')}`;
+  document.getElementById('time').value=`${String(Math.floor(hh)).padStart(2,'0')}:${String(Math.round((hh%1)*60)).padStart(2,'0')}`;
+  document.getElementById('lat').value=e.lat;
+  document.getElementById('lng').value=e.lon;
+  document.getElementById('tz').value=formatOffset(tz);
+  document.getElementById('city').value=own?e.city:e.city[LANG];
+  TZ_AUTO=false;
+  document.getElementById('calc').click();
+}
+document.getElementById('libList').addEventListener('click',function(ev){
+  const del=ev.target.closest('button[data-del]');
+  if(del){ ev.stopPropagation();
+    localStorage.setItem(LKEY_CHARTS,JSON.stringify(savedCharts().filter(x=>x.id!==del.dataset.del)));
+    renderLibrary(); return; }
+  const it=ev.target.closest('.libitem'); if(!it) return;
+  const own=it.dataset.own==='1';
+  const e=own ? savedCharts().find(x=>x.id===it.dataset.id)
+              : CHART_LIBRARY.find(x=>x.id===it.dataset.id);
+  if(e) loadChartEntry(e,own);
+});
+document.getElementById('saveChart').addEventListener('click',function(){
+  const d=document.getElementById('date').value, tm=document.getElementById('time').value;
+  if(!d||!tm) return;
+  const p=d.split('-').map(Number), q=tm.split(':').map(Number);
+  const nm=(document.getElementById('city').value||'').trim();
+  const list=savedCharts();
+  list.unshift({id:'u'+Date.now(), name:nm||`${p[2]}.${p[1]}.${p[0]}`,
+    y:p[0], mo:p[1], d:p[2], t:q[0]+q[1]/60,
+    lat:+document.getElementById('lat').value, lon:+document.getElementById('lng').value,
+    tz:parseOffset(document.getElementById('tz').value), city:nm, rr:'A', src:''});
+  localStorage.setItem(LKEY_CHARTS,JSON.stringify(list.slice(0,50)));
+  renderLibrary();
+});
+renderLibrary();
 
 /* Offline shell. Registered after load so it never competes with first paint,
    and failures stay silent: the app works fine without it, it just loses

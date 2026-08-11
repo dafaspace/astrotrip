@@ -20,11 +20,13 @@ stale build cannot pass, because the harness clears the service worker and its
 caches first. That mattered: before it did, a deliberately broken app passed
 every check.
 
-42 checks in six groups. Ephemeris (one position set verified against an
+48 checks in seven groups. Ephemeris (one position set verified against an
 external reference, two regression anchors), robustness (1850-2200, polar
 latitudes, southern hemisphere), house systems (angles land on the cusps, cusps run
 round the circle without crossing, the quadrant systems coincide at the equator), the
-reading (no
+chart library (every composer casts, every house system works on every one of them,
+and the writing rules hold across all twelve rather than on the one chart development
+used), the reading (no
 repeated sentences, no leftover periphrasis, no invented deadlines, full
 pair coverage), contrast (every text pair against WCAG AA, chart lines and
 sector glyphs, in both themes), and interface wiring (the theme switch must
@@ -54,6 +56,13 @@ collapsing the MC colour into the aspect colour both make it fail by name.
   prose; the terms appear only in card titles.
 - **Live transit engine** - today's transits vs the natal chart, ranked by personal weight.
 - **On-device personalization loop** (the point below).
+- **Chart library**: twelve composers, classical and film, plus your own charts saved
+  to this device. Each entry carries a Rodden rating. Only Mozart's time is documented
+  (from the baptismal record); for the rest the time is unknown, so the chart is cast
+  for noon and labelled as such, since the Ascendant, the houses and the Moon's degree
+  mean nothing without it. Historical entries use local mean time rather than a zone
+  offset, and pre-1918 Russian and pre-1700 German dates are stored in the Gregorian
+  calendar with the Julian original noted.
 - **Installs and runs offline.** Manifest, icons and a service worker that precaches the
   shell. Verified by stopping the server and reloading.
 - **Two themes** with a switch in the header, following the system until it is touched.
@@ -135,8 +144,9 @@ Total offline core budget: **~3.9 MB** - fits one service-worker precache.
   (`TAG_TOKENS`, 5.5 KB). It began as prose distilled from Podvodny, but the readings
   are written by hand now and only the weights were ever read, so the unused 32 KB was
   removed rather than left to look like a source of truth.
-- Development used a single test chart almost throughout. Configurations absent from it,
-  such as stelliums or a planet with no aspects at all, have had little exercise.
+- The twelve library charts now exercise the code across three centuries and both
+  hemispheres, but eleven of them have no known birth time. They test that the code
+  holds up; they cannot test that a reading is *right* about anyone.
 - No synastry, progressions, solar returns or composites. Kerykeion and similar engines
   have them.
 - Everything lives in one 283 KB file. That has kept the project free of a build step,

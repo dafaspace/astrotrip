@@ -236,6 +236,71 @@ function run(){
     return !miss.length||'нет у: '+miss.join(', ');
   });
 
+  /* ---------- библиотека карт ---------- */
+  group('Библиотека карт');
+  const LIB=ev('CHART_LIBRARY');
+  t('двенадцать карт композиторов',()=>LIB.length===12||`${LIB.length}`);
+  t('у каждой записи есть рейтинг достоверности',()=>{
+    const bad=LIB.filter(e=>!['AA','A','B','C','DD','X'].includes(e.rr)).map(e=>e.id);
+    return !bad.length||'без рейтинга: '+bad.join(', ');
+  });
+  t('запись без времени помечена рейтингом X',()=>{
+    const bad=LIB.filter(e=>(e.t==null)!==(e.rr==='X')).map(e=>e.id);
+    return !bad.length||'помечены неверно: '+bad.join(', ');
+  });
+  t('каждая карта библиотеки строится и даёт разбор',()=>{
+    const bad=[];
+    LIB.forEach(e=>{
+      try{
+        const hh=e.t==null?12:e.t;
+        W.__e=e;
+        const ch=ev(`computeChart(${e.y},${e.mo},${e.d},${hh},libTz(window.__e),${e.lat},${e.lon})`);
+        if(Object.values(ch.pos).some(p=>!isFinite(p.lon))) {bad.push(e.id+': нечисловые долготы');return;}
+        if(ch.houses.cusps.some(c=>!isFinite(c))) {bad.push(e.id+': нечисловой куспид');return;}
+        W.__ch2=ch;
+        const r=ev('composePlacement(window.__ch2,"Sun")');
+        if(!r||!r.detail||r.detail.length<80) bad.push(e.id+': пустой разбор');
+        const p=ev('composePortrait(window.__ch2)');
+        if(!p||!p.detail) bad.push(e.id+': нет портрета');
+      }catch(err){ bad.push(e.id+': '+err.message); }
+    });
+    return !bad.length||bad.join('; ');
+  });
+  t('все системы домов работают на всех картах библиотеки',()=>{
+    const bad=[];
+    SYS.forEach(k=>{ ev(`HSYS=${JSON.stringify(k)}`);
+      LIB.forEach(e=>{
+        const hh=e.t==null?12:e.t; W.__e=e;
+        const c=ev(`computeChart(${e.y},${e.mo},${e.d},${hh},libTz(window.__e),${e.lat},${e.lon})`).houses.cusps;
+        if(c.some(x=>!isFinite(x))) bad.push(`${k}/${e.id}`);
+        else if(!c.every((v,i)=>((c[(i+1)%12]-v+360)%360)>0.001)) bad.push(`${k}/${e.id}: порядок`);
+      }); });
+    ev('HSYS="placidus"');
+    return !bad.length||bad.slice(0,5).join('; ');
+  });
+  t('качество текста держится на всех картах, не только на тестовой',()=>{
+    const bad=[];
+    LIB.forEach(e=>{
+      const hh=e.t==null?12:e.t; W.__e=e;
+      ev(`window.__ch3=computeChart(${e.y},${e.mo},${e.d},${hh},libTz(window.__e),${e.lat},${e.lon})`);
+      const cards=ev('CARD_ORDER.map(p=>composePlacement(window.__ch3,p)).filter(Boolean)');
+      const txt=cards.map(c=>c.detail).join(' ');
+      if(txt.includes('—')) bad.push(e.id+': длинное тире');
+      if(/то, как вы/.test(txt)) bad.push(e.id+': оборот');
+      if(/\bэтому\b/.test(txt)) bad.push(e.id+': висячее «этому»');
+      cards.forEach(c=>{
+        const ss=c.detail.split(/(?<=[.?!])\s+/).map(x=>x.trim());
+        const seen=new Set();
+        ss.forEach(x=>{ if(x.length>40&&seen.has(x)) bad.push(`${e.id}/${c.label}: повтор`); seen.add(x); });
+        for(let i=0;i<ss.length-1;i++){
+          const a=ss[i].split(' ').slice(0,2).join(' ');
+          if(a===ss[i+1].split(' ').slice(0,2).join(' ')) bad.push(`${e.id}/${c.label}: «${a}» дважды`);
+        }
+      });
+    });
+    return !bad.length||`${bad.length} замечаний: `+bad.slice(0,3).join('; ');
+  });
+
   /* ---------- контраст ---------- */
   group('Контраст');
   const TEXT=[['основной','--ink','--paper'],['текст на карточке','--ink','--paper2'],
