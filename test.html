@@ -50,9 +50,12 @@ const frame=document.getElementById('app');
     const ks=await caches.keys();
     await Promise.all(ks.map(k=>caches.delete(k)));
   }catch(e){}
+  /* Read once here, because the runner below is synchronous. */
+  try{ SW_SRC=await (await fetch('./sw.js?notacache='+Date.now())).text(); }catch(e){}
   frame.addEventListener('load',()=>setTimeout(run,220));
   frame.src='./index.html?notacache='+Date.now();
 })();
+let SW_SRC='';
 
 function run(){
   const W=frame.contentWindow, D=frame.contentDocument;
@@ -446,6 +449,17 @@ function run(){
     if(!card) return 'блока нет';
     if(card.closest('#results')) return 'спрятан внутри результатов';
     return card.getBoundingClientRect().height>0 || 'нулевая высота';
+  });
+  /* If these drift apart the number on screen names one release while the
+     cache serves another, which is exactly the confusion it exists to end. */
+  t('номер версии на экране совпадает с именем кэша в sw.js',()=>{
+    const v=ev('APP_VERSION');
+    if(!v) return 'APP_VERSION не объявлен';
+    if(D.getElementById('ver').textContent!==v) return 'в заголовке не тот номер';
+    if(!SW_SRC) return 'sw.js не прочитан';
+    const m=SW_SRC.match(/CACHE\s*=\s*'([^']+)'/);
+    if(!m) return 'CACHE в sw.js не найден';
+    return m[1]==='astrotrip-v'+v || 'кэш '+m[1]+' против версии '+v;
   });
   t('на пустой форме кнопка сохранения выключена',()=>{
     const d=D.getElementById('date').value, tm=D.getElementById('time').value;
