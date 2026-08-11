@@ -152,6 +152,7 @@ details.unit summary .sh{font-weight:500}
 details.unit summary::after{content:'+';margin-left:auto;color:var(--ink3);font-size:15px}
 details.unit[open] summary::after{content:'−'}
 details.unit .dt{padding:0 0 10px;color:var(--ink2);font-size:14px}
+.libera{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink3);padding:14px 0 5px;border-bottom:1px solid var(--line);margin-bottom:2px}
 .libitem{display:flex;align-items:baseline;gap:9px;padding:8px 0;border-bottom:1px solid var(--line);cursor:pointer;flex-wrap:wrap}
 .libitem:last-child{border-bottom:none}
 .libitem:hover .libname{color:var(--accent)}
@@ -310,6 +311,13 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
       <button id="saveChart" data-i="saveChart"></button>
       <span class="tiny" data-i="libNote"></span>
     </div>
+    <!-- Search and sort rather than folders or tags: a hundred and fifty
+         entries already carry three axes of their own - name, date, place -
+         and a folder tree would force one of them to win permanently. -->
+    <div class="row" style="margin-bottom:10px;gap:8px">
+      <input id="libFind" type="search" autocomplete="off" style="flex:1;min-width:130px">
+      <select id="libSort" style="width:auto;flex:none"></select>
+    </div>
     <div id="libList"></div>
   </details>
 
@@ -371,7 +379,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
 /* Bump together with CACHE in sw.js: the two are the same release, and the
    number on screen is how you tell from a phone which one you are looking at. */
-const APP_VERSION='0.8.0';
+const APP_VERSION='0.9.0';
 document.getElementById('ver').textContent=APP_VERSION;
 
 /* ---------- i18n ---------- */
@@ -390,6 +398,8 @@ const STR = {
   libTitle:{ru:'Библиотека карт',en:'Chart library'},
   saveChart:{ru:'Сохранить текущую',en:'Save current'},
   namePh:{ru:'Чья это карта? Например, «мама»',en:'Whose chart is this? For example, mum'},
+  libFind:{ru:'Имя, место, год, «кино», «Чернобыль»…',en:'Name, place, year, "film", "Chernobyl"…'},
+  libNone:{ru:'Ничего не нашлось. Попробуйте часть имени или города.',en:'Nothing found. Try part of a name or city.'},
   libNote:{ru:'Сохранённые карты хранятся только на этом устройстве',en:'Saved charts stay on this device only'},
   noTime:{ru:'время неизвестно, карта на полдень',en:'birth time unknown, cast for noon'},
   rrKnown:{ru:'время из документа',en:'time from a document'},
@@ -999,54 +1009,145 @@ const CHART_LIBRARY=[
  {id:'debussy',k:'c',name:{ru:'Клод Дебюсси',en:'Debussy'},y:1862,mo:8,d:22,t:null,lat:48.899,lon:2.094,city:{ru:'Сен-Жермен-ан-Ле',en:'Saint-Germain-en-Laye'},rr:'X',src:'',dd:'1918-03-25'},
  {id:'rachmanin',k:'c',name:{ru:'Сергей Рахманинов',en:'Rachmaninoff'},y:1873,mo:4,d:1,t:null,lat:58.520,lon:31.270,city:{ru:'Онег, Новгородская губерния',en:'Oneg, Novgorod'},rr:'X',src:'20 марта по юлианскому календарю',dd:'1943-03-28'},
  {id:'stravinsky',k:'c',name:{ru:'Игорь Стравинский',en:'Stravinsky'},y:1882,mo:6,d:17,t:null,lat:59.906,lon:29.772,city:{ru:'Ораниенбаум',en:'Oranienbaum'},rr:'X',src:'5 июня по юлианскому календарю',dd:'1971-04-06'},
+ {id:'herbertstothar',z:'America/Chicago',k:'f',name:{ru:'Герберт Стотхарт',en:'Herbert Stothart'},y:1885,mo:9,d:11,t:null,lat:43.0500,lon:-87.9500,city:{ru:'Милуоки',en:'Milwaukee'},rr:'X',dd:'1949-02-01',src:''},
+ {id:'hansmay',z:'Europe/Vienna',k:'f',name:{ru:'Ханс Мэй',en:'Hans May'},y:1886,mo:7,d:11,t:null,lat:48.2083,lon:16.3725,city:{ru:'Вена',en:'Vienna'},rr:'X',dd:'1958-12-31',src:''},
+ {id:'oliverwallace',z:'Europe/London',k:'f',name:{ru:'Оливер Уоллес',en:'Oliver Wallace'},y:1887,mo:8,d:6,t:null,lat:51.5072,lon:-0.1275,city:{ru:'Лондон',en:'London'},rr:'X',dd:'1963-09-15',src:''},
+ {id:'johnleipold',z:'America/New_York',k:'f',name:{ru:'Джон Лайполд',en:'John Leipold'},y:1888,mo:2,d:26,t:null,lat:41.8900,lon:-74.2600,city:{ru:'Алстер',en:'Ulster County'},rr:'X',dd:'1970-03-08',src:''},
+ {id:'williamaxt',z:'America/New_York',k:'f',name:{ru:'Уильям Экст',en:'William Axt'},y:1888,mo:4,d:19,t:null,lat:40.7128,lon:-74.0061,city:{ru:'Нью-Йорк',en:'New York City'},rr:'X',dd:'1959-02-13',src:''},
  {id:'steiner',z:'Europe/Vienna',k:'f',name:{ru:'Макс Стайнер',en:'Max Steiner'},y:1888,mo:5,d:10,t:null,lat:48.2083,lon:16.3725,city:{ru:'Вена',en:'Vienna'},rr:'X',dd:'1971-12-28',src:''},
+ {id:'irvingberlin',z:'Asia/Yekaterinburg',k:'f',name:{ru:'Ирвинг Берлин',en:'Irving Berlin'},y:1888,mo:5,d:11,t:null,lat:57.1500,lon:65.5333,city:{ru:'Тюмень',en:'Tyumen'},rr:'X',dd:'1989-09-22',src:''},
+ {id:'roywebb',z:'America/New_York',k:'f',name:{ru:'Рой Уэбб',en:'Roy Webb'},y:1888,mo:10,d:3,t:null,lat:40.7128,lon:-74.0061,city:{ru:'Нью-Йорк',en:'New York City'},rr:'X',dd:'1982-12-10',src:''},
+ {id:'mischabakalein',z:'Europe/Moscow',k:'f',name:{ru:'Михаил Романович Бакалейников',en:'Mischa Bakaleinikoff'},y:1890,mo:11,d:10,t:null,lat:55.7506,lon:37.6175,city:{ru:'Москва',en:'Moscow'},rr:'X',dd:'1960-08-10',src:''},
+ {id:'coleporter',z:'America/Chicago',k:'f',name:{ru:'Коул Портер',en:'Cole Porter'},y:1891,mo:6,d:9,t:null,lat:40.7578,lon:-86.0678,city:{ru:'Перу',en:'Peru'},rr:'X',dd:'1964-10-15',src:''},
+ {id:'carlwstalling',z:'America/Chicago',k:'f',name:{ru:'Карл У. Сталлинг',en:'Carl W. Stalling'},y:1891,mo:11,d:10,t:null,lat:39.1831,lon:-93.8750,city:{ru:'Лексингтон',en:'Lexington'},rr:'X',dd:'1972-11-29',src:''},
+ {id:'scottbradley',z:'America/Chicago',k:'f',name:{ru:'Скотт Брэдли',en:'Scott Bradley'},y:1891,mo:11,d:26,t:null,lat:35.2783,lon:-93.1369,city:{ru:'Расселвилл',en:'Russellville'},rr:'X',dd:'1977-04-27',src:''},
+ {id:'dariusmilhaud',z:'Europe/Paris',k:'f',name:{ru:'Дариюс Мийо',en:'Darius Milhaud'},y:1892,mo:9,d:4,t:null,lat:43.2967,lon:5.3764,city:{ru:'Марсель',en:'Marseille'},rr:'X',dd:'1974-06-22',src:''},
+ {id:'leezahler',z:'America/New_York',k:'f',name:{ru:'Ли Цалер',en:'Lee Zahler'},y:1893,mo:8,d:14,t:null,lat:40.7128,lon:-74.0061,city:{ru:'Нью-Йорк',en:'New York City'},rr:'X',dd:'1947-02-21',src:''},
+ {id:'willyschmidtge',z:'Europe/Berlin',k:'f',name:{ru:'Вилли Шмидт-Гентнер',en:'Willy Schmidt-Gentner'},y:1894,mo:4,d:6,t:null,lat:50.5825,lon:10.9336,city:{ru:'Нойштадт-ам-Ренштайг',en:'Neustadt am Rennsteig'},rr:'X',dd:'1964-02-12',src:''},
  {id:'tiomkin',z:'Europe/Kyiv',k:'f',name:{ru:'Дмитрий Тёмкин',en:'Dimitri Tiomkin'},y:1894,mo:5,d:22,t:null,lat:49.0631,lon:33.4039,city:{ru:'Кременчуг',en:'Kremenchuk'},rr:'X',dd:'1979-11-11',src:''},
+ {id:'hansjsalter',z:'Europe/Vienna',k:'f',name:{ru:'Ханс Й. Зальтер',en:'Hans J. Salter'},y:1896,mo:1,d:14,t:null,lat:48.2083,lon:16.3725,city:{ru:'Вена',en:'Vienna'},rr:'X',dd:'1994-07-23',src:''},
+ {id:'cyriljmockridg',z:'Europe/London',k:'f',name:{ru:'Сирил Дж. Мокридж',en:'Cyril J. Mockridge'},y:1896,mo:8,d:6,t:null,lat:51.5072,lon:-0.1275,city:{ru:'Лондон',en:'London'},rr:'X',dd:'1979-01-18',src:''},
  {id:'korngold',z:'Europe/Prague',k:'f',name:{ru:'Эрих Корнгольд',en:'Erich Korngold'},y:1897,mo:5,d:29,t:null,lat:49.1953,lon:16.6083,city:{ru:'Брно',en:'Brno'},rr:'X',dd:'1957-11-29',src:''},
+ {id:'frankskinner',z:'America/Chicago',k:'f',name:{ru:'Фрэнк Скиннер',en:'Frank Skinner'},y:1897,mo:12,d:31,t:null,lat:39.8297,lon:-90.5583,city:{ru:'Meredosia',en:'Meredosia'},rr:'X',dd:'1968-10-08',src:''},
+ {id:'georgegershwin',z:'America/New_York',k:'f',name:{ru:'Джордж Гершвин',en:'George Gershwin'},y:1898,mo:9,d:26,t:null,lat:40.6508,lon:-73.9497,city:{ru:'Бруклин',en:'Brooklyn'},rr:'X',dd:'1937-07-11',src:''},
+ {id:'edwardjkay',z:'America/New_York',k:'f',name:{ru:'Edward J. Kay',en:'Edward J. Kay'},y:1898,mo:11,d:27,t:null,lat:40.7128,lon:-74.0061,city:{ru:'Нью-Йорк',en:'New York City'},rr:'X',dd:'1973-12-22',src:''},
+ {id:'georgesauric',z:'Europe/Paris',k:'f',name:{ru:'Жорж Орик',en:'Georges Auric'},y:1899,mo:2,d:15,t:null,lat:43.7317,lon:3.3194,city:{ru:'Лодев',en:'Lodève'},rr:'X',dd:'1983-07-23',src:''},
+ {id:'bernhardkaun',z:'America/Chicago',k:'f',name:{ru:'Бернхард Каун',en:'Bernhard Kaun'},y:1899,mo:4,d:5,t:null,lat:43.0500,lon:-87.9500,city:{ru:'Милуоки',en:'Milwaukee'},rr:'X',dd:'1980-01-03',src:''},
  {id:'anewman',z:'America/New_York',k:'f',name:{ru:'Альфред Ньюман',en:'Alfred Newman'},y:1900,mo:3,d:17,t:null,lat:41.3083,lon:-72.9250,city:{ru:'Нью-Хейвен',en:'New Haven'},rr:'X',dd:'1970-02-17',src:''},
+ {id:'victoryoung',z:'America/Chicago',k:'f',name:{ru:'Виктор Янг',en:'Victor Young'},y:1900,mo:8,d:8,t:null,lat:41.8819,lon:-87.6278,city:{ru:'Чикаго',en:'Chicago'},rr:'X',dd:'1956-11-10',src:''},
+ {id:'heinzericroemh',z:'America/Chicago',k:'f',name:{ru:'Хайнц Рёмхельд',en:'Heinz Eric Roemheld'},y:1901,mo:5,d:1,t:null,lat:43.0500,lon:-87.9500,city:{ru:'Милуоки',en:'Milwaukee'},rr:'X',dd:'1985-02-11',src:''},
+ {id:'bronisawkaper',z:'Europe/Warsaw',k:'f',name:{ru:'Бронислав Капер',en:'Bronisław Kaper'},y:1902,mo:2,d:5,t:null,lat:52.2300,lon:21.0111,city:{ru:'Варшава',en:'Warsaw'},rr:'X',dd:'1983-04-26',src:''},
+ {id:'georgesvanpary',z:'Europe/Paris',k:'f',name:{ru:'Жорж ван Парис',en:'Georges Van Parys'},y:1902,mo:6,d:7,t:null,lat:48.8755,lon:2.3579,city:{ru:'X округ Парижа',en:'10ᵗʰ arrondissement of Paris'},rr:'X',dd:'1971-01-28',src:''},
+ {id:'davidbuttolph',z:'America/New_York',k:'f',name:{ru:'Дэвид Баттолф',en:'David Buttolph'},y:1902,mo:8,d:3,t:null,lat:40.7128,lon:-74.0061,city:{ru:'Нью-Йорк',en:'New York City'},rr:'X',dd:'1983-01-01',src:''},
+ {id:'aramkhachaturi',z:'Asia/Tbilisi',k:'f',name:{ru:'Арам Хачатурян',en:'Aram Khachaturian'},y:1903,mo:6,d:6,t:null,lat:41.7225,lon:44.7925,city:{ru:'Тбилиси',en:'Tbilisi'},rr:'X',dd:'1978-05-01',src:''},
+ {id:'josephkosma',z:'Europe/Budapest',k:'f',name:{ru:'Жозеф Косма',en:'Joseph Kosma'},y:1905,mo:10,d:22,t:null,lat:47.4983,lon:19.0408,city:{ru:'Будапешт',en:'Budapest'},rr:'X',dd:'1969-08-07',src:''},
+ {id:'alessandrocico',z:'Europe/Rome',k:'f',name:{ru:'Алессандро Чиконини',en:'Alessandro Cicognini'},y:1906,mo:1,d:15,t:null,lat:42.4643,lon:14.2142,city:{ru:'Пескара',en:'Pescara'},rr:'X',dd:'1995-11-09',src:''},
+ {id:'paulsawtell',z:'Europe/Warsaw',k:'f',name:{ru:'Пол Соутелл',en:'Paul Sawtell'},y:1906,mo:2,d:3,t:null,lat:52.0000,lon:19.0000,city:{ru:'Польша',en:'Poland'},rr:'X',dd:'1971-08-01',src:''},
+ {id:'sachindevburma',k:'f',name:{ru:'Сачин Дев Бурман',en:'Sachin Dev Burman'},y:1906,mo:10,d:1,t:null,lat:23.4500,lon:91.2000,city:{ru:'Комилла',en:'Cumilla'},rr:'X',dd:'1975-10-31',src:''},
  {id:'waxman',z:'Europe/Berlin',k:'f',name:{ru:'Франц Ваксман',en:'Franz Waxman'},y:1906,mo:12,d:24,t:null,lat:50.2884,lon:18.9628,city:{ru:'Хожув',en:'Chorzow'},rr:'X',dd:'1967-02-24',src:''},
+ {id:'leighharline',z:'America/Denver',k:'f',name:{ru:'Ли Харлайн',en:'Leigh Harline'},y:1907,mo:3,d:26,t:null,lat:40.7500,lon:-111.8833,city:{ru:'Солт-Лейк-Сити',en:'Salt Lake City'},rr:'X',dd:'1969-12-10',src:''},
  {id:'rozsa',z:'Europe/Budapest',k:'f',name:{ru:'Миклош Рожа',en:'Miklos Rozsa'},y:1907,mo:4,d:18,t:null,lat:47.4983,lon:19.0408,city:{ru:'Будапешт',en:'Budapest'},rr:'X',dd:'1995-07-27',src:''},
+ {id:'paulmisraki',z:'Europe/Istanbul',k:'f',name:{ru:'Поль Мисраки',en:'Paul Misraki'},y:1908,mo:1,d:8,t:null,lat:41.0100,lon:28.9603,city:{ru:'Стамбул',en:'Istanbul'},rr:'X',dd:'1998-10-29',src:''},
+ {id:'renzorossellin',z:'Europe/Rome',k:'f',name:{ru:'Ренцо Росселлини',en:'Renzo Rossellini'},y:1908,mo:2,d:2,t:null,lat:41.8931,lon:12.4828,city:{ru:'Рим',en:'Rome'},rr:'X',dd:'1982-05-13',src:''},
+ {id:'georgeduning',z:'America/Chicago',k:'f',name:{ru:'Джордж Данинг',en:'George Duning'},y:1908,mo:2,d:25,t:null,lat:39.8303,lon:-84.8906,city:{ru:'Ричмонд',en:'Richmond'},rr:'X',dd:'2000-02-27',src:''},
+ {id:'franzgrothe',z:'Europe/Berlin',k:'f',name:{ru:'Франц Гроте',en:'Franz Grothe'},y:1908,mo:9,d:17,t:null,lat:52.5167,lon:13.3833,city:{ru:'Берлин',en:'Berlin'},rr:'X',dd:'1982-09-12',src:''},
+ {id:'hansmartinmaje',z:'Europe/Warsaw',k:'f',name:{ru:'Hans-Martin Majewski',en:'Hans-Martin Majewski'},y:1911,mo:1,d:14,t:null,lat:54.3625,lon:16.6786,city:{ru:'Славно',en:'Sławno'},rr:'X',dd:'1997-01-01',src:''},
+ {id:'williamlava',z:'America/Chicago',k:'f',name:{ru:'Уильям Лава',en:'William Lava'},y:1911,mo:3,d:18,t:null,lat:44.9442,lon:-93.0936,city:{ru:'Сент-Пол',en:'Saint Paul'},rr:'X',dd:'1971-02-20',src:''},
  {id:'herrmann',z:'America/New_York',k:'f',name:{ru:'Бернард Херрманн',en:'Bernard Herrmann'},y:1911,mo:6,d:29,t:null,lat:40.7128,lon:-74.0061,city:{ru:'Нью-Йорк',en:'New York'},rr:'X',dd:'1975-12-24',src:''},
+ {id:'manuelesperon',z:'America/Mexico_City',k:'f',name:{ru:'Мануэль Эсперон',en:'Manuel Esperón'},y:1911,mo:8,d:3,t:null,lat:19.3538,lon:-99.1359,city:{ru:'Мехико',en:'Mexico City'},rr:'X',dd:'2011-02-13',src:''},
  {id:'rota',z:'Europe/Rome',k:'f',name:{ru:'Нино Рота',en:'Nino Rota'},y:1911,mo:12,d:3,t:null,lat:45.4669,lon:9.1900,city:{ru:'Милан',en:'Milan'},rr:'X',dd:'1979-04-10',src:''},
+ {id:'marionascimben',z:'Europe/Rome',k:'f',name:{ru:'Марио Нашимбене',en:'Mario Nascimbene'},y:1913,mo:11,d:28,t:null,lat:45.4669,lon:9.1900,city:{ru:'Милан',en:'Milan'},rr:'X',dd:'2002-01-06',src:''},
+ {id:'akiraifukube',z:'Asia/Tokyo',k:'f',name:{ru:'Акира Ификубэ',en:'Akira Ifukube'},y:1914,mo:5,d:31,t:null,lat:42.9849,lon:144.3817,city:{ru:'Кусиро',en:'Kushiro'},rr:'X',dd:'2006-02-08',src:''},
+ {id:'armandotrovajo',z:'Europe/Rome',k:'f',name:{ru:'Армандо Тровайоли',en:'Armando Trovajoli'},y:1917,mo:9,d:2,t:null,lat:41.8931,lon:12.4828,city:{ru:'Рим',en:'Rome'},rr:'X',dd:'2013-02-28',src:''},
+ {id:'faridalatrash',k:'f',name:{ru:'Фарид Аль-Атраш',en:'Farid al-Atrash'},y:1917,mo:10,d:19,t:null,lat:32.7000,lon:36.5667,city:{ru:'Эс-Сувайда',en:'Suwayda'},rr:'X',dd:'1974-12-26',src:''},
+ {id:'kvmahadevan',z:'Asia/Kolkata',k:'f',name:{ru:'К. В. Махадеван',en:'K. V. Mahadevan'},y:1918,mo:3,d:14,t:null,lat:8.1875,lon:77.4294,city:{ru:'Нагеркойл',en:'Nagercoil'},rr:'X',dd:'2001-06-21',src:''},
+ {id:'pauldunlap',z:'America/Chicago',k:'f',name:{ru:'Пол Данлэп',en:'Paul Dunlap'},y:1919,mo:7,d:19,t:null,lat:39.9269,lon:-83.8042,city:{ru:'Спрингфилд',en:'Springfield'},rr:'X',dd:'2010-03-11',src:''},
+ {id:'carlosavina',z:'Europe/Rome',k:'f',name:{ru:'Карло Савина',en:'Carlo Savina'},y:1919,mo:8,d:2,t:null,lat:45.0792,lon:7.6761,city:{ru:'Турин',en:'Turin'},rr:'X',dd:'2002-06-23',src:''},
+ {id:'pieropiccioni',z:'Europe/Rome',k:'f',name:{ru:'Пьеро Пиччони',en:'Piero Piccioni'},y:1921,mo:12,d:6,t:null,lat:45.0792,lon:7.6761,city:{ru:'Турин',en:'Turin'},rr:'X',dd:'2004-07-23',src:''},
+ {id:'zdenekliska',z:'Europe/Prague',k:'f',name:{ru:'Зденек Лишка',en:'Zdeněk Liška'},y:1922,mo:3,d:16,t:null,lat:50.1885,lon:14.0404,city:{ru:'Смечно',en:'Smečno'},rr:'X',dd:'1983-07-13',src:''},
  {id:'ebernstein',z:'America/New_York',k:'f',name:{ru:'Элмер Бернстайн',en:'Elmer Bernstein'},y:1922,mo:4,d:4,t:null,lat:40.7128,lon:-74.0061,city:{ru:'Нью-Йорк',en:'New York'},rr:'X',dd:'2004-08-18',src:''},
  {id:'mancini',z:'America/New_York',k:'f',name:{ru:'Генри Манчини',en:'Henry Mancini'},y:1924,mo:4,d:16,t:null,lat:41.4992,lon:-81.6947,city:{ru:'Кливленд',en:'Cleveland'},rr:'X',dd:'1994-06-14',src:''},
  {id:'jarre',z:'Europe/Paris',k:'f',name:{ru:'Морис Жарр',en:'Maurice Jarre'},y:1924,mo:9,d:13,t:null,lat:45.7585,lon:4.7990,city:{ru:'Лион',en:'Lyon'},rr:'X',dd:'2009-03-28',src:''},
+ {id:'gianniferrio',z:'Europe/Rome',k:'f',name:{ru:'Джанни Феррио',en:'Gianni Ferrio'},y:1924,mo:11,d:16,t:null,lat:45.5500,lon:11.5500,city:{ru:'Виченца',en:'Vicenza'},rr:'X',dd:'2013-10-21',src:''},
+ {id:'georgesdelerue',z:'Europe/Paris',k:'f',name:{ru:'Жорж Делерю',en:'Georges Delerue'},y:1925,mo:3,d:12,t:null,lat:50.6900,lon:3.1817,city:{ru:'Рубе',en:'Roubaix'},rr:'X',dd:'1992-03-20',src:''},
+ {id:'rizortolani',z:'Europe/Rome',k:'f',name:{ru:'Риц Ортолани',en:'Riz Ortolani'},y:1926,mo:3,d:25,t:null,lat:43.9102,lon:12.9133,city:{ru:'Пезаро',en:'Pesaro'},rr:'X',dd:'2014-01-23',src:''},
+ {id:'pieroumiliani',z:'Europe/Rome',k:'f',name:{ru:'Пьеро Умилиани',en:'Piero Umiliani'},y:1926,mo:7,d:17,t:null,lat:43.7714,lon:11.2542,city:{ru:'Флоренция',en:'Florence'},rr:'X',dd:'2001-02-14',src:''},
+ {id:'martinbottcher',z:'Europe/Berlin',k:'f',name:{ru:'Мартин Бёттхер',en:'Martin Böttcher'},y:1927,mo:6,d:17,t:null,lat:52.5167,lon:13.3833,city:{ru:'Берлин',en:'Berlin'},rr:'X',dd:'2019-04-19',src:''},
+ {id:'masarusato',z:'Asia/Tokyo',k:'f',name:{ru:'Масару Сато',en:'Masaru Sato'},y:1928,mo:5,d:29,t:null,lat:43.9410,lon:141.6370,city:{ru:'Румои',en:'Rumoi'},rr:'X',dd:'1999-12-05',src:''},
  {id:'morricone',z:'Europe/Rome',k:'f',name:{ru:'Эннио Морриконе',en:'Ennio Morricone'},y:1928,mo:11,d:10,t:null,lat:41.902,lon:12.496,city:{ru:'Рим',en:'Rome'},rr:'X',src:'',dd:'2020-07-06'},
  {id:'goldsmith',z:'America/Los_Angeles',k:'f',name:{ru:'Джерри Голдсмит',en:'Jerry Goldsmith'},y:1929,mo:2,d:10,t:null,lat:34.0522,lon:-118.2437,city:{ru:'Лос-Анджелес',en:'Los Angeles'},rr:'X',dd:'2004-07-21',src:''},
+ {id:'francescodemas',z:'Europe/Rome',k:'f',name:{ru:'Франческо Де Мази',en:'Francesco De Masi'},y:1930,mo:1,d:11,t:null,lat:41.8931,lon:12.4828,city:{ru:'Рим',en:'Rome'},rr:'X',dd:'2005-11-06',src:''},
  {id:'takemitsu',z:'Asia/Tokyo',k:'f',name:{ru:'Тору Такэмицу',en:'Toru Takemitsu'},y:1930,mo:10,d:8,t:null,lat:35.6895,lon:139.6917,city:{ru:'Токио',en:'Tokyo'},rr:'X',dd:'1996-02-20',src:''},
  {id:'komeda',z:'Europe/Warsaw',k:'f',name:{ru:'Кшиштоф Комеда',en:'Krzysztof Komeda'},y:1931,mo:4,d:27,t:null,lat:52.4084,lon:16.9342,city:{ru:'Познань',en:'Poznan'},rr:'X',dd:'1969-04-23',src:''},
+ {id:'sofiagubaiduli',z:'Asia/Yekaterinburg',k:'f',name:{ru:'София Асгатовна Губайдулина',en:'Sofia Gubaidulina'},y:1931,mo:10,d:24,t:null,lat:55.3667,lon:50.6333,city:{ru:'Чистополь',en:'Chistopol'},rr:'X',dd:'2025-03-13',src:''},
+ {id:'shunsukekikuch',z:'Asia/Tokyo',k:'f',name:{ru:'Сюнсукэ Кикути',en:'Shunsuke Kikuchi'},y:1931,mo:11,d:1,t:null,lat:40.6031,lon:140.4638,city:{ru:'Хиросаки',en:'Hirosaki'},rr:'X',dd:'2021-04-24',src:''},
  {id:'jwilliams',z:'America/New_York',k:'f',name:{ru:'Джон Уильямс',en:'John Williams'},y:1932,mo:2,d:8,t:null,lat:40.728,lon:-73.794,city:{ru:'Куинс, Нью-Йорк',en:'Queens, New York'},rr:'X',src:'время не указано и в астрологических базах'},
  {id:'legrand',z:'Europe/Paris',k:'f',name:{ru:'Мишель Легран',en:'Michel Legrand'},y:1932,mo:2,d:24,t:null,lat:48.8567,lon:2.3522,city:{ru:'Париж',en:'Paris'},rr:'X',dd:'2019-01-26',src:''},
+ {id:'francislai',z:'Europe/Paris',k:'f',name:{ru:'Франсис Ле',en:'Francis Lai'},y:1932,mo:4,d:26,t:null,lat:43.7019,lon:7.2683,city:{ru:'Ницца',en:'Nice'},rr:'X',dd:'2018-11-07',src:''},
  {id:'schifrin',z:'America/Argentina/Buenos_Aires',k:'f',name:{ru:'Лало Шифрин',en:'Lalo Schifrin'},y:1932,mo:6,d:21,t:null,lat:-34.5997,lon:-58.3819,city:{ru:'Буэнос-Айрес',en:'Buenos Aires'},rr:'X',dd:'2025-06-26',src:''},
  {id:'kilar',z:'Europe/Warsaw',k:'f',name:{ru:'Войцех Киляр',en:'Wojciech Kilar'},y:1932,mo:7,d:17,t:null,lat:49.8425,lon:24.0322,city:{ru:'Львов',en:'Lviv'},rr:'X',dd:'2013-12-29',src:''},
+ {id:'luisbacalov',z:'America/Argentina/Buenos_Aires',k:'f',name:{ru:'Луис Энрикес Бакалов',en:'Luis Bacalov'},y:1933,mo:8,d:30,t:null,lat:-34.5997,lon:-58.3819,city:{ru:'Буэнос-Айрес',en:'Buenos Aires'},rr:'X',dd:'2017-11-15',src:''},
  {id:'jbarry',z:'Europe/London',k:'f',name:{ru:'Джон Барри',en:'John Barry'},y:1933,mo:11,d:3,t:null,lat:53.9500,lon:-1.0833,city:{ru:'Йорк',en:'York'},rr:'X',dd:'2011-01-30',src:''},
+ {id:'yevgenykrylato',z:'Asia/Yekaterinburg',k:'f',name:{ru:'Евгений Крылатов',en:'Yevgeny Krylatov'},y:1934,mo:2,d:23,t:null,lat:58.1004,lon:57.8043,city:{ru:'Лысьва',en:'Lysva'},rr:'X',dd:'2019-05-08',src:''},
+ {id:'alfredschnittk',z:'Asia/Yekaterinburg',k:'f',name:{ru:'Альфред Гарриевич Шнитке',en:'Alfred Schnittke'},y:1934,mo:11,d:24,t:null,lat:51.5017,lon:46.1222,city:{ru:'Энгельс',en:'Engels'},rr:'X',dd:'1998-08-03',src:''},
+ {id:'klausdoldinger',z:'Europe/Berlin',k:'f',name:{ru:'Клаус Дольдингер',en:'Klaus Doldinger'},y:1936,mo:5,d:12,t:null,lat:52.5167,lon:13.3833,city:{ru:'Берлин',en:'Berlin'},rr:'X',dd:'2025-10-16',src:''},
  {id:'glass',z:'America/New_York',k:'f',name:{ru:'Филип Гласс',en:'Philip Glass'},y:1937,mo:1,d:31,t:null,lat:39.2864,lon:-76.6150,city:{ru:'Балтимор',en:'Baltimore'},rr:'X',src:''},
  {id:'badalamenti',z:'America/New_York',k:'f',name:{ru:'Анджело Бадаламенти',en:'Angelo Badalamenti'},y:1937,mo:3,d:22,t:null,lat:40.7128,lon:-74.0061,city:{ru:'Нью-Йорк',en:'New York'},rr:'X',dd:'2022-12-11',src:''},
+ {id:'stelviociprian',z:'Europe/Rome',k:'f',name:{ru:'Стельвио Чиприани',en:'Stelvio Cipriani'},y:1937,mo:8,d:20,t:null,lat:41.8931,lon:12.4828,city:{ru:'Рим',en:'Rome'},rr:'X',dd:'2018-10-01',src:''},
  {id:'artemyev',z:'Asia/Novosibirsk',k:'f',name:{ru:'Эдуард Артемьев',en:'Eduard Artemyev'},y:1937,mo:11,d:30,t:null,lat:55.0333,lon:82.9167,city:{ru:'Новосибирск',en:'Novosibirsk'},rr:'X',dd:'2022-12-29',src:''},
+ {id:'rahuldevburman',z:'Asia/Kolkata',k:'f',name:{ru:'Рахул Дев Бурман',en:'Rahul Dev Burman'},y:1939,mo:6,d:27,t:null,lat:22.5675,lon:88.3700,city:{ru:'Калькутта',en:'Kolkata'},rr:'X',dd:'1994-01-04',src:''},
+ {id:'vladimircosma',z:'Europe/Bucharest',k:'f',name:{ru:'Владимир Косма',en:'Vladimir Cosma'},y:1940,mo:4,d:13,t:null,lat:44.4134,lon:26.0978,city:{ru:'Бухарест',en:'Bucharest'},rr:'X',src:''},
  {id:'moroder',z:'Europe/Rome',k:'f',name:{ru:'Джорджо Мородер',en:'Giorgio Moroder'},y:1940,mo:4,d:26,t:null,lat:46.5752,lon:11.6721,city:{ru:'Ортизеи',en:'Ortisei'},rr:'X',src:''},
+ {id:'pinodonaggio',z:'Europe/Rome',k:'f',name:{ru:'Пино Донаджо',en:'Pino Donaggio'},y:1941,mo:11,d:24,t:null,lat:45.4856,lon:12.4175,city:{ru:'Бурано',en:'Burano'},rr:'X',src:''},
+ {id:'johncale',z:'Europe/London',k:'f',name:{ru:'Джон Кейл',en:'John Cale'},y:1942,mo:3,d:9,t:null,lat:51.8020,lon:-3.9020,city:{ru:'Гарнант',en:'Garnant'},rr:'X',src:''},
+ {id:'billconti',z:'America/New_York',k:'f',name:{ru:'Билл Конти',en:'Bill Conti'},y:1942,mo:4,d:13,t:null,lat:41.8240,lon:-71.4128,city:{ru:'Провиденс',en:'Providence'},rr:'X',src:''},
+ {id:'paulmccartney',z:'Europe/London',k:'f',name:{ru:'Пол Маккартни',en:'Paul McCartney'},y:1942,mo:6,d:18,t:null,lat:53.4509,lon:-2.9693,city:{ru:'Больница Уолтона',en:'Walton Hospital'},rr:'X',src:''},
  {id:'vangelis',z:'Europe/Athens',k:'f',name:{ru:'Вангелис',en:'Vangelis'},y:1943,mo:3,d:29,t:null,lat:39.3400,lon:23.0133,city:{ru:'Агрия',en:'Agria'},rr:'X',dd:'2022-05-17',src:''},
+ {id:'ilaiyaraaja',z:'Asia/Kolkata',k:'f',name:{ru:'Илаяраджа',en:'Ilaiyaraaja'},y:1943,mo:6,d:3,t:null,lat:9.8619,lon:77.2719,city:{ru:'Паннайпурам',en:'Pannaipuram'},rr:'X',src:''},
  {id:'rnewman',z:'America/Los_Angeles',k:'f',name:{ru:'Рэнди Ньюман',en:'Randy Newman'},y:1943,mo:11,d:28,t:null,lat:34.0522,lon:-118.2437,city:{ru:'Лос-Анджелес',en:'Los Angeles'},rr:'X',src:''},
+ {id:'nicolapiovani',z:'Europe/Rome',k:'f',name:{ru:'Никола Пьовани',en:'Nicola Piovani'},y:1946,mo:5,d:26,t:null,lat:41.8931,lon:12.4828,city:{ru:'Рим',en:'Rome'},rr:'X',src:''},
+ {id:'marksnow',z:'America/New_York',k:'f',name:{ru:'Марк Сноу',en:'Mark Snow'},y:1946,mo:8,d:26,t:null,lat:40.6508,lon:-73.9497,city:{ru:'Бруклин',en:'Brooklyn'},rr:'X',dd:'2025-07-04',src:''},
  {id:'shore',z:'America/Toronto',k:'f',name:{ru:'Говард Шор',en:'Howard Shore'},y:1946,mo:10,d:18,t:null,lat:43.653,lon:-79.383,city:{ru:'Торонто',en:'Toronto'},rr:'X',src:'«Властелин колец»'},
+ {id:'philippesarde',z:'Europe/Paris',k:'f',name:{ru:'Филипп Сард',en:'Philippe Sarde'},y:1948,mo:6,d:21,t:null,lat:48.8872,lon:2.2675,city:{ru:'Нёйи-сюр-Сен',en:'Neuilly-sur-Seine'},rr:'X',src:''},
  {id:'menken',z:'America/New_York',k:'f',name:{ru:'Алан Менкен',en:'Alan Menken'},y:1949,mo:7,d:22,t:null,lat:40.9086,lon:-73.7819,city:{ru:'Нью-Рошелл',en:'New Rochelle'},rr:'X',src:''},
  {id:'yared',z:'Asia/Beirut',k:'f',name:{ru:'Габриэль Яред',en:'Gabriel Yared'},y:1949,mo:10,d:7,t:null,lat:33.8869,lon:35.5131,city:{ru:'Бейрут',en:'Beirut'},rr:'X',src:''},
+ {id:'georgefenton',z:'Europe/London',k:'f',name:{ru:'Джордж Фентон',en:'George Fenton'},y:1949,mo:10,d:19,t:null,lat:51.4064,lon:0.0183,city:{ru:'Бромли',en:'Bromley'},rr:'X',src:''},
+ {id:'wgsnuffywalden',z:'America/Chicago',k:'f',name:{ru:'У. Г. Снаффи Уолден',en:'W. G. Snuffy Walden'},y:1950,mo:2,d:13,t:null,lat:31.0000,lon:-92.0000,city:{ru:'Луизиана',en:'Louisiana'},rr:'X',src:''},
  {id:'silvestri',z:'America/New_York',k:'f',name:{ru:'Алан Сильвестри',en:'Alan Silvestri'},y:1950,mo:3,d:26,t:null,lat:40.7128,lon:-74.0061,city:{ru:'Нью-Йорк',en:'New York'},rr:'X',src:''},
+ {id:'markmothersbau',z:'America/New_York',k:'f',name:{ru:'Марк Мазерсбо',en:'Mark Mothersbaugh'},y:1950,mo:5,d:18,t:null,lat:41.0731,lon:-81.5178,city:{ru:'Акрон',en:'Akron'},rr:'X',src:''},
  {id:'hisaishi',z:'Asia/Tokyo',k:'f',name:{ru:'Дзё Хисаиси',en:'Joe Hisaishi'},y:1950,mo:12,d:6,t:null,lat:36.7415,lon:138.3694,city:{ru:'Накано, Нагано',en:'Nakano, Nagano'},rr:'X',src:''},
  {id:'jnhoward',z:'America/Los_Angeles',k:'f',name:{ru:'Джеймс Ньютон Ховард',en:'James Newton Howard'},y:1951,mo:6,d:9,t:null,lat:34.0522,lon:-118.2437,city:{ru:'Лос-Анджелес',en:'Los Angeles'},rr:'X',src:''},
+ {id:'markisham',z:'America/New_York',k:'f',name:{ru:'Марк Айшем',en:'Mark Isham'},y:1951,mo:9,d:7,t:null,lat:40.7128,lon:-74.0061,city:{ru:'Нью-Йорк',en:'New York City'},rr:'X',src:''},
  {id:'sakamoto',z:'Asia/Tokyo',k:'f',name:{ru:'Рюити Сакамото',en:'Ryuichi Sakamoto'},y:1952,mo:1,d:17,t:null,lat:35.7073,lon:139.6638,city:{ru:'Накано, Токио',en:'Nakano, Tokyo'},rr:'X',dd:'2023-03-28',src:''},
  {id:'elfman',z:'America/Los_Angeles',k:'f',name:{ru:'Дэнни Эльфман',en:'Danny Elfman'},y:1953,mo:5,d:29,t:null,lat:34.052,lon:-118.244,city:{ru:'Лос-Анджелес',en:'Los Angeles'},rr:'X',src:'«Бэтмен», «Симпсоны»'},
  {id:'horner',z:'America/Los_Angeles',k:'f',name:{ru:'Джеймс Хорнер',en:'James Horner'},y:1953,mo:8,d:14,t:null,lat:34.0522,lon:-118.2437,city:{ru:'Лос-Анджелес',en:'Los Angeles'},rr:'X',dd:'2015-06-22',src:''},
+ {id:'davidnewman',z:'America/Los_Angeles',k:'f',name:{ru:'Дэвид Ньюман',en:'David Newman'},y:1954,mo:3,d:11,t:null,lat:34.0522,lon:-118.2437,city:{ru:'Лос-Анджелес',en:'Los Angeles'},rr:'X',src:''},
+ {id:'christopheryou',z:'America/New_York',k:'f',name:{ru:'Кристофер Янг',en:'Christopher Young'},y:1954,mo:4,d:28,t:null,lat:40.3487,lon:-74.0665,city:{ru:'Ред-Банк',en:'Red Bank'},rr:'X',src:''},
  {id:'burwell',z:'America/New_York',k:'f',name:{ru:'Картер Бёруэлл',en:'Carter Burwell'},y:1954,mo:11,d:18,t:null,lat:40.7128,lon:-74.0061,city:{ru:'Нью-Йорк',en:'New York'},rr:'X',src:''},
  {id:'tnewman',z:'America/Los_Angeles',k:'f',name:{ru:'Томас Ньюман',en:'Thomas Newman'},y:1955,mo:10,d:20,t:null,lat:34.052,lon:-118.244,city:{ru:'Лос-Анджелес',en:'Los Angeles'},rr:'X',src:'«Побег из Шоушенка», «1917»'},
+ {id:'johndebney',z:'America/Los_Angeles',k:'f',name:{ru:'Джон Дебни',en:'John Debney'},y:1956,mo:8,d:18,t:null,lat:34.1708,lon:-118.2500,city:{ru:'Глендейл',en:'Glendale'},rr:'X',src:''},
+ {id:'kenjikawai',z:'Asia/Tokyo',k:'f',name:{ru:'Кэндзи Каваи',en:'Kenji Kawai'},y:1957,mo:4,d:23,t:null,lat:35.6092,lon:139.7302,city:{ru:'Синагава',en:'Shinagawa'},rr:'X',src:''},
  {id:'zimmer',z:'Europe/Berlin',k:'f',name:{ru:'Ханс Циммер',en:'Hans Zimmer'},y:1957,mo:9,d:12,t:null,lat:50.111,lon:8.682,city:{ru:'Франкфурт-на-Майне',en:'Frankfurt am Main'},rr:'X',src:'в Astro-Databank помечено как непроверенное'},
+ {id:'anumalik',z:'Asia/Kolkata',k:'f',name:{ru:'Ану Малик',en:'Anu Malik'},y:1960,mo:11,d:2,t:null,lat:19.0758,lon:72.8775,city:{ru:'Мумбаи',en:'Mumbai'},rr:'X',src:''},
  {id:'portman',z:'Europe/London',k:'f',name:{ru:'Рэйчел Портман',en:'Rachel Portman'},y:1960,mo:12,d:11,t:null,lat:51.0899,lon:-0.7117,city:{ru:'Хаслмир',en:'Haslemere'},rr:'X',src:''},
  {id:'desplat',z:'Europe/Paris',k:'f',name:{ru:'Александр Деспла',en:'Alexandre Desplat'},y:1961,mo:8,d:23,t:null,lat:48.857,lon:2.352,city:{ru:'Париж',en:'Paris'},rr:'X',src:'«Отель «Гранд Будапешт»», «Форма воды»'},
  {id:'mansell',z:'Europe/London',k:'f',name:{ru:'Клинт Мэнселл',en:'Clint Mansell'},y:1963,mo:1,d:7,t:null,lat:52.4167,lon:-1.5167,city:{ru:'Ковентри',en:'Coventry'},rr:'X',src:''},
  {id:'reznor',z:'America/New_York',k:'f',name:{ru:'Трент Резнор',en:'Trent Reznor'},y:1965,mo:5,d:17,t:null,lat:41.004,lon:-80.347,city:{ru:'Нью-Касл, Пенсильвания',en:'New Castle, Pennsylvania'},rr:'X',src:'«Социальная сеть», в паре с Эттикусом Россом'},
+ {id:'arrahman',z:'Asia/Kolkata',k:'f',name:{ru:'А. Р. Рахман',en:'A. R. Rahman'},y:1966,mo:1,d:6,t:null,lat:13.0825,lon:80.2750,city:{ru:'Ченнаи',en:'Chennai'},rr:'X',src:''},
  {id:'richter',z:'Europe/Berlin',k:'f',name:{ru:'Макс Рихтер',en:'Max Richter'},y:1966,mo:3,d:22,t:null,lat:52.104,lon:9.357,city:{ru:'Хамельн',en:'Hamelin'},rr:'X',src:'«Прибытие», Sleep'},
+ {id:'marcobeltrami',z:'America/New_York',k:'f',name:{ru:'Марко Белтрами',en:'Marco Beltrami'},y:1966,mo:10,d:7,t:null,lat:40.7889,lon:-73.2335,city:{ru:'Лонг-Айленд',en:'Long Island'},rr:'X',src:''},
  {id:'giacchino',z:'America/New_York',k:'f',name:{ru:'Майкл Джаккино',en:'Michael Giacchino'},y:1967,mo:10,d:10,t:null,lat:40.033,lon:-74.958,city:{ru:'Риверсайд, Нью-Джерси',en:'Riverside, New Jersey'},rr:'X',src:'«Вверх», «Бэтмен»'},
+ {id:'christophebeck',z:'America/Toronto',k:'f',name:{ru:'Кристоф Бек',en:'Christophe Beck'},y:1968,mo:1,d:1,t:null,lat:45.5033,lon:-73.5868,city:{ru:'Монреаль',en:'Montreal'},rr:'X',src:''},
  {id:'aross',z:'Europe/London',k:'f',name:{ru:'Эттикус Росс',en:'Atticus Ross'},y:1968,mo:1,d:16,t:null,lat:51.507,lon:-0.128,city:{ru:'Лондон',en:'London'},rr:'X',src:'«Социальная сеть», в паре с Трентом Резнором'},
+ {id:'murraygold',z:'Europe/London',k:'f',name:{ru:'Мюррей Голд',en:'Murray Gold'},y:1969,mo:2,d:28,t:null,lat:50.8058,lon:-1.0872,city:{ru:'Портсмут',en:'Portsmouth'},rr:'X',src:''},
  {id:'johannsson',z:'Atlantic/Reykjavik',k:'f',name:{ru:'Йохан Йоханнссон',en:'Johann Johannsson'},y:1969,mo:9,d:19,t:null,lat:64.147,lon:-21.940,city:{ru:'Рейкьявик',en:'Reykjavik'},rr:'X',src:'«Прибытие», «Убийца»',dd:'2018-02-09'},
  {id:'greenwood',z:'Europe/London',k:'f',name:{ru:'Джонни Гринвуд',en:'Jonny Greenwood'},y:1971,mo:11,d:5,t:null,lat:51.752,lon:-1.258,city:{ru:'Оксфорд',en:'Oxford'},rr:'X',src:'«Нефть», «Призрачная нить»'},
+ {id:'briantyler',z:'America/Los_Angeles',k:'f',name:{ru:'Брайан Тайлер',en:'Brian Tyler'},y:1972,mo:5,d:8,t:null,lat:34.0522,lon:-118.2437,city:{ru:'Лос-Анджелес',en:'Los Angeles'},rr:'X',src:''},
+ {id:'kevinmacleod',z:'America/Chicago',k:'f',name:{ru:'Кевин МакЛауд',en:'Kevin MacLeod'},y:1972,mo:9,d:28,t:null,lat:44.5133,lon:-88.0133,city:{ru:'Грин-Бей',en:'Green Bay'},rr:'X',src:''},
+ {id:'himeshreshammi',z:'Asia/Kolkata',k:'f',name:{ru:'Химеш Решаммия',en:'Himesh Reshammiya'},y:1973,mo:7,d:23,t:null,lat:19.0758,lon:72.8775,city:{ru:'Мумбаи',en:'Mumbai'},rr:'X',src:''},
+ {id:'fabianromer',z:'Europe/Zurich',k:'f',name:{ru:'Фабиан Ромер',en:'Fabian Römer'},y:1973,mo:10,d:29,t:null,lat:47.3744,lon:8.5411,city:{ru:'Цюрих',en:'Zurich'},rr:'X',src:''},
  {id:'djawadi',z:'Europe/Berlin',k:'f',name:{ru:'Рамин Джавади',en:'Ramin Djawadi'},y:1974,mo:7,d:19,t:null,lat:51.4322,lon:6.7611,city:{ru:'Дуйсбург',en:'Duisburg'},rr:'X',src:''},
+ {id:'yuvanshankarra',z:'Asia/Kolkata',k:'f',name:{ru:'Юван Шанкар Раджа',en:'Yuvan Shankar Raja'},y:1979,mo:8,d:31,t:null,lat:13.0825,lon:80.2750,city:{ru:'Ченнаи',en:'Chennai'},rr:'X',src:''},
  {id:'hildur',z:'Atlantic/Reykjavik',k:'f',name:{ru:'Хильдур Гуднадоуттир',en:'Hildur Gudnadottir'},y:1982,mo:9,d:4,t:null,lat:64.147,lon:-21.940,city:{ru:'Рейкьявик',en:'Reykjavik'},rr:'X',src:'«Джокер», «Чернобыль»'},
  {id:'goransson',z:'Europe/Stockholm',k:'f',name:{ru:'Людвиг Ёранссон',en:'Ludwig Goransson'},y:1984,mo:9,d:1,t:null,lat:58.410,lon:15.622,city:{ru:'Линчёпинг',en:'Linkoping'},rr:'X',src:'«Оппенгеймер», «Мандалорец»'}
 ];
@@ -2396,7 +2497,7 @@ document.getElementById('showSeconds').addEventListener('change',e=>{
 });
 /* Must not match the theme switcher, which shares the .lang styling. */
  document.querySelectorAll('.lang button[data-lang]').forEach(b=>b.addEventListener('click',()=>{
-  LANG=b.dataset.lang; localStorage.setItem('astrarium_lang',LANG); applyStatic(); fillHsys(); fillNamePh(); renderLibrary(); if(CURRENT)run();
+  LANG=b.dataset.lang; localStorage.setItem('astrarium_lang',LANG); applyStatic(); fillHsys(); fillNamePh(); fillLibSort(); renderLibrary(); if(CURRENT)run();
 }));
 document.getElementById('city').addEventListener('input',e=>renderCityList(searchCities(e.target.value)));
 document.getElementById('city').addEventListener('focus',e=>renderCityList(searchCities(e.target.value)));
@@ -2457,8 +2558,8 @@ applyStatic();
 const LKEY_CHARTS='astrarium_charts';
 function savedCharts(){ try{ return JSON.parse(localStorage.getItem(LKEY_CHARTS))||[] }catch(e){ return [] } }
 function libRow(e,own){
-  const nm=own?e.name:e.name[LANG];
-  const city=own?e.city:e.city[LANG];
+  const nm=e._n!==undefined?e._n:(own?e.name:e.name[LANG]);
+  const city=e._c!==undefined?e._c:(own?e.city:e.city[LANG]);
   const date=`${String(e.d).padStart(2,'0')}.${String(e.mo).padStart(2,'0')}.${e.y}`;
   const time=e.t==null
     ? `<span class="libwarn">${t('noTime')}</span>`
@@ -2478,15 +2579,80 @@ function libCountText(n){
   return n+' '+(a===1&&b!==11 ? 'карта'
     : (a>=2&&a<=4&&(b<12||b>14) ? 'карты' : 'карт'));
 }
+/* Search over everything visible in a row - name, city, year - because that is
+   what a person actually remembers about a chart. Diacritics are folded so
+   "Rozsa" finds Rózsa and "ё" does not hide Ёранссон. */
+const libFold=s=>(s||'').toLowerCase().replace(/ё/g,'е')
+  .normalize('NFD').replace(/[̀-ͯ]/g,'');
+const LIB_SORTS={
+  date:{ru:'по дате рождения',en:'by birth date',
+        fn:(a,b)=>a.y-b.y||a.mo-b.mo||a.d-b.d},
+  name:{ru:'по имени',en:'by name',
+        fn:(a,b)=>libFold(a._n).localeCompare(libFold(b._n),'ru')},
+  place:{ru:'по месту',en:'by place',
+        fn:(a,b)=>libFold(a._c).localeCompare(libFold(b._c),'ru')||a.y-b.y}
+};
+let LIB_SORT=localStorage.getItem('astrarium_libsort');
+if(!LIB_SORTS[LIB_SORT]) LIB_SORT='date';
+function fillLibSort(){
+  const sel=document.getElementById('libSort'); if(!sel) return;
+  sel.innerHTML=Object.entries(LIB_SORTS).map(([k,v])=>
+    `<option value="${k}"${k===LIB_SORT?' selected':''}>${v[LANG]}</option>`).join('');
+  const f=document.getElementById('libFind'); if(f) f.placeholder=t('libFind');
+}
+/* Russian needs three forms where English needs two, so the count cannot be
+   a single STR entry. */
+function libCountText(n,total){
+  const w=LANG==='en' ? (n===1?' chart':' charts')
+    : ' '+((n%10===1&&n%100!==11) ? 'карта'
+      : ((n%10>=2&&n%10<=4&&(n%100<12||n%100>14)) ? 'карты' : 'карт'));
+  return n+w+(total!=null&&total!==n ? ` ${LANG==='en'?'of':'из'} ${total}` : '');
+}
+/* Era headings come free from the chronological sort and give the eye
+   somewhere to land in a list this long. They are meaningless under the other
+   sorts, so they only appear under this one. */
+function libEra(y){
+  if(y<1880) return LANG==='en'?'Before the cinema':'До кинематографа';
+  if(y<1920) return LANG==='en'?'Born 1880-1919 · the studio era':'Рождённые 1880-1919 · эпоха студий';
+  if(y<1950) return LANG==='en'?'Born 1920-1949':'Рождённые 1920-1949';
+  return LANG==='en'?'Born from 1950':'Рождённые с 1950';
+}
 function renderLibrary(){
   const box=document.getElementById('libList'); if(!box) return;
-  const own=savedCharts();
-  box.innerHTML=own.map(e=>libRow(e,true)).join('')
-    + CHART_LIBRARY.map(e=>libRow(e,false)).join('');
+  const own=savedCharts().map(e=>({...e,_own:1,_n:e.name,_c:e.city}));
+  const lib=CHART_LIBRARY.map(e=>({...e,_own:0,_n:e.name[LANG],_c:e.city[LANG]}));
+  const all=own.concat(lib);
+  /* The haystack is everything you might remember about an entry: the name,
+     the place, the year, what the person did, and the note - which for the
+     hand-written entries holds the films they are known for, so "чернобыль"
+     finds Guðnadóttir. */
+  const kindWords=e=>e._own ? 'моя своя mine'
+    : (e.k==='c' ? 'классика классик composer classical'
+                 : 'кино кинокомпозитор film score');
+  /* Both language variants go into the haystack, not just the displayed one:
+     with the app in Russian, "rozsa" typed on a Latin keyboard should still
+     find Миклош Рожа. */
+  const both=e=>e._own ? [e.name,e.city]
+    : [e.name.ru,e.name.en,e.city.ru,e.city.en];
+  const q=libFold((document.getElementById('libFind')||{}).value);
+  const hit=q ? all.filter(e=>libFold(
+      both(e).concat([e.y,kindWords(e),e.src||'']).join(' ')).includes(q)) : all;
+  /* Own charts stay on top: they are the ones you came for. */
+  const mine=hit.filter(e=>e._own), rest=hit.filter(e=>!e._own);
+  rest.sort(LIB_SORTS[LIB_SORT].fn);
+  let html=mine.map(e=>libRow(e,true)).join(''), era=null;
+  rest.forEach(e=>{
+    if(LIB_SORT==='date'){
+      const h=libEra(e.y);
+      if(h!==era){ era=h; html+=`<div class="libera">${h}</div>`; }
+    }
+    html+=libRow(e,false);
+  });
+  box.innerHTML=html||`<div class="tiny" style="padding:8px 0">${t('libNone')}</div>`;
   /* The count is on the closed summary so the section reads as full rather
      than as one more empty fold to skip. */
   const c=document.getElementById('libCount');
-  if(c) c.textContent=libCountText(own.length+CHART_LIBRARY.length);
+  if(c) c.textContent=libCountText(hit.length, all.length);
 }
 function loadChartEntry(e,own){
   const tz=own?e.tz:libTz(e);
@@ -2540,6 +2706,13 @@ document.getElementById('saveChart').addEventListener('click',function(){
   localStorage.setItem(LKEY_CHARTS,JSON.stringify(list.slice(0,50)));
   renderLibrary();
 });
+/* Живой поиск: перерисовка списка из 150 строк занимает доли миллисекунды,
+   поэтому откладывать её нечем и незачем. */
+document.getElementById('libFind').addEventListener('input',renderLibrary);
+document.getElementById('libSort').addEventListener('change',function(){
+  LIB_SORT=this.value; localStorage.setItem('astrarium_libsort',LIB_SORT); renderLibrary();
+});
+fillLibSort();
 renderLibrary();
 
 /* Offline shell. Registered after load so it never competes with first paint,
