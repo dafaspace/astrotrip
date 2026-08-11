@@ -371,7 +371,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
 /* Bump together with CACHE in sw.js: the two are the same release, and the
    number on screen is how you tell from a phone which one you are looking at. */
-const APP_VERSION='0.5.0';
+const APP_VERSION='0.6.0';
 document.getElementById('ver').textContent=APP_VERSION;
 
 /* ---------- i18n ---------- */
@@ -940,12 +940,33 @@ const CHART_LIBRARY=[
  {id:'debussy',name:{ru:'Клод Дебюсси',en:'Debussy'},y:1862,mo:8,d:22,t:null,lat:48.899,lon:2.094,city:{ru:'Сен-Жермен-ан-Ле',en:'Saint-Germain-en-Laye'},rr:'X',src:''},
  {id:'rachmanin',name:{ru:'Сергей Рахманинов',en:'Rachmaninoff'},y:1873,mo:4,d:1,t:null,lat:58.520,lon:31.270,city:{ru:'Онег, Новгородская губерния',en:'Oneg, Novgorod'},rr:'X',src:'20 марта по юлианскому календарю'},
  {id:'stravinsky',name:{ru:'Игорь Стравинский',en:'Stravinsky'},y:1882,mo:6,d:17,t:null,lat:59.906,lon:29.772,city:{ru:'Ораниенбаум',en:'Oranienbaum'},rr:'X',src:'5 июня по юлианскому календарю'},
- {id:'morricone',name:{ru:'Эннио Морриконе',en:'Ennio Morricone'},y:1928,mo:11,d:10,t:null,lat:41.902,lon:12.496,city:{ru:'Рим',en:'Rome'},rr:'X',src:''},
- {id:'jwilliams',name:{ru:'Джон Уильямс',en:'John Williams'},y:1932,mo:2,d:8,t:null,lat:40.728,lon:-73.794,city:{ru:'Куинс, Нью-Йорк',en:'Queens, New York'},rr:'X',src:'время не указано и в астрологических базах'},
- {id:'zimmer',name:{ru:'Ханс Циммер',en:'Hans Zimmer'},y:1957,mo:9,d:12,t:null,lat:50.111,lon:8.682,city:{ru:'Франкфурт-на-Майне',en:'Frankfurt am Main'},rr:'X',src:'в Astro-Databank помечено как непроверенное'}
+ {id:'morricone',z:'Europe/Rome',name:{ru:'Эннио Морриконе',en:'Ennio Morricone'},y:1928,mo:11,d:10,t:null,lat:41.902,lon:12.496,city:{ru:'Рим',en:'Rome'},rr:'X',src:''},
+ {id:'jwilliams',z:'America/New_York',name:{ru:'Джон Уильямс',en:'John Williams'},y:1932,mo:2,d:8,t:null,lat:40.728,lon:-73.794,city:{ru:'Куинс, Нью-Йорк',en:'Queens, New York'},rr:'X',src:'время не указано и в астрологических базах'},
+ {id:'shore',z:'America/Toronto',name:{ru:'Говард Шор',en:'Howard Shore'},y:1946,mo:10,d:18,t:null,lat:43.653,lon:-79.383,city:{ru:'Торонто',en:'Toronto'},rr:'X',src:'«Властелин колец»'},
+ {id:'elfman',z:'America/Los_Angeles',name:{ru:'Дэнни Эльфман',en:'Danny Elfman'},y:1953,mo:5,d:29,t:null,lat:34.052,lon:-118.244,city:{ru:'Лос-Анджелес',en:'Los Angeles'},rr:'X',src:'«Бэтмен», «Симпсоны»'},
+ {id:'tnewman',z:'America/Los_Angeles',name:{ru:'Томас Ньюман',en:'Thomas Newman'},y:1955,mo:10,d:20,t:null,lat:34.052,lon:-118.244,city:{ru:'Лос-Анджелес',en:'Los Angeles'},rr:'X',src:'«Побег из Шоушенка», «1917»'},
+ {id:'zimmer',z:'Europe/Berlin',name:{ru:'Ханс Циммер',en:'Hans Zimmer'},y:1957,mo:9,d:12,t:null,lat:50.111,lon:8.682,city:{ru:'Франкфурт-на-Майне',en:'Frankfurt am Main'},rr:'X',src:'в Astro-Databank помечено как непроверенное'},
+ {id:'desplat',z:'Europe/Paris',name:{ru:'Александр Деспла',en:'Alexandre Desplat'},y:1961,mo:8,d:23,t:null,lat:48.857,lon:2.352,city:{ru:'Париж',en:'Paris'},rr:'X',src:'«Отель «Гранд Будапешт»», «Форма воды»'},
+ {id:'reznor',z:'America/New_York',name:{ru:'Трент Резнор',en:'Trent Reznor'},y:1965,mo:5,d:17,t:null,lat:41.004,lon:-80.347,city:{ru:'Нью-Касл, Пенсильвания',en:'New Castle, Pennsylvania'},rr:'X',src:'«Социальная сеть», в паре с Эттикусом Россом'},
+ {id:'richter',z:'Europe/Berlin',name:{ru:'Макс Рихтер',en:'Max Richter'},y:1966,mo:3,d:22,t:null,lat:52.104,lon:9.357,city:{ru:'Хамельн',en:'Hamelin'},rr:'X',src:'«Прибытие», Sleep'},
+ {id:'giacchino',z:'America/New_York',name:{ru:'Майкл Джаккино',en:'Michael Giacchino'},y:1967,mo:10,d:10,t:null,lat:40.033,lon:-74.958,city:{ru:'Риверсайд, Нью-Джерси',en:'Riverside, New Jersey'},rr:'X',src:'«Вверх», «Бэтмен»'},
+ {id:'aross',z:'Europe/London',name:{ru:'Эттикус Росс',en:'Atticus Ross'},y:1968,mo:1,d:16,t:null,lat:51.507,lon:-0.128,city:{ru:'Лондон',en:'London'},rr:'X',src:'«Социальная сеть», в паре с Трентом Резнором'},
+ {id:'johannsson',z:'Atlantic/Reykjavik',name:{ru:'Йохан Йоханнссон',en:'Johann Johannsson'},y:1969,mo:9,d:19,t:null,lat:64.147,lon:-21.940,city:{ru:'Рейкьявик',en:'Reykjavik'},rr:'X',src:'«Прибытие», «Убийца»'},
+ {id:'greenwood',z:'Europe/London',name:{ru:'Джонни Гринвуд',en:'Jonny Greenwood'},y:1971,mo:11,d:5,t:null,lat:51.752,lon:-1.258,city:{ru:'Оксфорд',en:'Oxford'},rr:'X',src:'«Нефть», «Призрачная нить»'},
+ {id:'hildur',z:'Atlantic/Reykjavik',name:{ru:'Хильдур Гуднадоуттир',en:'Hildur Gudnadottir'},y:1982,mo:9,d:4,t:null,lat:64.147,lon:-21.940,city:{ru:'Рейкьявик',en:'Reykjavik'},rr:'X',src:'«Джокер», «Чернобыль»'},
+ {id:'goransson',z:'Europe/Stockholm',name:{ru:'Людвиг Ёранссон',en:'Ludwig Goransson'},y:1984,mo:9,d:1,t:null,lat:58.410,lon:15.622,city:{ru:'Линчёпинг',en:'Linkoping'},rr:'X',src:'«Оппенгеймер», «Мандалорец»'}
 ];
-/* Historical entries predate zone time, so their offset is local mean time. */
-const libTz=e=>e.y<1900?LMT(e.lon):(e.id==='morricone'?1:e.id==='jwilliams'?-5:e.id==='zimmer'?2:LMT(e.lon));
+/* Before standard time a birth was recorded in local mean time, so those
+   entries take longitude/15 - and the birthplace's own longitude, not the
+   zone's reference city, which can sit a quarter hour away.
+   From 1900 the offset comes from the tz database through Intl, the same
+   path the form uses, rather than from a constant written here by hand. */
+const libTz=e=>{
+  if(e.y<1900||!e.z) return LMT(e.lon);
+  const hh=e.t==null?12:e.t;
+  const off=ianaOffset(e.z,e.y,e.mo,e.d,Math.floor(hh),Math.round((hh%1)*60));
+  return off==null?LMT(e.lon):off;
+};
 const HOUSE_SYSTEMS={
   placidus:{ru:'Плацидус',en:'Placidus',fn:(ramc,lat,ecl,asc,mc)=>placidusCusps(ramc,lat,ecl,asc,mc)},
   regiomontanus:{ru:'Региомонтан',en:'Regiomontanus',fn:(ramc,lat,ecl,asc,mc)=>
