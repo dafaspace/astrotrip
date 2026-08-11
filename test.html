@@ -263,7 +263,18 @@ function run(){
   /* ---------- библиотека карт ---------- */
   group('Библиотека карт');
   const LIB=ev('CHART_LIBRARY');
-  t('двадцать четыре карты композиторов',()=>LIB.length===24||`${LIB.length}`);
+  t('пятьдесят девять карт: пятьдесят кинокомпозиторов и девять классиков',()=>{
+    if(LIB.length!==59) return `записей ${LIB.length}`;
+    const f=LIB.filter(e=>e.k==='f').length, c=LIB.filter(e=>e.k==='c').length;
+    return (f===50&&c===9)||`кино ${f}, классика ${c}`;
+  });
+  t('у умерших есть дата смерти, у живых её нет',()=>{
+    const bad=LIB.filter(e=>e.dd&&!/^\d{4}-\d{2}-\d{2}$/.test(e.dd)).map(e=>e.id);
+    if(bad.length) return 'кривая дата: '+bad.join(', ');
+    /* родившийся до 1910 года и без даты смерти - почти наверняка пропуск */
+    const suspect=LIB.filter(e=>!e.dd&&e.y<1910).map(e=>e.id);
+    return !suspect.length||'нет даты смерти у: '+suspect.join(', ');
+  });
   /* Часовой пояс не пишется рукой: до 1900 это местное среднее время места,
      после - база tz через Intl. Проверяем именно её ответы, потому что
      полдюжины записей попадают в исторические ловушки (Британия 1968-1971
@@ -276,8 +287,10 @@ function run(){
       if(e.y>=1900){
         if(!e.z) bad.push(e.id+': нет зоны при годе '+e.y);
         else if(Math.abs(off*60-Math.round(off*60/15)*15)>0.01)
-          bad.push(e.id+': не кратно 15 минутам ('+off+')');
-      } else if(Math.abs(off-e.lon/15)>0.02) bad.push(e.id+': не местное среднее время');
+          bad.push(e.id+': после 1900 года, но пояс не стандартный ('+off+')');
+      } else if(Math.abs(off-e.lon/15)>0.02
+                && Math.abs(off*60-Math.round(off*60/15)*15)>0.01)
+        bad.push(e.id+': ни зона, ни местное среднее время');
     });
     return !bad.length||bad.join('; ');
   });
