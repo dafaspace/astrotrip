@@ -1,8 +1,8 @@
 {
   "name": "AstroTrip",
   "short_name": "AstroTrip",
-  "description": "Офлайновое ядро расчёта и интерпретации натальной карты. Ни сети, ни API.",
-  "lang": "ru",
+  "description": "Offline natal chart calculation and interpretation core. No network, no API.",
+  "lang": "en",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

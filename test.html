@@ -521,7 +521,7 @@ function run(){
   t('испорченный язык в хранилище не ломает приложение',()=>{
     const saved=W.localStorage.getItem('astrarium_lang');
     W.localStorage.setItem('astrarium_lang','undefined');
-    const ok=ev("['ru','en'].includes(localStorage.getItem('astrarium_lang')) ? localStorage.getItem('astrarium_lang') : 'ru'")==='ru';
+    const ok=ev("['ru','en'].includes(localStorage.getItem('astrarium_lang')) ? localStorage.getItem('astrarium_lang') : 'en'")==='en';
     saved===null?W.localStorage.removeItem('astrarium_lang'):W.localStorage.setItem('astrarium_lang',saved);
     return ok||'валидация не срабатывает';
   });

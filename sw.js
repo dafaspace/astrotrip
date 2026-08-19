@@ -12,7 +12,7 @@
    Bump CACHE on every deploy that changes a precached file, and keep it equal
    to APP_VERSION in index.html: the number shown next to the title is how a
    stale install is spotted, so it has to name the same release as this cache. */
-const CACHE = 'astrotrip-v1.0.0';
+const CACHE = 'astrotrip-v1.0.1';
 const ASSETS = [
   './',
   './index.html',
