@@ -184,6 +184,57 @@ function run(){
     const c=ev('computeChart(1985,11,3,13+37/60,3,59.9343,30.3351)');
     return c.houses.cusps[0]===Math.floor(c.asc/30)*30||`${c.houses.cusps[0]} при Асценденте ${c.asc.toFixed(2)}`;
   });
+  /* Дом присваивается по настоящему положению тела, а не по проекции его
+     долготы на эклиптику. Плутон отходит от эклиптики на 17,5°, Луна на 5,
+     и проекция ставила их в соседний дом достаточно часто, чтобы породить
+     ложную находку в исследовании, посчитанном этим приложением. */
+  t('тело на эклиптике: новый расчёт дома совпадает со старым',()=>{
+    ev('HSYS="placidus"');
+    let bad=0,n=0;
+    for(let i=0;i<40;i++){
+      const c=ev(`computeChart(${1900+i*3},6,15,${(i*7)%24},0,${-50+i*2.5},${-170+i*8})`);
+      if(c.houses.system!=='placidus') continue;
+      W.__c=c;
+      for(let k=0;k<8;k++){
+        const L=(i*37+k*47)%360;
+        const a=ev(`houseOf(${L},window.__c.houses.cusps)`);
+        const b=ev(`placidusHousePos(${L},0,window.__c.ramc,window.__c.geolat,window.__c.ecl)`);
+        if(b==null) continue;
+        n++; if(Math.floor(b)!==a) bad++;
+      }
+    }
+    return (n>200&&!bad)||`проверено ${n}, разошлось ${bad}`;
+  });
+  t('куспид Плацидуса даёт ровно свой номер дома',()=>{
+    ev('HSYS="placidus"');
+    let worst=0;
+    for(let i=0;i<25;i++){
+      const c=ev(`computeChart(${1880+i*5},3,9,${(i*5)%24},0,${-45+i*3.5},${i*14-90})`);
+      if(c.houses.system!=='placidus') continue;
+      W.__c=c;
+      for(let k=0;k<12;k++){
+        const v=ev(`placidusHousePos(window.__c.houses.cusps[${k}],0,window.__c.ramc,window.__c.geolat,window.__c.ecl)`);
+        if(v==null) continue;
+        const want=k+1;
+        worst=Math.max(worst,Math.min(Math.abs(v-want),Math.abs(v-want+12),Math.abs(v-want-12)));
+      }
+    }
+    return worst<0.01||`худшая ошибка ${worst.toFixed(3)} дома`;
+  });
+  t('широта тела влияет на дом: Плутон расходится с проекцией',()=>{
+    ev('HSYS="placidus"');
+    let chg=0,n=0;
+    ev('CHART_LIBRARY').slice(0,120).forEach(e=>{
+      W.__e=e;
+      const c=ev(`computeChart(${e.y},${e.mo},${e.d},${e.t==null?12:e.t},libTz(window.__e),${e.lat},${e.lon})`);
+      if(c.houses.system!=='placidus') return;
+      W.__c=c; n++;
+      if(ev("houseOf(window.__c.pos.Pluto.lon,window.__c.houses.cusps)")!==ev("bodyHouse(window.__c,'Pluto')")) chg++;
+    });
+    if(!n) return 'ни одной карты с Плацидусом';
+    const pct=chg/n*100;
+    return (pct>5)||`Плутон расходится лишь у ${pct.toFixed(1)}% — похоже, широта не учитывается`;
+  });
   t('за полярным кругом Плацидус отступает на равнодомную',()=>{
     ev('HSYS="placidus"');
     return ev('computeChart(2000,6,15,12,0,78.2,15.6)').houses.system==='equal'||'не отступил';

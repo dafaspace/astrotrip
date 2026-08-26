@@ -379,7 +379,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
 /* Bump together with CACHE in sw.js: the two are the same release, and the
    number on screen is how you tell from a phone which one you are looking at. */
-const APP_VERSION='1.0.1';
+const APP_VERSION='1.1.0';
 document.getElementById('ver').textContent=APP_VERSION;
 
 /* ---------- i18n ---------- */
@@ -921,7 +921,7 @@ function computeChart(y,mo,day,localH,tzOff,lat,lng){
   let asc=atan2d(cosd(ramc),-(sind(ramc)*cosd(ecl)+tand(lat)*sind(ecl)));
   if(rev(asc-mc)>180) asc=rev(asc+180);
   const houses=HOUSE_SYSTEMS[HSYS].fn(ramc,lat,ecl,asc,mc);
-  return {pos,asc,mc,ecl,houses,d};
+  return {pos,asc,mc,ecl,houses,d,ramc,geolat:lat};
 }
 
 /* Placidus intermediate cusps by semi-arc trisection (standard iteration).
@@ -1538,6 +1538,42 @@ function houseOf(lon,cusps){
     if(rev(lon-a)<span) return h+1;
   }
   return 12;
+}
+/* A body is not on the ecliptic, and it rises and culminates from where it
+   actually is. Pluto stands up to 17.5 degrees off it, the Moon 5, and taking
+   the longitude alone puts them in the neighbouring house often enough to
+   fabricate a result: a study run on this app produced a 3-sigma "finding"
+   for Pluto that was nothing but this projection.
+   Placidus trisects each body's OWN semi-arc, so the house follows from the
+   body's hour angle measured against that arc - not from where its longitude
+   happens to fall between cusps. */
+function eqFromEcl(lon,lat,ecl){
+  const cb=cosd(lat), sb=sind(lat);
+  const x=cb*cosd(lon);
+  const y=cb*sind(lon)*cosd(ecl)-sb*sind(ecl);
+  const z=cb*sind(lon)*sind(ecl)+sb*cosd(ecl);
+  return {ra:atan2d(y,x), dec:asind(z)};
+}
+function placidusHousePos(lon,lat,ramc,geolat,ecl){
+  const {ra,dec}=eqFromEcl(lon,lat,ecl);
+  let ha=rev(ramc-ra); if(ha>180) ha-=360;        // west of the meridian is positive
+  const t=tand(dec)*tand(geolat);
+  if(!isFinite(t)||Math.abs(t)>=1) return null;   // never rises or never sets
+  const ad=asind(t), dsa=90+ad, nsa=90-ad;
+  let p;
+  if(Math.abs(ha)<=dsa)  p=10-3*(ha/dsa);         // above the horizon
+  else if(ha>dsa)        p=7-3*((ha-dsa)/nsa);    // below, west of the IC
+  else                   p=4-3*((180+ha)/nsa);    // below, east of the IC
+  return ((p-1)%12+12)%12+1;
+}
+/* Every place that asks "which house is this body in" goes through here. */
+function bodyHouse(ch,name){
+  const b=ch.pos[name]; if(!b) return null;
+  if(ch.houses.system==='placidus' && b.lat){
+    const p=placidusHousePos(b.lon,b.lat,ch.ramc,ch.geolat,ch.ecl);
+    if(p!=null) return Math.floor(p);
+  }
+  return houseOf(b.lon,ch.houses.cusps);
 }
 let SHOW_SECONDS=localStorage.getItem('astrarium_seconds')==='1';
 function fmtPos(lon){
@@ -2228,7 +2264,7 @@ function aspectClause(a,p,ch,vi){
   const on=nounOf(other);
   /* Naming a bare temptation says nothing, so the point's own house supplies
      the arena where it actually plays out. */
-  const oh=houseOf(ch.pos[other].lon,ch.houses.cusps);
+  const oh=bodyHouse(ch,other);
   const line=pl?(pl[a.asp.kind]||pl.harm)(HOUSE_ARENA[oh-1]):L[li](on[0],on[1]);
   if(secondary) return line;             // body already spelled out in the earlier card
   const pt=PAIR_TEXT[pairKey(p,other)];
@@ -2270,7 +2306,7 @@ function buildPlacement(ch,p){
      have everything the text needs, so they must not be dropped. */
   if(!TAG_TOKENS||!ch.pos[p]||!PLANET_FUNC[p]) return null;
   const P=TAG_TOKENS.planets[p];
-  const lon=ch.pos[p].lon, s=Math.floor(rev(lon)/30), hs=houseOf(lon,ch.houses.cusps);
+  const lon=ch.pos[p].lon, s=Math.floor(rev(lon)/30), hs=bodyHouse(ch,p);
   const S=TAG_TOKENS.signs[SIGN_KEYS[s]], H=TAG_TOKENS.houses['H'+hs];
   const dig=dignity(p,s);
   const wSign=dig==='ruler'?1.0:dig==='exalt'?0.95:0.85;
@@ -2439,7 +2475,7 @@ function composeFirstImpr(ch){
   const sunS=Math.floor(rev(ch.pos.Sun.lon)/30), moonS=Math.floor(rev(ch.pos.Moon.lon)/30);
   const parts=[`Вы производите впечатление человека, который ${ASC_IMPR[ascSignIdx]}; в деле вы ${SUN_WORK[sunS]}; в близких отношениях ${MOON_CLOSE[moonS]}.`];
   if(ch.pos.NNode){
-    const ns=Math.floor(rev(ch.pos.NNode.lon)/30), nh=houseOf(ch.pos.NNode.lon,ch.houses.cusps);
+    const ns=Math.floor(rev(ch.pos.NNode.lon)/30), nh=bodyHouse(ch,'NNode');
     parts.push(`${NODE_AXIS[ns]} Разыгрывается это прежде всего ${HOUSE_ARENA[nh-1]}.`);
   }
   return {label:'Первое впечатление',short:'взгляд со стороны и вектор роста',detail:parts.join(' ')};
@@ -2575,7 +2611,7 @@ function drawWheel(ch){
 }
 function showDetail(p,ch){
   const el=document.getElementById('detail'); el.classList.remove('empty');
-  const f=fmtPos(ch.pos[p].lon),hs=houseOf(ch.pos[p].lon,ch.houses.cusps);
+  const f=fmtPos(ch.pos[p].lon),hs=bodyHouse(ch,p);
   const asps=findAspects(ch.pos).filter(a=>a.p1===p||a.p2===p);
   let html=`<div style="font-size:16px"><span class="af">${GLYPH[p]}</span> <b>${PN(p)}</b> - <span class="deg">${f.html}</span>, ${t('house')} ${hs}</div>`;
   if(PLANET_FN[LANG][p]) html+=`<div class="tiny" style="margin:4px 0 8px">${PLANET_FN[LANG][p]}</div>`;
@@ -2771,7 +2807,7 @@ function renderPositions(ch){
   }).join('');
   const shown=BODIES.concat(POINTS.filter(p=>ch.pos[p]));
   rows+=shown.map(n=>{
-    const f=fmtPos(ch.pos[n].lon),hs=houseOf(ch.pos[n].lon,ch.houses.cusps);
+    const f=fmtPos(ch.pos[n].lon),hs=bodyHouse(ch,n);
     return `<div class="planet-row"><span class="g af">${GLYPH[n]}</span><span class="nm">${PN(n)}</span><span class="pos deg">${f.html}</span><span class="hs">${t('house')} ${hs}</span></div>`;
   }).join('');
   document.getElementById('positions').innerHTML=rows;
