@@ -314,10 +314,15 @@ function run(){
   /* ---------- библиотека карт ---------- */
   group('Библиотека карт');
   const LIB=ev('CHART_LIBRARY');
-  t('376 карт: 184 кинокомпозитора и 192 классика',()=>{
-    if(LIB.length!==376) return `записей ${LIB.length}`;
-    const f=LIB.filter(e=>e.k==='f').length, c=LIB.filter(e=>e.k==='c').length;
-    return (f===184&&c===192)||`кино ${f}, классика ${c}`;
+  t('1019 карт: 643 художника, 184 кинокомпозитора, 192 классика',()=>{
+    if(LIB.length!==1019) return `записей ${LIB.length}`;
+    const n=k=>LIB.filter(e=>e.k===k).length;
+    return (n('a')===643&&n('f')===184&&n('c')===192)
+      ||`художники ${n('a')}, кино ${n('f')}, классика ${n('c')}`;
+  });
+  t('у каждой записи есть род занятий',()=>{
+    const bad=LIB.filter(e=>!['a','f','c'].includes(e.k)).map(e=>e.id);
+    return !bad.length||'без рода занятий: '+bad.join(', ');
   });
   /* Wikidata сериализует дату, у которой известен только год, как 1 января.
      Массовый импорт молча превратил «родился в 1835 году» в «родился 1 января
@@ -328,7 +333,11 @@ function run(){
   t('нет кучи записей на одну календарную дату',()=>{
     const c={}; LIB.forEach(e=>{const k=e.mo+'-'+e.d; c[k]=(c[k]||0)+1;});
     const worst=Object.entries(c).sort((a,b)=>b[1]-a[1])[0];
-    if(worst[1]>8) return `на ${worst[0]} приходится ${worst[1]} записей при ожидаемых ${(LIB.length/366).toFixed(1)}`;
+    /* Порог привязан к размеру базы: при 1020 записях на день приходится 2,8,
+       и девять на одну дату - обычный хвост Пуассона, а не сбой импорта.
+       Ловим настоящую кучу, а не совпадение дней рождения. */
+    const lam=LIB.length/366, lim=Math.max(8,Math.ceil(lam+5*Math.sqrt(lam)));
+    if(worst[1]>lim) return `на ${worst[0]} приходится ${worst[1]} записей при ожидаемых ${lam.toFixed(1)}`;
     const jan=c['1-1']||0;
     return jan<=3||`на 1 января ${jan} записей — похоже на дату из Wikidata с точностью до года`;
   });
@@ -345,7 +354,10 @@ function run(){
   t('в библиотеке нет имён без международной известности',()=>{
     const known=['Bach','Mozart','Beethoven','Chopin','Wagner','Tchaikovsky','Debussy',
       'Handel','Vivaldi','Schubert','Verdi','Haydn','Mahler','Brahms','Liszt','Ravel',
-      'Morricone','Zimmer','Williams','Boulez','Messiaen','Satie','Berlioz'];
+      'Morricone','Zimmer','Williams','Boulez','Messiaen','Satie','Berlioz',
+      'Rembrandt','Goya','Monet','Gogh','Picasso','Dalí','Matisse','Renoir','Cézanne',
+      'Klimt','Munch','Kandinsky','Malevich','Repin','Vrubel','Turner','Delacroix',
+      'Manet','Degas','Gauguin','Magritte','Kahlo','Warhol','Pollock','Chagall','Klee','Ingres'];
     const miss=known.filter(k=>!LIB.some(e=>e.name.en.includes(k)));
     return !miss.length||'потеряны при отборе: '+miss.join(', ');
   });
