@@ -64,11 +64,53 @@ const frame=document.getElementById('app');
       if(st==='ready') break;
       await new Promise(r=>setTimeout(r,100));
     }
+    /* Two things the synchronous runner cannot measure itself. Both drive the
+       real loader; neither leaves the atlas unloaded. */
+    try{ ATLAS_REAL_BYTES=(await (await fetch('./cities.txt?probe='+Date.now())).arrayBuffer()).byteLength; }catch(e){}
+    try{ ATLAS_BAR=await W.eval(`(async()=>{
+      const real=await (await fetch('./cities.txt')).arrayBuffer();
+      const bytes=new Uint8Array(real), orig=window.fetch;
+      let off=0, step=Math.ceil(bytes.length/20);
+      window.fetch=(u,o)=>String(u).includes('cities.txt')?Promise.resolve(new Response(
+        new ReadableStream({async pull(c){
+          if(off>=bytes.length){c.close();return;}
+          await new Promise(r=>setTimeout(r,40));
+          c.enqueue(bytes.slice(off,off+step)); off+=step;
+        }}),{status:200})):orig(u,o);
+      ATLAS_GEN++; ATLAS.state='idle';
+      atlasLoad();
+      const widths=[]; let everShown=false;
+      for(let i=0;i<80;i++){
+        const b=document.getElementById('atlasBar');
+        if(!b.hidden){ everShown=true; widths.push(parseInt(document.getElementById('atlasFill').style.width)||0); }
+        if(ATLAS.state==='ready') break;
+        await new Promise(r=>setTimeout(r,60));
+      }
+      window.fetch=orig;
+      return {everShown, max:Math.max(0,...widths),
+        rising:widths.length>2&&widths[widths.length-1]>widths[0],
+        hidden:document.getElementById('atlasBar').hidden, state:ATLAS.state};
+    })()`); }catch(e){}
+    try{ ATLAS_FAIL=await W.eval(`(async()=>{
+      const orig=window.fetch;
+      window.fetch=(u,o)=>String(u).includes('cities.txt')?Promise.resolve(new Response('',{status:503})):orig(u,o);
+      ATLAS_GEN++; ATLAS.state='idle';
+      atlasLoad(true);
+      await new Promise(r=>setTimeout(r,250));
+      const out={explained:document.getElementById('atlasMsg').textContent===t('atlasFail'),
+        retry:!document.getElementById('atlasRetry').hidden,
+        seedWorks:(searchCities('Москва')[0]||{}).e};
+      window.fetch=orig;
+      document.getElementById('atlasRetry').click();
+      for(let i=0;i<60;i++){ if(ATLAS.state==='ready') break; await new Promise(r=>setTimeout(r,100)); }
+      out.recovered=ATLAS.state;
+      return out;
+    })()`); }catch(e){}
     run();
   },220));
   frame.src='./index.html?notacache='+Date.now();
 })();
-let SW_SRC='';
+let SW_SRC='', ATLAS_REAL_BYTES=null, ATLAS_BAR=null, ATLAS_FAIL=null;
 
 function run(){
   const W=frame.contentWindow, D=frame.contentDocument;
@@ -965,6 +1007,36 @@ function run(){
       for(const q of ['мо','мос','моск','ber','berl','zur']) searchCities(q);
       return (performance.now()-t0)/6;})()`);
     return ms<16||`в среднем ${ms.toFixed(1)} мс на запрос`;
+  });
+  t('размер атласа в коде совпадает с настоящим файлом',()=>{
+    /* Это знаменатель полосы загрузки. Content-Length тут не годится: файл
+       отдаётся сжатым, заголовок сообщает сжатые 4 МБ, а поток возвращает
+       распакованные байты, и полоса ушла бы за сто процентов. Поэтому число
+       в коде, а этот тест ловит момент, когда атлас пересоберут. */
+    const want=ev('ATLAS_BYTES');
+    const got=ATLAS_REAL_BYTES;
+    if(got==null) return 'не удалось измерить cities.txt';
+    return want===got||`в коде ${want}, в файле ${got}`;
+  });
+  t('число мест в подписи совпадает с числом строк атласа',()=>{
+    const r=ev('({claimed:ATLAS_PLACES, actual:ATLAS.rowAt?ATLAS.rowAt.length:0})');
+    return r.claimed===r.actual||`подпись обещает ${r.claimed}, строк ${r.actual}`;
+  });
+  t('полоса загрузки доходит до конца и убирается',()=>{
+    /* Измерено до запуска набора: настоящие байты, поданные двадцатью
+       порциями, потому что на localhost всё кончается раньше, чем полоса
+       успевает появиться. Раннер синхронный, поэтому результат готовится
+       заранее. */
+    const r=ATLAS_BAR;
+    if(!r) return 'полосу не удалось измерить';
+    return (r.everShown&&r.rising&&r.max>=80&&r.hidden&&r.state==='ready')
+      ||`показана ${r.everShown}, росла ${r.rising}, максимум ${r.max}%, скрыта ${r.hidden}, состояние ${r.state}`;
+  });
+  t('неудача показывает объяснение и кнопку, а поиск продолжает работать',()=>{
+    const r=ATLAS_FAIL;
+    if(!r) return 'сбой не удалось воспроизвести';
+    return (r.explained&&r.retry&&r.seedWorks==='Moscow'&&r.recovered==='ready')
+      ||`объяснение ${r.explained}, кнопка ${r.retry}, поиск по встроенному списку ${r.seedWorks}, после повтора ${r.recovered}`;
   });
   t('атлас лежит в service worker как необязательный, а не критический',()=>{
     /* 7.6 МБ не должны уметь сорвать установку worker: приложение обязано

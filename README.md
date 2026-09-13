@@ -93,10 +93,19 @@ Russian names taken from `alternateNamesV2` filtered to `isolanguage=ru` and his
 names dropped. Searchable by local name, Russian name or ASCII alias, so Zürich answers
 to `zurich`, `zuerich` and `Цюрих`.
 
-It is 6.7 MB of text, about 3.8 MB gzipped, fetched after first paint and then cached
-by the service worker. It is deliberately **not** in the critical precache: the app
-must boot and cast without it, falling back to an inline seed of the 131 largest
+It is 6.7 MB of text, about 4.2 MB over the wire, fetched after first paint and then
+cached by the service worker. It is deliberately **not** in the critical precache: the
+app must boot and cast without it, falling back to an inline seed of the 131 largest
 cities. Once it lands, every village works offline like everything else.
+
+The download is streamed with a progress bar under the city field, saying what is
+being fetched and that it happens once. The denominator is a constant, not the
+`Content-Length` header: the file is served gzipped, so the header reports the
+compressed size while the stream hands back decompressed bytes, and the bar would run
+past 100% and stop. A test fetches the real file and fails with the new number if the
+atlas is ever rebuilt. The bar only appears if the download is still going after 350
+ms, so a cached repeat visit does not flash it. A failure explains itself and offers a
+retry, and a superseded attempt cannot write over a newer one.
 
 Searched as one folded string rather than 235k objects: building objects costs about
 90 MB of heap on a phone, while `indexOf` over a blob answers in a few milliseconds
@@ -161,7 +170,7 @@ mattered: before it did, a deliberately broken app passed every check. The runne
 for the city atlas to finish loading, or the atlas tests would silently check the inline
 seed instead.
 
-**124 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
+**128 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
 library, robustness over 1550-2250 and at polar latitudes, house systems (angles land
 on the cusps, cusps run round the circle without crossing, quadrant systems coincide at
 the equator, zero-latitude bodies get the same house from both methods), library data
@@ -169,7 +178,7 @@ quality (chronological order, no calendar-date pile-up, AA entries carry a time 
 source), the Black Moon and Selena checks above, the scrubber's calendar arithmetic,
 progressions and directions (the arc, the angle rate, the orb cap), the language
 pack (every visible key present in all eight, no language a copy of English),
-the atlas, the balance tallies, the CSV round trip including quotes and commas, the
+the atlas and its progress bar, the balance tallies, the CSV round trip including quotes and commas, the
 interpretation flag, the bi-wheel's ring separation, contrast against WCAG AA in both
 themes, and interface wiring.
 

@@ -127,6 +127,18 @@ svg{display:block;width:100%;height:auto;touch-action:manipulation}
 .tiny{font-size:12px;color:var(--ink3)}
 .detail{background:var(--paper3);border-radius:12px;padding:12px;margin-top:10px;min-height:20px}
 .detail.empty{color:var(--ink3);font-style:italic}
+/* ---- city atlas download ---- */
+.atlasbar{margin-top:8px}
+.atlasbar .bar{height:4px;border-radius:2px;background:var(--paper3);overflow:hidden}
+.atlasbar .bar i{display:block;height:100%;width:0;background:var(--accent);
+  transition:width .2s linear}
+.atlasbar .tiny{margin-top:5px}
+/* The percentage on its own line, the explanation under it: on a phone the two
+   run to three wrapped lines when they share one, and the number is what the
+   eye is looking for. */
+.atlasbar .dim{margin-top:2px;opacity:.75}
+.atlasbar .dim:empty{display:none}
+.atlasbar button{margin-top:7px;padding:5px 11px;font-size:13px;min-height:36px}
 /* ---- time scrubber ---- */
 /* Reuses the language switch's segmented look, one row, full width, with 44px
    of height because these are the control the whole card turns on. */
@@ -335,6 +347,14 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
       <input id="city" type="text" autocomplete="off">
       <div id="citylist" class="citylist"></div>
     </div>
+    <!-- Atlas download progress. Sits under the city field because that is the
+         only thing it affects, and says out loud that it happens once. -->
+    <div class="atlasbar" id="atlasBar" hidden>
+      <div class="bar"><i id="atlasFill"></i></div>
+      <div class="tiny" id="atlasMsg"></div>
+      <div class="tiny dim" id="atlasNote"></div>
+      <button id="atlasRetry" hidden></button>
+    </div>
     <div class="grid3" style="margin-top:10px">
       <div><label data-i="lat"></label><input id="lat" type="number" step="0.0001"></div>
       <div><label data-i="lng"></label><input id="lng" type="number" step="0.0001"></div>
@@ -479,7 +499,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
 /* Bump together with CACHE in sw.js: the two are the same release, and the
    number on screen is how you tell from a phone which one you are looking at. */
-const APP_VERSION='2.1.0';
+const APP_VERSION='2.1.1';
 document.getElementById('ver').textContent=APP_VERSION;
 
 /* ---------- feature flags ----------
@@ -524,6 +544,12 @@ const STR = {
   cast:{ru:'Построить карту',en:'Cast chart'},
   city:{ru:'Город рождения',en:'Birth city'},
   cityph:{ru:'Начните вводить название...',en:'Start typing a name...'},
+  atlasLoading:{ru:'Загружается атлас городов',en:'Downloading the city atlas'},
+  atlasOnce:{ru:'{n} мест, 4 МБ. Только один раз, дальше офлайн.',
+    en:'{n} places, 4 MB. Once only, then it works offline.'},
+  atlasFail:{ru:'Атлас не загрузился. Пока доступны только крупные города.',
+    en:'The atlas did not download. Only major cities are available for now.'},
+  atlasRetry:{ru:'Повторить',en:'Try again'},
   hint:{ru:'Смещение UTC подставляется автоматически из часового пояса города для точной даты, исторические переходы учтены.',en:'The UTC offset fills in automatically from the city time zone for the exact date, historical shifts included.'},
   libTitle:{ru:'Библиотека карт',en:'Chart library'},
   saveChart:{ru:'Сохранить текущую',en:'Save current'},
@@ -612,6 +638,7 @@ const STR = {
    standard terms of each tradition; the prose is mine. */
 const I18N={
   es:{
+    atlasLoading:"Descargando el atlas de ciudades", atlasOnce:"{n} lugares, 4 MB. Solo una vez, luego sin conexión.", atlasFail:"El atlas no se descargó. Por ahora solo están las ciudades grandes.", atlasRetry:"Reintentar",
     tagline:"Cartas precisas sin conexión, y un tiempo que puedes mover.", birth:"Datos de nacimiento",
     date:"Fecha", time:"Hora (local)", lat:"Latitud", lng:"Longitud", tz:"Desfase UTC",
     cast:"Levantar la carta", city:"Ciudad de nacimiento", cityph:"Empieza a escribir un nombre...",
@@ -652,6 +679,7 @@ const I18N={
     foot:"Las posiciones están cotejadas con JPL Horizons en todas las cartas de la biblioteca: la diferencia es menor de cuatro segundos de arco, y menor de medio en el siglo XX. Atlas de ciudades de GeoNames, CC BY 4.0. Tras la primera carga nada de aquí sale a la red.",
   },
   fr:{
+    atlasLoading:"Téléchargement de l’atlas des villes", atlasOnce:"{n} lieux, 4 Mo. Une seule fois, ensuite hors ligne.", atlasFail:"L’atlas ne s’est pas téléchargé. Seules les grandes villes sont disponibles pour l’instant.", atlasRetry:"Réessayer",
     tagline:"Des cartes précises hors ligne, et un temps que l’on peut déplacer.",
     birth:"Données de naissance", date:"Date", time:"Heure (locale)", lat:"Latitude", lng:"Longitude",
     tz:"Décalage UTC", cast:"Dresser la carte", city:"Ville de naissance",
@@ -693,6 +721,7 @@ const I18N={
     foot:"Les positions sont vérifiées avec JPL Horizons sur toutes les cartes de la bibliothèque : l’écart est inférieur à quatre secondes d’arc, et à une demi-seconde pour le vingtième siècle. Atlas des villes : GeoNames, CC BY 4.0. Après le premier chargement, rien ici ne contacte le réseau.",
   },
   de:{
+    atlasLoading:"Städte-Atlas wird geladen", atlasOnce:"{n} Orte, 4 MB. Nur einmal, danach offline.", atlasFail:"Der Atlas wurde nicht geladen. Vorerst gibt es nur die großen Städte.", atlasRetry:"Erneut versuchen",
     tagline:"Genaue Charts offline, und eine Zeit, die sich bewegen lässt.", birth:"Geburtsdaten",
     date:"Datum", time:"Zeit (Ortszeit)", lat:"Breite", lng:"Länge", tz:"UTC-Versatz",
     cast:"Chart berechnen", city:"Geburtsort", cityph:"Namen eintippen...",
@@ -731,6 +760,7 @@ const I18N={
     foot:"Die Positionen sind bei jedem Chart der Bibliothek gegen JPL Horizons geprüft: die Abweichung bleibt unter vier Bogensekunden, im zwanzigsten Jahrhundert unter einer halben. Städte-Atlas von GeoNames, CC BY 4.0. Nach dem ersten Laden geht von hier nichts mehr ins Netz.",
   },
   it:{
+    atlasLoading:"Scaricamento dell’atlante delle città", atlasOnce:"{n} luoghi, 4 MB. Una volta sola, poi offline.", atlasFail:"L’atlante non si è scaricato. Per ora ci sono solo le città grandi.", atlasRetry:"Riprova",
     tagline:"Carte precise offline, e un tempo che si può muovere.", birth:"Dati di nascita", date:"Data",
     time:"Ora (locale)", lat:"Latitudine", lng:"Longitudine", tz:"Scarto UTC", cast:"Calcola la carta",
     city:"Città di nascita", cityph:"Inizia a scrivere un nome...",
@@ -769,6 +799,7 @@ const I18N={
     foot:"Le posizioni sono confrontate con JPL Horizons su ogni carta della biblioteca: lo scarto resta sotto i quattro secondi d’arco, e sotto il mezzo secondo per il Novecento. Atlante delle città da GeoNames, CC BY 4.0. Dopo il primo caricamento nulla di qui va in rete.",
   },
   uk:{
+    atlasLoading:"Завантажується атлас міст", atlasOnce:"{n} місць, 4 МБ. Лише один раз, далі офлайн.", atlasFail:"Атлас не завантажився. Поки доступні лише великі міста.", atlasRetry:"Повторити",
     tagline:"Точні карти офлайн, і час, який можна рухати.", birth:"Дані народження", date:"Дата",
     time:"Час (місцевий)", lat:"Широта", lng:"Довгота", tz:"Зсув UTC", cast:"Побудувати карту",
     city:"Місто народження", cityph:"Почніть вводити назву...",
@@ -807,6 +838,7 @@ const I18N={
     foot:"Положення звірені з JPL Horizons на всіх картах бібліотеки: розбіжність менша за чотири секунди дуги, для XX століття менша за половину. Атлас міст - GeoNames, CC BY 4.0. Після першого завантаження ніщо звідси не виходить у мережу.",
   },
   ka:{
+    atlasLoading:"ქალაქების ატლასი იტვირთება", atlasOnce:"{n} ადგილი, 4 მბ. მხოლოდ ერთხელ, შემდეგ ოფლაინში.", atlasFail:"ატლასი ვერ ჩამოიტვირთა. ჯერჯერობით მხოლოდ დიდი ქალაქებია.", atlasRetry:"ხელახლა",
     tagline:"ზუსტი რუკები ოფლაინში, და დრო, რომელიც შეიძლება გადაანაცვლო.", birth:"დაბადების მონაცემები",
     date:"თარიღი", time:"დრო (ადგილობრივი)", lat:"განედი", lng:"გრძედი", tz:"UTC წანაცვლება",
     cast:"რუკის აგება", city:"დაბადების ქალაქი", cityph:"დაიწყე სახელის აკრეფა...",
@@ -1402,14 +1434,75 @@ function atlasRowOf(at){
   while(lo<=hi){ const m=(lo+hi)>>1; if(a[m]<=at){i=m;lo=m+1;} else hi=m-1; }
   return i;
 }
-function atlasLoad(){
+/* Uncompressed size of cities.txt. The denominator for the progress bar has to
+   be this and not the Content-Length header: the file is served gzipped, the
+   header reports the compressed 4.2 MB, and the stream hands back decompressed
+   bytes, so the header would put the bar past 100% and stop. A test fetches
+   the real file and fails with the new number if the atlas is ever rebuilt. */
+const ATLAS_BYTES=7648914;
+const ATLAS_PLACES=235779;
+function atlasProgress(frac,msgKey){
+  const box=document.getElementById('atlasBar');
+  if(!box) return;
+  box.hidden=false;
+  document.getElementById('atlasFill').style.width=Math.round(Math.min(1,frac)*100)+'%';
+  document.getElementById('atlasMsg').textContent=
+    msgKey==='atlasFail' ? t('atlasFail')
+    : `${t('atlasLoading')} · ${Math.round(Math.min(1,frac)*100)}%`;
+  document.getElementById('atlasNote').textContent=
+    msgKey==='atlasFail' ? '' : t('atlasOnce').replace('{n}',ATLAS_PLACES.toLocaleString(LANG));
+  const rt=document.getElementById('atlasRetry');
+  rt.hidden=msgKey!=='atlasFail';
+  rt.textContent=t('atlasRetry');
+}
+function atlasHide(){ const b=document.getElementById('atlasBar'); if(b) b.hidden=true; }
+/* A load that has been superseded must not write anything. Without this a
+   failed attempt whose catch lands after the retry has started resets the
+   state back to idle and repaints the failure over a download that is running
+   perfectly well. Only the newest generation may touch state or the bar. */
+let ATLAS_GEN=0;
+function atlasLoad(immediate){
   if(ATLAS.state!=='idle') return;
   ATLAS.state='loading';
+  const gen=++ATLAS_GEN;
+  const mine=()=>gen===ATLAS_GEN;
+  /* The bar only appears if the download is still going after a moment. On a
+     repeat visit the service worker answers from cache in milliseconds, and a
+     progress bar that flashes for one frame is worse than none. */
+  let shown=!!immediate;
+  const reveal=immediate?0:setTimeout(()=>{ if(!mine())return; shown=true; atlasProgress(0); },350);
+  const show=f=>{ if(shown&&mine()) atlasProgress(f); };
   fetch('./cities.txt')
-    .then(r=>{ if(!r.ok) throw new Error(r.status); return r.text(); })
-    .then(txt=>{ atlasParse(txt); const el=document.getElementById('city');
-      if(el&&el.value) renderCityList(searchCities(el.value)); })
-    .catch(()=>{ ATLAS.state='idle'; });   // stays on the seed, retries next focus
+    .then(r=>{
+      if(!r.ok) throw new Error(r.status);
+      /* Without a readable stream there is no progress to report, but the
+         atlas must still load: older WebKit takes this path. */
+      if(!r.body||!r.body.getReader) return r.text();
+      const reader=r.body.getReader(), dec=new TextDecoder();
+      let txt='', got=0;
+      const pump=()=>reader.read().then(({done,value})=>{
+        if(done){ txt+=dec.decode(); return txt; }
+        got+=value.length;
+        txt+=dec.decode(value,{stream:true});
+        show(got/ATLAS_BYTES);
+        return pump();
+      });
+      return pump();
+    })
+    .then(txt=>{
+      clearTimeout(reveal);
+      if(!mine()) return;
+      atlasParse(txt);
+      atlasHide();
+      const el=document.getElementById('city');
+      if(el&&el.value) renderCityList(searchCities(el.value));
+    })
+    .catch(()=>{
+      clearTimeout(reveal);
+      if(!mine()) return;
+      ATLAS.state='idle';          // stays on the seed; the button tries again
+      atlasProgress(0,'atlasFail');
+    });
 }
 function searchCities(q){
   q=normStr(q.trim()); if(!q) return [];
@@ -4734,6 +4827,14 @@ document.getElementById('expCsv').addEventListener('click',()=>{
   a.download=`astrotrip-charts-${todayStr()}.csv`;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+});
+document.getElementById('atlasRetry').addEventListener('click',()=>{
+  document.getElementById('atlasRetry').hidden=true;
+  /* Abandon whatever is in flight rather than waiting for it: the button is
+     pressed precisely because the last attempt is not coming back. */
+  ATLAS_GEN++; ATLAS.state='idle';
+  atlasProgress(0);
+  atlasLoad(true);
 });
 document.getElementById('impCsv').addEventListener('click',()=>document.getElementById('impFile').click());
 document.getElementById('impFile').addEventListener('change',function(){
