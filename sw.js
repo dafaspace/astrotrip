@@ -12,13 +12,18 @@
    Bump CACHE on every deploy that changes a precached file, and keep it equal
    to APP_VERSION in index.html: the number shown next to the title is how a
    stale install is spotted, so it has to name the same release as this cache. */
-const CACHE = 'astrotrip-v1.4.0';
+const CACHE = 'astrotrip-v2.0.0';
 const ASSETS = [
   './',
   './index.html',
   // The ephemeris series. Without it the app cannot cast anything at all,
   // so it is as critical as the document itself.
   './ephemeris.js',
+  // The city atlas: 235,779 places, 6.7 MB of text. Optional on purpose - the
+  // app boots, casts and reads without it, falling back to the inline seed of
+  // the 131 largest cities, so a failed or slow fetch here must not fail the
+  // install. Once it lands, every village works offline like everything else.
+  './cities.txt',
   './manifest.json',
   './icon-192.png',
   './icon-512.png',

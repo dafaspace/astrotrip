@@ -117,7 +117,47 @@ svg{display:block;width:100%;height:auto;touch-action:manipulation}
 .tiny{font-size:12px;color:var(--ink3)}
 .detail{background:var(--paper3);border-radius:12px;padding:12px;margin-top:10px;min-height:20px}
 .detail.empty{color:var(--ink3);font-style:italic}
+/* ---- time scrubber ---- */
+.scrub{border:1px solid var(--line);border-radius:12px;padding:12px 14px 14px;margin:0 0 14px;background:var(--paper3)}
+.momrow{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.mom{font-family:'Literata',Georgia,serif;font-size:17px;font-variant-numeric:tabular-nums}
+/* A 32px thumb on a 4px rail: the rail is a hairline you read, the thumb is a
+   target you hit with a thumb. Both native appearances are removed because
+   Safari and Chrome disagree about everything else on a range input. */
+#scrub{-webkit-appearance:none;appearance:none;width:100%;height:32px;padding:0;border:none;
+  background:transparent;margin:2px 0 10px;touch-action:pan-y}
+#scrub::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:var(--line)}
+#scrub::-moz-range-track{height:4px;border-radius:2px;background:var(--line)}
+#scrub::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:26px;height:26px;
+  margin-top:-11px;border-radius:50%;background:var(--accentBtn);border:2px solid var(--paper);
+  box-shadow:0 1px 3px rgba(0,0,0,.28);cursor:grab}
+#scrub::-moz-range-thumb{width:26px;height:26px;border-radius:50%;background:var(--accentBtn);
+  border:2px solid var(--paper);box-shadow:0 1px 3px rgba(0,0,0,.28);cursor:grab}
+#scrub:active::-webkit-slider-thumb{cursor:grabbing}
+.scrubctl{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.scrubctl select{width:auto;flex:none;min-width:104px}
+.scrubctl button{min-height:44px}
+/* Square icon buttons: 44px is the floor a thumb needs, and it is cheaper to
+   set here than to retrofit across thirteen classes later. */
+button.ico{width:44px;height:44px;padding:0;display:inline-flex;align-items:center;justify-content:center;color:var(--ink2)}
+/* The global svg rule stretches every icon to its container's width, which
+   on a 44px target draws an 44px glyph. These are 18px marks in a 44px
+   button: the target is for the thumb, the drawing is for the eye. */
+button.ico svg{width:18px;height:18px;flex:none}
+button.ico:disabled{opacity:.4;cursor:default}
+.steplab{display:inline;margin:0}
+.ctlgrp{display:inline-flex;align-items:center;gap:8px}
+/* ---- balance ---- */
+.balrow{display:flex;align-items:center;gap:8px;padding:4px 0;font-variant-numeric:tabular-nums}
+.balrow .nm{width:112px;color:var(--ink2);font-size:13px}
+.balrow .n{width:22px;text-align:right;font-weight:500}
+.balrow .bar{flex:1;height:8px;border-radius:4px;background:var(--paper3);overflow:hidden}
+.balrow .bar i{display:block;height:100%}
+.balgrp{margin:2px 0 12px}
+.balgrp:last-of-type{margin-bottom:0}
+.balgrp h3{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--ink3);margin:0 0 4px;font-family:inherit;font-weight:500}
 .transit{border:1px solid var(--line);border-radius:12px;padding:12px;margin:10px 0;background:var(--paper)}
+.transit .app{margin-left:auto;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3)}
 .daysyn{border:1px solid var(--accent);border-radius:12px;padding:12px 14px;margin:0 0 12px;background:var(--paper3);font-size:14px;line-height:1.55}
 .daysyn:empty{display:none}
 .transit .head{display:flex;align-items:center;gap:8px;font-size:15px}
@@ -289,9 +329,9 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
     <label style="display:flex;align-items:center;gap:7px;margin-top:10px;text-transform:none;font-size:13px;color:var(--ink2);cursor:pointer">
       <input id="showSeconds" type="checkbox" style="width:auto"><span data-i="secondsLabel"></span>
     </label>
-    <div style="margin-top:10px">
-      <label data-i="hsysLabel"></label>
-      <select id="hsys"></select>
+    <div class="grid" style="margin-top:10px">
+      <div><label data-i="hsysLabel"></label><select id="hsys"></select></div>
+      <div><label data-i="lilLabel"></label><select id="lilmode"></select></div>
     </div>
     <div style="margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
       <button class="primary" id="calc" data-i="cast"></button>
@@ -309,8 +349,13 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
     <input id="chartName" style="margin-bottom:10px">
     <div class="row" style="margin-bottom:10px">
       <button id="saveChart" data-i="saveChart"></button>
-      <span class="tiny" data-i="libNote"></span>
+      <!-- CSV, not a private blob: the point of a personal database is that you
+           can open it in a spreadsheet, fix a birth time and put it back. -->
+      <button id="expCsv" data-i="exportCsv"></button>
+      <button id="impCsv" data-i="importCsv"></button>
+      <input id="impFile" type="file" accept=".csv,text/csv" hidden>
     </div>
+    <div class="row" style="margin-bottom:10px"><span class="tiny" data-i="libNote"></span></div>
     <!-- Search and sort rather than folders or tags: a hundred and fifty
          entries already carry three axes of their own - name, date, place -
          and a folder tree would force one of them to win permanently. -->
@@ -337,7 +382,17 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
       <div class="tiny" style="margin-top:8px" data-i="posnote"></div>
     </details>
 
-    <div class="card">
+    <!-- Element, modality and hemisphere tallies. Counts only, no verdict:
+         the number is checkable, "you lack earth" is not. -->
+    <details class="card fold" id="balCard">
+      <summary><h2 data-i="balance"></h2><span class="tiny" id="balBrief"></span></summary>
+      <div id="balance"></div>
+      <div class="tiny" style="margin-top:8px" data-i="balnote"></div>
+    </details>
+
+    <!-- Interpretation card. Hidden while FEATURES.interpretation is off; the
+         corpus and every compose* function stay in the file untouched. -->
+    <div class="card" id="readingCard">
       <h2 data-i="reading"></h2>
       <div id="reading"></div>
       <div class="tiny" style="margin-top:8px" data-i="corpusnote"></div>
@@ -345,16 +400,41 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
     <div class="card">
       <h2 data-i="transits"></h2>
-      <p class="tiny" style="margin-top:0" data-i="transintro"></p>
-      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin:0 0 12px">
-        <div style="flex:1;min-width:150px"><label data-i="transitdate"></label><input id="transitDate" type="date"></div>
-        <button id="transitToday" data-i="todaybtn"></button>
+      <p class="tiny" style="margin-top:0" data-i="scrubintro"></p>
+
+      <!-- The scrubber. The date and time fields jump; the slider scrubs. The
+           slider is relative on purpose: it spans 60 steps either side of an
+           anchor and re-centres on release, so the same 300 px of travel works
+           whether one notch is a second or a century. -->
+      <div class="scrub">
+        <div class="momrow">
+          <div class="mom" id="momUT"></div>
+          <div class="tiny" id="momLoc"></div>
+        </div>
+        <input id="scrub" type="range" min="-60" max="60" value="0" step="1" aria-label="Time">
+        <div class="scrubctl">
+          <button class="ico" id="stepBack" data-i-title="stepback">
+            <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 3.5 5.5 8l5 4.5"/><path d="M3.6 3.5v9"/></svg></button>
+          <button class="ico" id="playBtn" data-i-title="playbtn">
+            <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M4.8 3.2 12.4 8l-7.6 4.8z"/></svg></button>
+          <button class="ico" id="stepFwd" data-i-title="stepfwd">
+            <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 3.5 10.5 8l-5 4.5"/><path d="M12.4 3.5v9"/></svg></button>
+          <!-- Grouped so a narrow screen wraps between the groups and never
+               between a label and the control it names. -->
+          <span class="ctlgrp"><label class="steplab" data-i="stepLabel"></label><select id="scrubUnit"></select></span>
+          <span class="ctlgrp"><button id="momNow" data-i="nowbtn"></button><button id="momBirth" data-i="birthbtn"></button></span>
+        </div>
+        <div class="grid" style="margin-top:10px">
+          <div><label data-i="transitdate"></label><input id="transitDate" type="date"></div>
+          <div><label data-i="transittime"></label><input id="transitTime" type="time" step="1"></div>
+        </div>
       </div>
+
       <div id="daysyn" class="daysyn"></div>
       <div id="transitlist"></div>
     </div>
 
-    <div class="card">
+    <div class="card" id="learnedCard">
       <h2 data-i="learned"></h2>
       <div id="learnedbox"></div>
       <div style="margin-top:10px"><button id="reset" data-i="forget"></button></div>
@@ -379,15 +459,30 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
 /* Bump together with CACHE in sw.js: the two are the same release, and the
    number on screen is how you tell from a phone which one you are looking at. */
-const APP_VERSION='1.4.0';
+const APP_VERSION='2.0.0';
 document.getElementById('ver').textContent=APP_VERSION;
+
+/* ---------- feature flags ----------
+   interpretation: the natal reading, the transit prose and the personal-weight
+   model that ranks by it. Switched off for the 2.0 release because the corpus
+   exists in Russian only, so the English build was serving a four-line stub
+   next to arc-second positions, and because none of it is the reason to use
+   this app. Nothing is deleted: TAG_TOKENS, every compose* function, the whole
+   T_WEATHER/T_DO/T_TOUCH set and the learning store are untouched and come
+   back by flipping this to true. What the flag hides:
+     - the Reading card and the What-AstroTrip-learned card
+     - the day synthesis line and the prose sentence on each transit
+     - the rating strip, and with it the personal reweighting of the list
+   With it off the transit list ranks by receiver rank and exactness alone,
+   which is a stated rule rather than a private model. */
+const FEATURES={interpretation:false};
 
 /* ---------- i18n ---------- */
 /* Validated, not just defaulted: a stored value could be anything, and a
    bad one would propagate into every lookup keyed by language. */
 let LANG = ['ru','en'].includes(localStorage.getItem('astrarium_lang')) ? localStorage.getItem('astrarium_lang') : 'en';
 const STR = {
-  tagline:{ru:'Офлайновое ядро расчёта и интерпретации. Ни сети, ни API.', en:'Offline calculation + interpretation core. No network, no API.'},
+  tagline:{ru:'Точные карты офлайн, и время, которое можно двигать.', en:'Precise charts offline, and time you can move.'},
   birth:{ru:'Данные рождения',en:'Birth data'},
   date:{ru:'Дата',en:'Date'}, time:{ru:'Время (местное)',en:'Time (local)'},
   lat:{ru:'Широта',en:'Latitude'}, lng:{ru:'Долгота',en:'Longitude'}, tz:{ru:'Смещение UTC',en:'UTC offset'},
@@ -405,6 +500,10 @@ const STR = {
   rrKnown:{ru:'время из документа',en:'time from a document'},
   delChart:{ru:'удалить',en:'delete'},
   hsysLabel:{ru:'СИСТЕМА ДОМОВ',en:'HOUSE SYSTEM'},
+  lilLabel:{ru:'ЧЁРНАЯ ЛУНА',en:'BLACK MOON'},
+  lil_mean:{ru:'Средняя (Лилит)',en:'Mean (Lilith)'},
+  lil_true:{ru:'Истинная (оскулирующая)',en:'True (osculating)'},
+  transittime:{ru:'Время UT',en:'Time UT'},
   secondsLabel:{ru:'Показывать угловые секунды в позициях',en:'Show arc-seconds in positions'},
   needdata:{ru:'Заполните дату, время и место.',en:'Fill in date, time and place.'},
   empty:{ru:'Введите данные рождения и постройте карту.',en:'Enter birth data and cast the chart.'},
@@ -413,13 +512,43 @@ const STR = {
   housesyseq:{ru:'дома: равнодомные (высокая широта)',en:'houses: equal (high latitude)'},
   tapdetail:{ru:'Коснитесь планеты для детали.',en:'Tap a planet for detail.'},
   positions:{ru:'Позиции',en:'Positions'},
-  posnote:{ru:'Движок: компактный аналитический ряд, целиком офлайн. Это шов, куда встаёт Swiss Ephemeris (WASM) для точности до угловой секунды. Лилит и узлы - средние. Хирон появится вместе со Swiss Ephemeris.',en:'Engine: compact analytic series, fully offline. This is the seam where Swiss Ephemeris (WASM) drops in for arc-second grade. Lilith and nodes are mean. Chiron arrives with Swiss Ephemeris.'},
+  posnote:{ru:'Движок: VSOP87D, ELP82B и чебышёвская подгонка Плутона, целиком офлайн. Узлы средние. Чёрная Луна - средняя или истинная, на выбор; Селена считается по определению Swiss Ephemeris. Плутон надёжен на 1550-2250, дальше экстраполируется. Хирона пока нет.',en:'Engine: VSOP87D, ELP82B and a Chebyshev fit for Pluto, fully offline. Nodes are mean. The Black Moon is mean or true, your choice; Selena follows the Swiss Ephemeris definition. Pluto is reliable over 1550-2250 and extrapolated beyond. Chiron is not here yet.'},
   reading:{ru:'Разбор карты',en:'Reading'},
   corpusnote:{ru:'Тексты - структурная заготовка: кратко + подробнее по касанию. Настоящий корпус интерпретаций подключается отдельно.',en:'Texts are a structural stub: short + detail on tap. The real interpretation corpus plugs in separately.'},
   transits:{ru:'Транзиты',en:'Transits'},
-  transintro:{ru:'Транзитные планеты на выбранную дату к вашей натальной карте. Оцените, как каждый реально ощущается, движок подстраивает ранжирование и тон полностью без API.',en:'Transiting planets on the chosen date vs your natal chart. Rate how each one actually lands, the engine adapts ranking and tone with zero API.'},
   transitdate:{ru:'Дата транзита',en:'Transit date'},
-  todaybtn:{ru:'Сегодня',en:'Today'},
+  /* time scrubber */
+  timeline:{ru:'Ход времени',en:'Time'},
+  scrubintro:{ru:'Тяните ползунок - транзитное кольцо и список пересчитываются на лету. Шаг задаёт, сколько времени в одном делении: от секунды до столетия.',en:'Drag the slider and the transit ring redraws live. The step sets how much time one notch is worth, from a second to a century.'},
+  stepLabel:{ru:'ШАГ',en:'STEP'},
+  u_sec:{ru:'секунда',en:'second'}, u_min:{ru:'минута',en:'minute'}, u_hour:{ru:'час',en:'hour'},
+  u_day:{ru:'сутки',en:'day'}, u_week:{ru:'неделя',en:'week'}, u_month:{ru:'месяц',en:'month'},
+  u_year:{ru:'год',en:'year'}, u_dec:{ru:'10 лет',en:'10 years'}, u_cent:{ru:'100 лет',en:'100 years'},
+  nowbtn:{ru:'Сейчас',en:'Now'}, birthbtn:{ru:'Момент рождения',en:'Birth moment'},
+  applying:{ru:'сходится',en:'applying'}, separating:{ru:'расходится',en:'separating'},
+  playbtn:{ru:'Пуск',en:'Play'}, pausebtn:{ru:'Стоп',en:'Pause'},
+  stepback:{ru:'Шаг назад',en:'Step back'}, stepfwd:{ru:'Шаг вперёд',en:'Step forward'},
+  ringlegend:{ru:'Внешнее кольцо - транзит, внутреннее - натал.',en:'Outer ring is the transit, inner is the natal chart.'},
+  outofrange:{ru:'За пределами 1550-2250 Плутон экстраполируется, остальные тела считаются нормально.',en:'Outside 1550-2250 Pluto is extrapolated; every other body still computes normally.'},
+  /* balance */
+  balance:{ru:'Баланс карты',en:'Chart balance'},
+  el_fire:{ru:'Огонь',en:'Fire'}, el_earth:{ru:'Земля',en:'Earth'},
+  el_air:{ru:'Воздух',en:'Air'}, el_water:{ru:'Вода',en:'Water'},
+  mo_card:{ru:'Кардинальные',en:'Cardinal'}, mo_fix:{ru:'Фиксированные',en:'Fixed'},
+  mo_mut:{ru:'Мутабельные',en:'Mutable'},
+  elements:{ru:'Стихии',en:'Elements'}, modes:{ru:'Кресты',en:'Modes'},
+  hemi:{ru:'Полушария',en:'Hemispheres'},
+  hemi_e:{ru:'Восток',en:'East'}, hemi_w:{ru:'Запад',en:'West'},
+  hemi_n:{ru:'Низ',en:'North'}, hemi_s:{ru:'Верх',en:'South'},
+  balnote:{ru:'Считаются десять планет плюс Асцендент и MC, каждое тело весит одинаково. Полушария - по домам: восток это дома 10-3, верх это дома 7-12.',en:'Ten planets plus the Ascendant and MC, each body weighted the same. Hemispheres are by house: east is houses 10-3, south is houses 7-12.'},
+  /* library exchange */
+  exportCsv:{ru:'Выгрузить CSV',en:'Export CSV'},
+  importCsv:{ru:'Загрузить CSV',en:'Import CSV'},
+  importDone:{ru:'Загружено карт: ',en:'Charts imported: '},
+  importBad:{ru:'Не удалось прочитать файл как CSV.',en:'Could not read that file as CSV.'},
+  /* atlas */
+  atlasLoading:{ru:'Загружается атлас городов…',en:'Loading the city atlas…'},
+  atlasSeed:{ru:'Пока доступны крупные города. Полный атлас догружается.',en:'Major cities for now. The full atlas is still downloading.'},
   learned:{ru:'Что AstroTrip узнал о вас',en:'What AstroTrip has learned about you'},
   forget:{ru:'Забыть всё',en:'Forget everything'},
   landq:{ru:'Зашло?',en:'Did it land?'}, felt:{ru:'Ощущалось:',en:'Felt:'},
@@ -427,7 +556,7 @@ const STR = {
   lasttime:{ru:'В прошлый раз',en:'Last time'}, noaspects:{ru:'Крупных аспектов в орбисе нет.',en:'No major aspects within orb.'},
   notransits:{ru:'Сейчас транзитов в орбисе нет.',en:'No transits within orb right now.'},
   learnempty:{ru:'Оцените несколько транзитов выше. Движок строит приватную модель того, как циклы реально проживаются именно вами, ранжирование и тон подстраиваются целиком на этом устройстве.',en:'Rate a few transits above. The engine builds a private model of how cycles actually land for you, ranking and tone adapt entirely on this device.'},
-  foot:{ru:'Положения сверены с JPL Horizons на всех картах библиотеки: расхождение меньше четырёх секунд дуги, для XX века меньше половины. Ничто здесь не выходит в сеть.',en:'Positions are checked against JPL Horizons on every chart in the library, agreeing to within four arcseconds and to half of one for the twentieth century. Nothing here contacts the network.'}
+  foot:{ru:'Положения сверены с JPL Horizons на всех картах библиотеки: расхождение меньше четырёх секунд дуги, для XX века меньше половины. Атлас городов - GeoNames, CC BY 4.0. После первой загрузки ничто здесь не выходит в сеть.',en:'Positions are checked against JPL Horizons on every chart in the library, agreeing to within four arcseconds and to half of one for the twentieth century. City atlas from GeoNames, CC BY 4.0. After the first load nothing here contacts the network.'}
 };
 function t(k){const s=STR[k];return s?(s[LANG]!==undefined?s[LANG]:s.en):k;}
 
@@ -685,7 +814,49 @@ function plutoXYZ(tm){
 /* Mean Black Moon Lilith = mean lunar apogee (Meeus 45.7: perigee 83.3532465° @J2000,
    rate 4069.0137287°/cy; apogee = perigee+180). Our day-number epoch is JD 2451543.5
    = J2000 - 1.5d, hence the shifted constant. */
-function lilithLon(d){ return rev(263.1861+0.11140416*d); }
+/* Mean Black Moon = mean lunar apogee, Meeus 45.7 in full: the perigee
+   polynomial plus 180 degrees. The old form here was linear at 0.11140416
+   degrees a day, which is 0.0232 degrees per century faster than Meeus's
+   4069.0137287, so a 1900 chart carried about an arc-minute and a half of
+   drift and a 1600 chart five. The quadratic and higher terms are small
+   (0.01 degrees at a century) but cost nothing once the polynomial is here. */
+function lilithLon(d){
+  const T=(d-1.5)/36525;                 // d = 0 is J2000 minus 1.5 days
+  return rev(263.3532465+T*(4069.0137287+T*(-0.0103200+T*(-1/80053+T/18999000))));
+}
+/* True (osculating) Black Moon: the apogee of the ellipse the Moon is actually
+   on at this instant, rather than the averaged one. The two disagree by up to
+   30 degrees, a whole sign, and the true one turns retrograde, so this is a
+   different point and not a refinement of the same number - both are offered.
+
+   Method: take the Moon's geocentric position and velocity from ELP82B, build
+   the eccentricity vector e = ((v^2 - mu/r) r - (r.v) v) / mu, which points at
+   perigee, and read the ecliptic direction of -e. Geometric position only: no
+   light-time and no aberration, because the apsidal line is a property of the
+   orbit and not something we observe arriving. */
+const GM_EM=403503.2415*86400*86400;    // km^3/day^2, Earth + Moon
+/* Five-point stencil rather than a central difference: over the h below the
+   Moon turns about half a degree, and the O(h^2) error of a plain central
+   difference lands in the fourth digit of the velocity, which the eccentricity
+   vector then divides by e = 0.055 and turns into arc-minutes of apogee. */
+function moonVel(t){
+  const h=1e-6;                          // Julian centuries, about 53 minutes
+  const a=moonXYZ(t+2*h), b=moonXYZ(t+h), c=moonXYZ(t-h), d=moonXYZ(t-2*h);
+  const k=1/(12*h*36525);                // ... and per day, not per century
+  return [(-a[0]+8*b[0]-8*c[0]+d[0])*k,(-a[1]+8*b[1]-8*c[1]+d[1])*k,(-a[2]+8*b[2]-8*c[2]+d[2])*k];
+}
+function lilithTrue(T,dpsi){
+  const r=moonXYZ(T), v=moonVel(T);
+  const rr=Math.hypot(r[0],r[1],r[2]);
+  const v2=v[0]*v[0]+v[1]*v[1]+v[2]*v[2];
+  const rv=r[0]*v[0]+r[1]*v[1]+r[2]*v[2];
+  const k1=(v2-GM_EM/rr)/GM_EM, k2=rv/GM_EM;
+  const ex=k1*r[0]-k2*v[0], ey=k1*r[1]-k2*v[1], ez=k1*r[2]-k2*v[2];
+  const em=Math.hypot(ex,ey,ez);
+  if(!(em>1e-6)) return null;            // a circular osculating orbit has no apsis
+  const [l2,b2]=precessEcl(Math.atan2(-ey,-ex),Math.asin(-ez/em),T);
+  return {lon:rev((l2+dpsi)*R2D), lat:b2*R2D};
+}
 /* White Moon Selena: fictitious point (Avestan school), h56 in Swiss Ephemeris.
    seorbel.txt: lon = 242.2205555 + 5143.5418158*T (T = centuries from J2000),
    perfect circle, period ~7 years. Constants re-anchored to our epoch (J2000-1.5d). */
@@ -738,8 +909,22 @@ const ASPECTS=[
   {name:'opposition',angle:180,orb:7,kind:'hard',color:'var(--hard)'}
 ];
 
-/* ---------- offline city atlas ---------- */
-const CITIES=[
+/* ---------- offline city atlas ----------
+   Two tiers, because "every city on Earth" and "works on the very first offline
+   load" pull in opposite directions.
+
+   SEED is the 131 largest cities, inline, available before a single byte is
+   fetched. ATLAS is the whole GeoNames cities500 set - 235,779 places down to
+   population 500 - in ./cities.txt, fetched once and then cached by the service
+   worker. It is 6.7 MB of text, about 3.8 MB over the wire gzipped, so it is
+   deliberately NOT in the critical precache: the app must boot and cast without
+   it. Until it lands, the seed answers; after it lands, every village does.
+
+   Data: GeoNames, CC BY 4.0. Russian names come from alternateNamesV2 filtered
+   to isolanguage=ru with historic names dropped, NOT from "the first Cyrillic
+   string in the alternates column" - that heuristic returned Serbian, and gave
+   Shanghai as Шангај. */
+const SEED_CITIES=[
 {r:'Москва',e:'Moscow',c:'RU',lat:55.7558,lon:37.6176,z:'Europe/Moscow'},
 {r:'Санкт-Петербург',e:'Saint Petersburg',c:'RU',lat:59.9343,lon:30.3351,z:'Europe/Moscow'},
 {r:'Новосибирск',e:'Novosibirsk',c:'RU',lat:55.0084,lon:82.9357,z:'Asia/Novosibirsk'},
@@ -872,10 +1057,86 @@ const CITIES=[
 {r:'Каракас',e:'Caracas',c:'VE',lat:10.4806,lon:-66.9036,z:'America/Caracas'},
 {r:'Гавана',e:'Havana',c:'CU',lat:23.1136,lon:-82.3666,z:'America/Havana'}
 ];
-function normStr(s){ return (s||'').toLowerCase().replace(/[̀-ͯ]/g,''); }
+/* NFD first, then strip the combining marks: without the decomposition step
+   "Zürich" keeps its precomposed ü and never matches a typed "zurich". */
+function normStr(s){ return (s||'').normalize('NFD').toLowerCase().replace(/[̀-ͯ]/g,''); }
+
+/* The atlas is searched as one flat string rather than 235k objects: building
+   objects costs about 90 MB of heap on a phone and half a second of parse,
+   while indexOf over a single normalised blob answers in a few milliseconds and
+   allocates only for the eight rows actually shown. */
+const ATLAS={state:'idle', tz:[], body:'', blob:'', rowAt:null, foldAt:null};
+function atlasParse(text){
+  const nl=text.indexOf('\n');
+  ATLAS.tz=text.slice(0,nl).split(',');
+  const body=text.slice(nl+2);                 // header line, blank line, then rows
+  ATLAS.body=body;
+  /* Each row contributes "\n" + folded local name + "\n" + folded Russian name
+     to one blob, plus "\n" + the ASCII alias where the row carries one (Zürich
+     is also findable as Zuerich). Every name therefore starts right after a
+     newline, which is what lets one "\n"+query search find a prefix in any of
+     them; a plain query search then finds it anywhere inside a name. */
+  const rowAt=[], foldAt=[], parts=[];
+  let pos=0, at=0;
+  while(pos<body.length){
+    let e=body.indexOf('\n',pos); if(e===-1) e=body.length;
+    const t1=body.indexOf('\t',pos), t2=body.indexOf('\t',t1+1);
+    const f=body.slice(pos,e).split('\t');
+    let folded='\n'+normStr(f[0])+'\n'+normStr(f[1]);
+    if(f[6]) folded+='\n'+normStr(f[6]);
+    rowAt.push(pos); foldAt.push(at); at+=folded.length; parts.push(folded);
+    pos=e+1;
+  }
+  ATLAS.blob=parts.join('');
+  ATLAS.rowAt=Int32Array.from(rowAt);
+  ATLAS.foldAt=Int32Array.from(foldAt);
+  ATLAS.state='ready';
+}
+function atlasRow(i){
+  const body=ATLAS.body, s=ATLAS.rowAt[i];
+  const e=i+1<ATLAS.rowAt.length?ATLAS.rowAt[i+1]-1:body.length;
+  const f=body.slice(s,e).split('\t');
+  return {r:f[1]||f[0], e:f[0], c:f[4],
+    lat:parseInt(f[2],36)/1e4, lon:parseInt(f[3],36)/1e4,
+    z:ATLAS.tz[parseInt(f[5],36)]};
+}
+/* Blob offset -> row index. The blob is built in row order, so the row is the
+   last one whose folded text starts at or before the match. */
+function atlasRowOf(at){
+  const a=ATLAS.foldAt; let lo=0, hi=a.length-1, i=0;
+  while(lo<=hi){ const m=(lo+hi)>>1; if(a[m]<=at){i=m;lo=m+1;} else hi=m-1; }
+  return i;
+}
+function atlasLoad(){
+  if(ATLAS.state!=='idle') return;
+  ATLAS.state='loading';
+  fetch('./cities.txt')
+    .then(r=>{ if(!r.ok) throw new Error(r.status); return r.text(); })
+    .then(txt=>{ atlasParse(txt); const el=document.getElementById('city');
+      if(el&&el.value) renderCityList(searchCities(el.value)); })
+    .catch(()=>{ ATLAS.state='idle'; });   // stays on the seed, retries next focus
+}
 function searchCities(q){
   q=normStr(q.trim()); if(!q) return [];
-  return CITIES.filter(c=>normStr(c.r).includes(q)||normStr(c.e).includes(q)).slice(0,8);
+  if(ATLAS.state==='ready'){
+    const out=[], blob=ATLAS.blob;
+    /* Rows are stored most-populous first, so the first eight matches found by
+       scanning forward are also the eight biggest places - no ranking pass
+       needed. The prefix run goes first so that "san" offers San Diego before
+       it offers Busan; the substring run then fills any slots left over. */
+    for(const needle of ['\n'+q, q]){
+      let at=blob.indexOf(needle);
+      while(at!==-1&&out.length<8){
+        const i=atlasRowOf(at);
+        if(!out.includes(i)) out.push(i);
+        at=blob.indexOf(needle,at+1);
+      }
+      if(out.length>=8) break;
+    }
+    return out.map(atlasRow);
+  }
+  atlasLoad();
+  return SEED_CITIES.filter(c=>normStr(c.r).includes(q)||normStr(c.e).includes(q)).slice(0,8);
 }
 function formatOffset(h){
   const sign=h<0?'-':'+', a=Math.abs(h); let hh=Math.floor(a+1e-9), mm=Math.round((a-hh)*60);
@@ -914,14 +1175,15 @@ function computeChart(y,mo,day,localH,tzOff,lat,lng){
   pos.Moon=moonApparent(Tc,dpsi);
   const nd=meanNode(Tc);
   pos.NNode={lon:nd}; pos.SNode={lon:rev(nd+180)};
-  pos.Lilith={lon:lilithLon(d)};
+  if(LILMODE==='true'){ const lt=lilithTrue(Tc,dpsi); pos.Lilith=lt||{lon:lilithLon(d)}; }
+  else pos.Lilith={lon:lilithLon(d)};
   const sel=selenaLon(d); if(sel!=null) pos.Selena={lon:sel};
   const ramc=rev(gastDeg(jdUT,Tc,dpsi,eps)+lng);
   const mc=atan2d(sind(ramc),cosd(ramc)*cosd(ecl));
   let asc=atan2d(cosd(ramc),-(sind(ramc)*cosd(ecl)+tand(lat)*sind(ecl)));
   if(rev(asc-mc)>180) asc=rev(asc+180);
   const houses=HOUSE_SYSTEMS[HSYS].fn(ramc,lat,ecl,asc,mc);
-  return {pos,asc,mc,ecl,houses,d,ramc,geolat:lat};
+  return {pos,asc,mc,ecl,houses,d,ramc,geolat:lat,geolon:lng,jdUT};
 }
 
 /* Placidus intermediate cusps by semi-arc trisection (standard iteration).
@@ -2055,6 +2317,10 @@ const HOUSE_SYSTEMS={
 };
 let HSYS=Object.keys(HOUSE_SYSTEMS).includes(localStorage.getItem('astrarium_hsys'))
   ? localStorage.getItem('astrarium_hsys') : 'placidus';
+/* Mean stays the default: it is what the app has always shown, what the Russian
+   schools work with, and what every ephemeris printed before software existed. */
+let LILMODE=['mean','true'].includes(localStorage.getItem('astrarium_lilith'))
+  ? localStorage.getItem('astrarium_lilith') : 'mean';
 function houseOf(lon,cusps){
   for(let h=0;h<12;h++){
     const a=cusps[h], span=rev(cusps[(h+1)%12]-a);
@@ -3042,9 +3308,16 @@ function natalReading(ch){
 let CURRENT=null, ISO=null;
 const S=380, C=S/2;
 function polarFor(asc){ return (lon,r)=>{const a=(180-(lon-asc))*D2R;return [C+r*Math.cos(a), C-r*Math.sin(a)];}; }
-function drawWheel(ch){
+/* Single wheel or bi-wheel. With a transit chart the natal ring moves inward to
+   free a band for the transiting bodies, rather than the two sets sharing one
+   radius: overlapping glyphs is exactly the failure that makes cheap mobile
+   charts unreadable, and the whole reason for the scrubber is that you can see
+   which ring a body belongs to while it moves. */
+function drawWheel(ch,tr){
   const asc=ch.asc, polar=polarFor(asc);
-  const rHouOut=C-3, rHouIn=C-26, rZodIn=C-52, rTickEnd=C-60, rPl=C-76, rAsp=C-94;
+  const rHouOut=C-3, rHouIn=C-26, rZodIn=C-52, rTickEnd=C-60;
+  const rTr=tr?rZodIn-16:0;
+  const rPl=tr?C-104:C-76, rAsp=tr?C-120:C-94;
   const cusps=ch.houses.cusps;
   function sector(l0,l1,r1,r2,fill,op){
     const [ax,ay]=polar(l0,r2),[bx,by]=polar(l1,r2),[cx,cy]=polar(l1,r1),[dx,dy]=polar(l0,r1);
@@ -3128,9 +3401,41 @@ function drawWheel(ch){
     s+=`<text x="${px.toFixed(1)}" y="${(py+(isPoint?4.5:5)).toFixed(1)}" text-anchor="middle" font-size="${isPoint?12:15}" font-family="Astro" fill="${isPoint?'var(--ink2)':'var(--ink)'}">${GLYPH[n]}</text>`;
     s+=`</g>`;
   });
+  // --- transiting bodies, outer band ---
+  if(tr){
+    /* An actual band, drawn as an even-odd annulus so the natal aspect lines
+       underneath still show through the hole. Without it the two sets of
+       glyphs read as one crowded ring, which is the failure this layout exists
+       to avoid. */
+    const ring=(r)=>`M${C-r} ${C}a${r} ${r} 0 1 0 ${2*r} 0a${r} ${r} 0 1 0 ${-2*r} 0`;
+    s+=`<path d="${ring(rTr+12)}${ring(rTr-12)}" fill-rule="evenodd" fill="var(--paper2)" fill-opacity="0.55" stroke="var(--line)" stroke-width="0.5"/>`;
+    /* Only the tight hits get a line drawn. Every hit within a full orb would
+       be fifteen or twenty chords across the middle, and the wheel stops being
+       readable at about six. */
+    TR_HITS.filter(h=>h.orb<=2).forEach(h=>{
+      const nlon=h.np==='ASC'?ch.asc:h.np==='MC'?ch.mc:(ch.pos[h.np]?ch.pos[h.np].lon:null);
+      if(nlon==null) return;
+      const [x1,y1]=polar(tr.pos[h.tp].lon,rTr-11), [x2,y2]=polar(nlon,rPl+12);
+      s+=`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${h.asp.color}" stroke-width="1" stroke-dasharray="3 3" opacity="0.55"/>`;
+    });
+    const tplaced=[];
+    BODIES.forEach(n=>{
+      if(!tr.pos[n]) return;
+      let disp=tr.pos[n].lon, guard=0;
+      while(tplaced.some(pl=>Math.abs(rev(disp-pl+180)-180)<8)&&guard++<48) disp=rev(disp+2.6);
+      tplaced.push(disp);
+      const [px,py]=polar(disp,rTr);
+      const [tx,ty]=polar(tr.pos[n].lon,rZodIn-1);
+      s+=`<g opacity="0.92">`;
+      s+=`<line x1="${tx.toFixed(1)}" y1="${ty.toFixed(1)}" x2="${px.toFixed(1)}" y2="${py.toFixed(1)}" stroke="var(--accent)" stroke-width="0.5" opacity="0.6"/>`;
+      s+=`<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="10" fill="var(--paper3)" stroke="var(--accent)" stroke-width="0.9"/>`;
+      s+=`<text x="${px.toFixed(1)}" y="${(py+4.5).toFixed(1)}" text-anchor="middle" font-size="13" font-family="Astro" fill="var(--ink2)">${GLYPH[n]}</text>`;
+      s+=`</g>`;
+    });
+  }
   s+=`</svg>`;
   document.getElementById('wheel').innerHTML=s;
-  document.querySelectorAll('#wheel .pl').forEach(g=>g.addEventListener('click',()=>{const p=g.dataset.p;ISO=(ISO===p?null:p);drawWheel(ch);showDetail(p,ch);}));
+  document.querySelectorAll('#wheel .pl').forEach(g=>g.addEventListener('click',()=>{const p=g.dataset.p;ISO=(ISO===p?null:p);drawWheel(ch,tr);showDetail(p,ch);}));
 }
 function showDetail(p,ch){
   const el=document.getElementById('detail'); el.classList.remove('empty');
@@ -3153,20 +3458,31 @@ function learn(){const o=loadLearn();o.obs=o.obs||[];o.feat=o.feat||{};return o;
 function featStat(o,k){return o.feat[k]||{rSum:0,rN:0,vSum:0,vN:0};}
 function learnedRes(o,k){const f=featStat(o,k);return (2+f.rSum)/(2+f.rN);}
 function learnedVal(o,k){const f=featStat(o,k);return (0+f.vSum)/(2+f.vN);}
-function currentTransits(ch,y,mo,da){
-  let utH;
-  if(y==null){ const now=new Date(); y=now.getUTCFullYear(); mo=now.getUTCMonth()+1; da=now.getUTCDate(); utH=now.getUTCHours()+now.getUTCMinutes()/60; }
-  else utH=12; // a picked calendar date is evaluated at local noon - day-level granularity
-  const tp=computeChart(y,mo,da,utH,0,0,0).pos;
+const TRANSITERS=['Jupiter','Saturn','Uranus','Neptune','Pluto','Mars','Sun','Venus','Mercury'];
+function aspectOrbs(ch,tp){
   const hits=[];
   const receivers=BODIES.concat(['ASC','MC','NNode','Lilith']);
-  ['Jupiter','Saturn','Uranus','Neptune','Pluto','Mars','Sun','Venus','Mercury'].forEach(T=>{
+  TRANSITERS.forEach(T=>{
     receivers.forEach(np=>{
       const nlon=np==='ASC'?ch.asc:np==='MC'?ch.mc:(ch.pos[np]?ch.pos[np].lon:null);
       if(nlon==null)return;
       let diff=Math.abs(rev(tp[T].lon-nlon));if(diff>180)diff=360-diff;
       for(const asp of ASPECTS){const orb=Math.abs(diff-asp.angle),maxo=Math.min(asp.orb,SPEED_ORB[T]+2);if(orb<=maxo){hits.push({tp:T,np,asp,orb,maxo});break;}}
     });
+  });
+  return hits;
+}
+/* Applying or separating, decided by looking rather than by table: the same
+   aspect is applying or separating depending on where in its retrograde loop
+   the planet is, so the orb is simply measured again an hour later. An hour is
+   long enough that the Moon's 33 arc-minutes dwarf any rounding and short
+   enough that nothing changes aspect. */
+function markApplying(ch,tp,tpLater,hits){
+  const later=new Map();
+  aspectOrbs(ch,tpLater).forEach(h=>later.set(`${h.tp}.${h.asp.name}.${h.np}`,h.orb));
+  hits.forEach(h=>{
+    const o2=later.get(`${h.tp}.${h.asp.name}.${h.np}`);
+    h.applying = o2==null ? null : o2<h.orb;
   });
   return hits;
 }
@@ -3246,40 +3562,161 @@ function daySynthesis(o,hits){
   const tone=hardW>harmW*1.5?'День скорее напряжённый: важное лучше не форсировать.':harmW>hardW*1.5?'День скорее поддерживающий: хорошее время для дел из списка ниже.':'День смешанный: где-то поддержит, где-то потрёт.';
   return `${tone} ${transitText(o,hits[0].h)}`;
 }
-function selectedTransitDate(){
-  const v=document.getElementById('transitDate').value;
-  if(!v) return [null,null,null];
-  return v.split('-').map(Number);
+/* ---------- the time scrubber ----------
+   One moment, held in UTC milliseconds, drives the transit ring, the transit
+   list and the readout. Everything that moves time goes through setMoment, so
+   there is exactly one place where the moment can become inconsistent with
+   what is drawn.
+
+   The moment is UT because that is what the ephemeris consumes and what makes
+   a scrub reproducible; the birthplace's own clock is shown underneath at the
+   offset the chart was cast with, which is a display convenience and does not
+   track later daylight-saving changes at that place. */
+const SCRUB_UNITS=[['sec','u_sec'],['min','u_min'],['hour','u_hour'],['day','u_day'],
+  ['week','u_week'],['month','u_month'],['year','u_year'],['dec','u_dec'],['cent','u_cent']];
+let SCRUB_UNIT=SCRUB_UNITS.some(u=>u[0]===localStorage.getItem('astrarium_unit'))
+  ? localStorage.getItem('astrarium_unit') : 'day';
+let TR_MS=Date.now(), TR_ANCHOR=TR_MS, TR_TZ=0, PLAYING=false, PLAY_RAF=0;
+let TR_CHART=null, TR_HITS=[];
+
+/* Calendar steps, not millisecond steps, for month and up: adding "a month" to
+   31 January must not land in March, and adding "a year" to 29 February must
+   not land on 1 March. Both are clamped to the last valid day instead. */
+function addUnits(ms,n,unit){
+  if(unit==='sec') return ms+n*1000;
+  if(unit==='min') return ms+n*60000;
+  if(unit==='hour') return ms+n*3600000;
+  if(unit==='day') return ms+n*86400000;
+  if(unit==='week') return ms+n*604800000;
+  const d=new Date(ms), day=d.getUTCDate();
+  d.setUTCDate(1);
+  if(unit==='month') d.setUTCMonth(d.getUTCMonth()+n);
+  else d.setUTCFullYear(d.getUTCFullYear()+n*(unit==='year'?1:unit==='dec'?10:100));
+  const last=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+1,0)).getUTCDate();
+  d.setUTCDate(Math.min(day,last));
+  return d.getTime();
 }
+/* Date.UTC maps years 0-99 onto 1900-1999, which would silently move a chart by
+   nineteen centuries. setUTCFullYear does not, so every moment is built here. */
+function utcMs(y,mo,da,hh,mi,ss){
+  const d=new Date(0);
+  d.setUTCFullYear(y,mo-1,da);
+  d.setUTCHours(hh||0,mi||0,ss||0,0);
+  return d.getTime();
+}
+function momParts(ms){
+  const d=new Date(ms);
+  return {y:d.getUTCFullYear(),mo:d.getUTCMonth()+1,d:d.getUTCDate(),
+    h:d.getUTCHours()+d.getUTCMinutes()/60+d.getUTCSeconds()/3600};
+}
+const pad2=x=>String(x).padStart(2,'0');
+function momText(ms,offH){
+  const d=new Date(ms+offH*3600000);
+  const y=d.getUTCFullYear();
+  return `${y<0?'-'+pad2(-y):String(y).padStart(4,'0')}-${pad2(d.getUTCMonth()+1)}-${pad2(d.getUTCDate())}`
+    +` ${pad2(d.getUTCHours())}:${pad2(d.getUTCMinutes())}:${pad2(d.getUTCSeconds())}`;
+}
+function transitChartAt(ch,ms){
+  const p=momParts(ms);
+  return computeChart(p.y,p.mo,p.d,p.h,0,ch.geolat||0,ch.geolon||0);
+}
+/* rAF coalescing: a drag fires input events faster than a chart can be cast,
+   and without this the queue outruns the finger and the slider feels sticky. */
+let scrubQueued=false;
+function scrubDraw(){
+  if(scrubQueued) return;
+  scrubQueued=true;
+  requestAnimationFrame(()=>{ scrubQueued=false; if(CURRENT) renderTransits(CURRENT); });
+}
+function setMoment(ms,{recenter=false}={}){
+  TR_MS=ms;
+  if(recenter){ TR_ANCHOR=ms; const s=document.getElementById('scrub'); if(s) s.value=0; }
+  const p=momParts(ms);
+  const dEl=document.getElementById('transitDate'), tEl=document.getElementById('transitTime');
+  if(dEl) dEl.value=`${String(p.y).padStart(4,'0')}-${pad2(p.mo)}-${pad2(p.d)}`;
+  if(tEl) tEl.value=momText(ms,0).slice(11);
+  renderMoment();          // the readout is live before any chart exists
+  scrubDraw();
+}
+function renderMoment(){
+  document.getElementById('momUT').textContent=momText(TR_MS,0)+' UT';
+  document.getElementById('momLoc').textContent=
+    TR_TZ ? momText(TR_MS,TR_TZ)+' '+formatOffset(TR_TZ) : '';
+}
+function fillScrubUnit(){
+  const sel=document.getElementById('scrubUnit');
+  sel.innerHTML=SCRUB_UNITS.map(([k,s])=>
+    `<option value="${k}"${k===SCRUB_UNIT?' selected':''}>${t(s)}</option>`).join('');
+}
+function setPlaying(on){
+  PLAYING=on;
+  const b=document.getElementById('playBtn');
+  b.innerHTML=on
+    ? '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M5.6 3.4v9.2M10.4 3.4v9.2"/></svg>'
+    : '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M4.8 3.2 12.4 8l-7.6 4.8z"/></svg>';
+  b.title=t(on?'pausebtn':'playbtn');
+  cancelAnimationFrame(PLAY_RAF);
+  if(!on) return;
+  const tick=()=>{ if(!PLAYING) return;
+    setMoment(addUnits(TR_MS,1,SCRUB_UNIT),{recenter:true});
+    PLAY_RAF=requestAnimationFrame(tick); };
+  PLAY_RAF=requestAnimationFrame(tick);
+}
+
 function renderTransits(ch){
   const o=learn();
-  const [y,mo,da]=selectedTransitDate();
-  const hits=currentTransits(ch,y,mo,da)
-    .filter(h=>!(['Uranus','Neptune','Pluto'].includes(h.tp)&&['Uranus','Neptune','Pluto'].includes(h.np)))
-    .map(h=>({h,w:personalWeight(o,h)})).sort((a,b)=>b.w-a.w).slice(0,4);
+  const tr=transitChartAt(ch,TR_MS);
+  TR_CHART=tr;
+  renderMoment();
+  let hits=aspectOrbs(ch,tr.pos)
+    .filter(h=>!(['Uranus','Neptune','Pluto'].includes(h.tp)&&['Uranus','Neptune','Pluto'].includes(h.np)));
+  markApplying(ch,tr.pos,transitChartAt(ch,TR_MS+3600000).pos,hits);
+  TR_HITS=hits;
+  drawWheel(ch,tr);
+  /* Ranked by receiver rank times exactness. With the interpretation flag on,
+     the private model multiplies that in; with it off the order is that rule
+     and nothing else, which is why the personal-weight column disappears too. */
+  const ranked=hits.map(h=>({h,w:FEATURES.interpretation?personalWeight(o,h)
+    :(RECEIVER_RANK[h.np]||0.6)*Math.cos((h.orb/h.maxo)*Math.PI/2)**2}))
+    .sort((a,b)=>b.w-a.w).slice(0,FEATURES.interpretation?4:8);
   const box=document.getElementById('transitlist');
-  document.getElementById('daysyn').textContent=daySynthesis(o,hits);
-  if(!hits.length){box.innerHTML=`<p class="tiny">${t('notransits')}</p>`;renderLearned();return;}
-  box.innerHTML=hits.map(({h,w})=>{
+  document.getElementById('daysyn').textContent=
+    FEATURES.interpretation?daySynthesis(o,ranked):'';
+  if(!ranked.length){box.innerHTML=`<p class="tiny">${t('notransits')}</p>`;renderLearned();return;}
+  box.innerHTML=ranked.map(({h,w})=>{
     const s=sig(h), intensity=Math.cos((h.orb/h.maxo)*Math.PI/2)**2;
     const rated=o.obs.find(x=>x.sig===s&&Date.now()-x.t<86400000*3);
-    return `<div class="transit" data-sig="${s}">
-      <div class="head"><span class="af" style="font-size:18px">${GLYPH[h.tp]}</span><span class="af" style="font-size:14px;color:var(--ink3)">${ASPECT_GLYPH[h.asp.name]}</span><span class="af" style="font-size:18px">${GLYPH[h.np]||''}</span><span style="margin-left:4px">${transitText(o,h)}</span></div>
-      <div class="tiny">${PN(h.tp)} ${ASPECT_NAME[LANG][h.asp.name]} ${PN(h.np)} · ${t('orb')} ${h.orb.toFixed(1)}° · ${t('weight')} ${w.toFixed(2)}</div>
-      <div class="bar"><i style="width:${Math.round(intensity*100)}%"></i></div>
-      ${recall(o,s)}
+    const app=h.applying==null?'':`<span class="app">${t(h.applying?'applying':'separating')}</span>`;
+    const prose=FEATURES.interpretation
+      ? `<span style="margin-left:4px">${transitText(o,h)}</span>` : '';
+    const weight=FEATURES.interpretation?` · ${t('weight')} ${w.toFixed(2)}`:'';
+    const rating=FEATURES.interpretation?`${recall(o,s)}
       <div class="rate">
         <span class="tiny">${t('landq')}</span>
         <span class="stars" data-sig="${s}">${[1,2,3].map(n=>`<span data-r="${n}">${rated&&rated.r>=n?'<b>★</b>':'☆'}</span>`).join('')}</span>
         <span class="tiny" style="margin-left:8px">${t('felt')}</span>
         ${[['hard','−'],['neutral','·'],['easy','+']].map(([k,g])=>`<span class="chip val ${rated&&rated.val===k?'on':''}" data-sig="${s}" data-val="${k}">${g}</span>`).join('')}
         ${AREA_KEYS.map(a=>`<span class="chip area ${rated&&rated.area===a?'on':''}" data-sig="${s}" data-area="${a}">${AREA_NAME[LANG][a]}</span>`).join('')}
-      </div></div>`;
+      </div>`:'';
+    return `<div class="transit" data-sig="${s}">
+      <div class="head"><span class="af" style="font-size:18px">${GLYPH[h.tp]}</span><span class="af" style="font-size:14px;color:var(--ink3)">${ASPECT_GLYPH[h.asp.name]}</span><span class="af" style="font-size:18px">${GLYPH[h.np]||''}</span>${prose}${app}</div>
+      <div class="tiny">${PN(h.tp)} ${ASPECT_NAME[LANG][h.asp.name]} ${PN(h.np)} · ${t('orb')} ${fmtOrb(h.orb)}${weight}</div>
+      <div class="bar"><i style="width:${Math.round(intensity*100)}%"></i></div>
+      ${rating}</div>`;
   }).join('');
-  box.querySelectorAll('.stars span[data-r]').forEach(st=>st.addEventListener('click',e=>rate(hits,e.currentTarget.parentElement.dataset.sig,{r:+e.currentTarget.dataset.r})));
-  box.querySelectorAll('.chip.val').forEach(c=>c.addEventListener('click',()=>rate(hits,c.dataset.sig,{val:c.dataset.val})));
-  box.querySelectorAll('.chip.area').forEach(c=>c.addEventListener('click',()=>rate(hits,c.dataset.sig,{area:c.dataset.area})));
+  if(FEATURES.interpretation){
+    box.querySelectorAll('.stars span[data-r]').forEach(st=>st.addEventListener('click',e=>rate(ranked,e.currentTarget.parentElement.dataset.sig,{r:+e.currentTarget.dataset.r})));
+    box.querySelectorAll('.chip.val').forEach(c=>c.addEventListener('click',()=>rate(ranked,c.dataset.sig,{val:c.dataset.val})));
+    box.querySelectorAll('.chip.area').forEach(c=>c.addEventListener('click',()=>rate(ranked,c.dataset.sig,{area:c.dataset.area})));
+  }
   renderLearned();
+}
+/* Degrees and arc-minutes, not tenths of a degree: at a one-second step the
+   whole point is to watch an orb close, and 0.1 degrees is six arc-minutes of
+   nothing happening. */
+function fmtOrb(o){
+  const d=Math.floor(o), m=Math.round((o-d)*60);
+  return m===60?`${d+1}°00'`:`${d}°${pad2(m)}'`;
 }
 function rate(hits,s,patch){
   const o=learn(),hit=hits.find(x=>sig(x.h)===s); if(!hit)return; const h=hit.h;
@@ -3347,6 +3784,54 @@ function updateTzAuto(){
   const off=ianaOffset(SELECTED_CITY.z,y,mo,da,hh,mi);
   if(off!=null) document.getElementById('tz').value=formatOffset(off);
 }
+/* ---------- chart balance ----------
+   Counts, and only counts. Which element is short is a fact about the chart;
+   what a short element means about the person is not, so nothing here says it.
+   Twelve bodies: the ten planets plus the Ascendant and Midheaven, each worth
+   one. Weighting schemes exist (luminaries double, angles half) and every
+   school has a different one, so this uses the only version that needs no
+   defending. Hemispheres take the ten planets alone, the angles being the
+   boundaries themselves. */
+const ELEM_KEYS=['el_fire','el_earth','el_air','el_water'];
+const MODE_KEYS=['mo_card','mo_fix','mo_mut'];
+function chartBalance(ch){
+  const el=[0,0,0,0], mo=[0,0,0], hemi={e:0,w:0,n:0,s:0};
+  const bodies=BODIES.concat(['ASC','MC']);
+  bodies.forEach(p=>{
+    const lon=p==='ASC'?ch.asc:p==='MC'?ch.mc:(ch.pos[p]?ch.pos[p].lon:null);
+    if(lon==null) return;
+    const s=Math.floor(rev(lon)/30);
+    el[s%4]++; mo[s%3]++;
+  });
+  BODIES.forEach(p=>{
+    if(!ch.pos[p]) return;
+    const h=bodyHouse(ch,p);
+    if(h>=10||h<=3) hemi.e++; else hemi.w++;
+    if(h<=6) hemi.n++; else hemi.s++;
+  });
+  return {el,mo,hemi,total:bodies.filter(p=>p==='ASC'||p==='MC'||ch.pos[p]).length};
+}
+function balBar(name,n,total,colour){
+  const pct=total?Math.round(n/total*100):0;
+  return `<div class="balrow"><span class="nm">${name}</span><span class="n">${n}</span>`
+    +`<span class="bar"><i style="width:${pct}%;background:${colour}"></i></span></div>`;
+}
+function renderBalance(ch){
+  const b=chartBalance(ch);
+  const grp=(title,rows)=>`<div class="balgrp"><h3>${title}</h3>${rows}</div>`;
+  let h='';
+  h+=grp(t('elements'),
+    ELEM_KEYS.map((k,i)=>balBar(t(k),b.el[i],b.total,ELEM_VAR[i])).join(''));
+  h+=grp(t('modes'),
+    MODE_KEYS.map((k,i)=>balBar(t(k),b.mo[i],b.total,'var(--accent)')).join(''));
+  h+=grp(t('hemi'),
+    [['hemi_e',b.hemi.e],['hemi_w',b.hemi.w],['hemi_n',b.hemi.n],['hemi_s',b.hemi.s]]
+      .map(([k,n])=>balBar(t(k),n,BODIES.length,'var(--ink3)')).join(''));
+  document.getElementById('balance').innerHTML=h;
+  /* The summary line carries the tally so the card answers without opening. */
+  document.getElementById('balBrief').textContent=
+    ELEM_KEYS.map((k,i)=>`${t(k)} ${b.el[i]}`).join(' · ');
+}
 function renderCityList(items){
   const box=document.getElementById('citylist');
   if(!items.length){box.style.display='none';box.innerHTML='';return;}
@@ -3364,6 +3849,15 @@ function selectCity(c){
 }
 function applyStatic(){
   document.querySelectorAll('[data-i]').forEach(el=>el.textContent=t(el.dataset.i));
+  /* Icon-only controls carry their label as a tooltip and an aria-label, since
+     there is no text node to translate. */
+  document.querySelectorAll('[data-i-title]').forEach(el=>{
+    el.title=t(el.dataset.iTitle); el.setAttribute('aria-label',t(el.dataset.iTitle));
+  });
+  /* One flag, both cards. Hidden rather than removed so that turning the flag
+     back on needs no other change anywhere. */
+  document.getElementById('readingCard').hidden=!FEATURES.interpretation;
+  document.getElementById('learnedCard').hidden=!FEATURES.interpretation;
   document.querySelectorAll('.lang button[data-lang]').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG));
   document.getElementById('detail').textContent=t('tapdetail');
   document.getElementById('city').placeholder=t('cityph');
@@ -3382,22 +3876,56 @@ function run(){
   const [y,mo,da]=dv.split('-').map(Number);
   const [hh,mi]=tv.split(':').map(Number);
   CURRENT=computeChart(y,mo,da,hh+mi/60,tz,lat,lng); ISO=null;
+  TR_TZ=tz;
+  BIRTH_MS=utcMs(y,mo,da,0,0,0)+Math.round((hh+mi/60-tz)*3600000);
   document.getElementById('results').style.display='';
   document.getElementById('emptycard').style.display='none';
   const hs=HOUSE_SYSTEMS[CURRENT.houses.system];
   document.getElementById('charttitle').textContent=
     `${t('natal')} · ${(hs?hs[LANG]:CURRENT.houses.system)}`;
-  drawWheel(CURRENT); renderPositions(CURRENT);
-  document.getElementById('reading').innerHTML=natalReading(CURRENT);
-  if(!document.getElementById('transitDate').value) document.getElementById('transitDate').value=todayStr();
-  renderTransits(CURRENT);
+  renderPositions(CURRENT); renderBalance(CURRENT);
+  if(FEATURES.interpretation) document.getElementById('reading').innerHTML=natalReading(CURRENT);
+  renderTransits(CURRENT);          // casts the transit ring and draws the wheel
   document.getElementById('detail').className='detail empty';
   document.getElementById('detail').textContent=t('tapdetail');
 }
+/* Birth moment in UTC ms, so the scrubber can jump back to it. Held apart from
+   the chart because a chart is positions and a moment is a clock reading. */
+let BIRTH_MS=null;
 document.getElementById('calc').addEventListener('click',run);
 document.getElementById('reset').addEventListener('click',()=>{localStorage.removeItem(LKEY);if(CURRENT)renderTransits(CURRENT);});
-document.getElementById('transitDate').addEventListener('change',()=>{if(CURRENT)renderTransits(CURRENT);});
-document.getElementById('transitToday').addEventListener('click',()=>{document.getElementById('transitDate').value=todayStr();if(CURRENT)renderTransits(CURRENT);});
+
+/* ---- scrubber wiring ---- */
+{
+  const sc=document.getElementById('scrub');
+  sc.addEventListener('input',()=>{ setPlaying(false); TR_MS=addUnits(TR_ANCHOR,+sc.value,SCRUB_UNIT);
+    setMoment(TR_MS); });
+  /* On release the anchor moves to where the finger left the moment and the
+     slider springs back to centre, so a long sweep is many drags of the same
+     travel instead of one drag that runs out of rail. */
+  sc.addEventListener('change',()=>setMoment(TR_MS,{recenter:true}));
+  document.getElementById('stepBack').addEventListener('click',()=>{setPlaying(false);setMoment(addUnits(TR_MS,-1,SCRUB_UNIT),{recenter:true});});
+  document.getElementById('stepFwd').addEventListener('click',()=>{setPlaying(false);setMoment(addUnits(TR_MS,1,SCRUB_UNIT),{recenter:true});});
+  document.getElementById('playBtn').addEventListener('click',()=>setPlaying(!PLAYING));
+  document.getElementById('scrubUnit').addEventListener('change',e=>{
+    SCRUB_UNIT=e.target.value; localStorage.setItem('astrarium_unit',SCRUB_UNIT);
+    TR_ANCHOR=TR_MS; document.getElementById('scrub').value=0;
+  });
+  document.getElementById('momNow').addEventListener('click',()=>{setPlaying(false);setMoment(Date.now(),{recenter:true});});
+  document.getElementById('momBirth').addEventListener('click',()=>{
+    if(BIRTH_MS==null) return; setPlaying(false); setMoment(BIRTH_MS,{recenter:true});
+  });
+  const jump=()=>{
+    const dv=document.getElementById('transitDate').value, tv=document.getElementById('transitTime').value||'00:00:00';
+    if(!dv) return;
+    const [y,mo,da]=dv.split('-').map(Number);
+    const [hh,mi,ss]=tv.split(':').map(Number);
+    setPlaying(false);
+    setMoment(utcMs(y,mo,da,hh,mi,ss),{recenter:true});
+  };
+  document.getElementById('transitDate').addEventListener('change',jump);
+  document.getElementById('transitTime').addEventListener('change',jump);
+}
 document.getElementById('showSeconds').checked=SHOW_SECONDS;
 document.getElementById('showSeconds').addEventListener('change',e=>{
   SHOW_SECONDS=e.target.checked;
@@ -3406,7 +3934,7 @@ document.getElementById('showSeconds').addEventListener('change',e=>{
 });
 /* Must not match the theme switcher, which shares the .lang styling. */
  document.querySelectorAll('.lang button[data-lang]').forEach(b=>b.addEventListener('click',()=>{
-  LANG=b.dataset.lang; localStorage.setItem('astrarium_lang',LANG); applyStatic(); fillHsys(); fillNamePh(); fillLibSort(); renderLibrary(); if(CURRENT)run();
+  LANG=b.dataset.lang; localStorage.setItem('astrarium_lang',LANG); applyStatic(); fillHsys(); fillLil(); fillScrubUnit(); setPlaying(PLAYING); fillNamePh(); fillLibSort(); renderLibrary(); if(CURRENT)run();
 }));
 document.getElementById('city').addEventListener('input',e=>renderCityList(searchCities(e.target.value)));
 document.getElementById('city').addEventListener('focus',e=>renderCityList(searchCities(e.target.value)));
@@ -3431,7 +3959,20 @@ document.getElementById('hsys').addEventListener('change',e=>{
   HSYS=e.target.value; localStorage.setItem('astrarium_hsys',HSYS);
   if(CURRENT) run();
 });
+function fillLil(){
+  const sel=document.getElementById('lilmode');
+  sel.innerHTML=[['mean','lil_mean'],['true','lil_true']]
+    .map(([k,s])=>`<option value="${k}"${k===LILMODE?' selected':''}>${t(s)}</option>`).join('');
+}
+document.getElementById('lilmode').addEventListener('change',e=>{
+  LILMODE=e.target.value; localStorage.setItem('astrarium_lilith',LILMODE);
+  if(CURRENT) run();
+});
+fillLil();
 fillHsys();
+fillScrubUnit();
+setPlaying(false);
+setMoment(Date.now(),{recenter:true});
 fillNamePh();
 
 /* Theme: the system decides until the switch is touched, the stored choice
@@ -3458,6 +3999,10 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{
 });
 applyTheme();
 applyStatic();
+/* The atlas is 3.8 MB over the wire, so it starts after first paint rather
+   than blocking it: the seed answers meanwhile and the swap is invisible. */
+if('requestIdleCallback' in window) requestIdleCallback(atlasLoad,{timeout:4000});
+else setTimeout(atlasLoad,1200);
 
 
 /* Chart library. Built-in entries are historical figures; saved charts are the
@@ -3612,8 +4157,92 @@ document.getElementById('saveChart').addEventListener('click',function(){
     lat:+document.getElementById('lat').value, lon:+document.getElementById('lng').value,
     tz:parseOffset(document.getElementById('tz').value), city:cityV, rr:'A', src:''});
   nameEl.value='';
-  localStorage.setItem(LKEY_CHARTS,JSON.stringify(list.slice(0,50)));
+  localStorage.setItem(LKEY_CHARTS,JSON.stringify(list.slice(0,LIB_CAP)));
   renderLibrary();
+});
+
+/* ---------- CSV exchange ----------
+   A personal chart database is only yours if you can get it out. The format is
+   deliberately the dullest possible: RFC 4180 CSV with a header row, one chart
+   per line, times as HH:MM and offsets as +HH:MM, so it opens in any
+   spreadsheet, survives editing by hand, and can be diffed. Only your own
+   saved charts are exported; the built-in library is not yours to carry off.
+
+   Reading is more forgiving than writing: the header decides the column order,
+   so a file with the columns rearranged or with extra columns still loads. */
+const LIB_CAP=2000;
+const CSV_COLS=['name','date','time','utc_offset','latitude','longitude','city','rodden','source'];
+const csvCell=v=>{ const s=v==null?'':String(v);
+  return /[",\n\r]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; };
+function csvParse(text){
+  const rows=[]; let row=[], cell='', q=false;
+  text=text.replace(/^﻿/,'');
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(q){
+      if(c==='"'){ if(text[i+1]==='"'){cell+='"';i++;} else q=false; }
+      else cell+=c;
+    } else if(c==='"') q=true;
+    else if(c===','){ row.push(cell); cell=''; }
+    else if(c==='\n'){ row.push(cell); rows.push(row); row=[]; cell=''; }
+    else if(c!=='\r') cell+=c;
+  }
+  if(cell!==''||row.length){ row.push(cell); rows.push(row); }
+  return rows.filter(r=>r.length>1||r[0]!=='');
+}
+const hhmm=h=>{ const t=Math.round(h*60); return pad2(Math.floor(t/60)%24)+':'+pad2(((t%60)+60)%60); };
+function libToCsv(){
+  const lines=[CSV_COLS.join(',')];
+  savedCharts().forEach(e=>lines.push([
+    e.name, `${String(e.y).padStart(4,'0')}-${pad2(e.mo)}-${pad2(e.d)}`,
+    e.t==null?'':hhmm(e.t), e.tz==null?'':formatOffset(e.tz),
+    e.lat, e.lon, e.city||'', e.rr||'', e.src||''
+  ].map(csvCell).join(',')));
+  return lines.join('\r\n')+'\r\n';
+}
+function csvToLib(text){
+  const rows=csvParse(text);
+  if(rows.length<2) return 0;
+  const head=rows[0].map(h=>h.trim().toLowerCase());
+  const at=n=>head.indexOf(n);
+  if(at('date')===-1||at('latitude')===-1) return -1;
+  const have=new Set(savedCharts().map(e=>`${e.name}|${e.y}-${e.mo}-${e.d}|${e.t}`));
+  const list=savedCharts(); let n=0;
+  for(let i=1;i<rows.length;i++){
+    const r=rows[i]; const g=k=>{const j=at(k);return j===-1?'':(r[j]||'').trim();};
+    const dm=/^(-?\d{1,6})-(\d{1,2})-(\d{1,2})$/.exec(g('date')); if(!dm) continue;
+    const tm=/^(\d{1,2}):(\d{2})/.exec(g('time'));
+    const lat=parseFloat(g('latitude')), lon=parseFloat(g('longitude'));
+    if(isNaN(lat)||isNaN(lon)) continue;
+    const t=tm?(+tm[1]+ +tm[2]/60):12;
+    const key=`${g('name')}|${+dm[1]}-${+dm[2]}-${+dm[3]}|${t}`;
+    if(have.has(key)) continue;
+    have.add(key);
+    list.unshift({id:'u'+Date.now()+'_'+n, name:g('name')||g('city')||g('date'),
+      y:+dm[1], mo:+dm[2], d:+dm[3], t, lat, lon,
+      tz:parseOffset(g('utc_offset')), city:g('city'), rr:g('rodden')||'', src:g('source')||''});
+    n++;
+  }
+  localStorage.setItem(LKEY_CHARTS,JSON.stringify(list.slice(0,LIB_CAP)));
+  return n;
+}
+document.getElementById('expCsv').addEventListener('click',()=>{
+  const blob=new Blob([libToCsv()],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`astrotrip-charts-${todayStr()}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+});
+document.getElementById('impCsv').addEventListener('click',()=>document.getElementById('impFile').click());
+document.getElementById('impFile').addEventListener('change',function(){
+  const f=this.files&&this.files[0]; if(!f) return;
+  f.text().then(txt=>{
+    const n=csvToLib(txt);
+    alert(n<0?t('importBad'):t('importDone')+n);
+    if(n>0) renderLibrary();
+  }).catch(()=>alert(t('importBad')));
+  this.value='';
 });
 /* Живой поиск: перерисовка списка из 150 строк занимает доли миллисекунды,
    поэтому откладывать её нечем и незачем. */

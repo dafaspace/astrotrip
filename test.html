@@ -52,7 +52,20 @@ const frame=document.getElementById('app');
   }catch(e){}
   /* Read once here, because the runner below is synchronous. */
   try{ SW_SRC=await (await fetch('./sw.js?notacache='+Date.now())).text(); }catch(e){}
-  frame.addEventListener('load',()=>setTimeout(run,220));
+  /* The city atlas is fetched after first paint, so the run waits for it -
+     otherwise the atlas tests would silently check the inline seed instead and
+     pass on the wrong data. Capped, because a failed fetch must still let the
+     other ninety tests report. */
+  frame.addEventListener('load',()=>setTimeout(async()=>{
+    const W=frame.contentWindow;
+    try{ W.eval('atlasLoad()'); }catch(e){}
+    for(let i=0;i<200;i++){
+      let st=''; try{ st=W.eval('ATLAS.state'); }catch(e){}
+      if(st==='ready') break;
+      await new Promise(r=>setTimeout(r,100));
+    }
+    run();
+  },220));
   frame.src='./index.html?notacache='+Date.now();
 })();
 let SW_SRC='';
@@ -647,6 +660,327 @@ function run(){
     if(!m) return 'CACHE в sw.js не найден';
     return m[1]==='astrotrip-v'+v || 'кэш '+m[1]+' против версии '+v;
   });
+  /* ---------- Чёрная Луна и Селена ---------- */
+  group('Чёрная Луна и Селена');
+  t('Селена совпадает с определением Swiss Ephemeris в эпоху J2000',()=>{
+    /* seorbel.txt: средняя аномалия 242.2205555 + 5143.5418158*T, эксцентриситет
+       и наклон нулевые, тело геоцентрическое, поэтому долгота равна аномалии.
+       Наша нулевая точка это JD 2451543.5, то есть J2000 минус 1.5 суток. */
+    const v=ev('selenaLon(1.5)');
+    return near(v,242.2205555,1e-5)||`получилось ${v.toFixed(7)} вместо 242.2205555`;
+  });
+  t('Селена проходит круг за семь лет',()=>{
+    const a=ev('selenaLon(0)'), b=ev('selenaLon(2556.06)');   // 6.9986 юлианских лет
+    let d=Math.abs(b-a); if(d>180) d=360-d;
+    return d<0.2||`за период ушла на ${d.toFixed(3)}°`;
+  });
+  t('средняя Чёрная Луна это апогей по Meeus 45.7',()=>{
+    /* Перигей 83.3532465° в J2000, скорость 4069.0137287°/век; апогей на 180°
+       дальше. Проверяем в самой эпохе и через сто лет. */
+    const now=ev('lilithLon(1.5)'), late=ev('lilithLon(1.5+36525)');
+    const wantNow=(83.3532465+180)%360;
+    const wantLate=(83.3532465+180+4069.0137287-0.0103200-1/80053+1/18999000)%360;
+    return (near(now,wantNow,1e-6)&&near(late,wantLate,1e-6))
+      ||`J2000 ${now.toFixed(4)} против ${wantNow.toFixed(4)}, +100 лет ${late.toFixed(4)} против ${wantLate.toFixed(4)}`;
+  });
+  t('истинная Чёрная Луна даёт правдоподобную оскулирующую орбиту',()=>{
+    /* Большая полуось около 384 400 км, эксцентриситет колеблется примерно от
+       0.026 до 0.077. Если численная производная испорчена, оба уедут сразу. */
+    const bad=ev(`(()=>{const out=[];
+      for(let k=0;k<40;k++){
+        const T=(2440000.5+k*97-2451545)/36525;
+        const h=1e-6, a=moonXYZ(T+2*h),b=moonXYZ(T+h),c=moonXYZ(T-h),d=moonXYZ(T-2*h);
+        const kk=1/(12*h*36525);
+        const v=[(-a[0]+8*b[0]-8*c[0]+d[0])*kk,(-a[1]+8*b[1]-8*c[1]+d[1])*kk,(-a[2]+8*b[2]-8*c[2]+d[2])*kk];
+        const r=moonXYZ(T), rr=Math.hypot(r[0],r[1],r[2]);
+        const v2=v[0]*v[0]+v[1]*v[1]+v[2]*v[2], rv=r[0]*v[0]+r[1]*v[1]+r[2]*v[2];
+        const k1=(v2-GM_EM/rr)/GM_EM, k2=rv/GM_EM;
+        const e=Math.hypot(k1*r[0]-k2*v[0],k1*r[1]-k2*v[1],k1*r[2]-k2*v[2]);
+        const sma=1/(2/rr-v2/GM_EM);
+        if(!(sma>370000&&sma<400000&&e>0.02&&e<0.085)) out.push(k+': a='+sma.toFixed(0)+' e='+e.toFixed(4));
+      }
+      return out;})()`);
+    return bad.length===0||`выпали из диапазона: ${bad.join(', ')}`;
+  });
+  t('шаг численной производной сошёлся',()=>{
+    /* Если ответ зависит от h, то это не производная, а шум. */
+    const f=h=>ev(`(()=>{const T=(2448088.02-2451545)/36525, h=${h};
+      const a=moonXYZ(T+2*h),b=moonXYZ(T+h),c=moonXYZ(T-h),d=moonXYZ(T-2*h);
+      const k=1/(12*h*36525);
+      const v=[(-a[0]+8*b[0]-8*c[0]+d[0])*k,(-a[1]+8*b[1]-8*c[1]+d[1])*k,(-a[2]+8*b[2]-8*c[2]+d[2])*k];
+      const r=moonXYZ(T), rr=Math.hypot(r[0],r[1],r[2]);
+      const v2=v[0]*v[0]+v[1]*v[1]+v[2]*v[2], rv=r[0]*v[0]+r[1]*v[1]+r[2]*v[2];
+      const k1=(v2-GM_EM/rr)/GM_EM, k2=rv/GM_EM;
+      const e=[k1*r[0]-k2*v[0],k1*r[1]-k2*v[1],k1*r[2]-k2*v[2]];
+      return (Math.atan2(-e[1],-e[0])*180/Math.PI+360)%360;})()`);
+    const a=f(1e-6), b=f(1e-7);
+    return near(a,b,1/3600)||`h=1e-6 даёт ${a.toFixed(5)}, h=1e-7 даёт ${b.toFixed(5)}`;
+  });
+  t('истинная Чёрная Луна расходится со средней и бывает ретроградной',()=>{
+    /* Расхождение доходит до знака зодиака, и ретроградность есть только у
+       истинной. Обе особенности разом отличают её от средней. */
+    const r=ev(`(()=>{let maxd=0, retro=0;
+      for(let k=0;k<160;k++){
+        const jd=2444000.5+k*11, d=jd-2451543.5;
+        const T=(jd-2451545)/36525, [dp]=nutation(T);
+        const a=lilithTrue(T,dp), b=lilithTrue((jd+1-2451545)/36525,nutation((jd+1-2451545)/36525)[0]);
+        let diff=Math.abs(((a.lon-lilithLon(d))%360+540)%360-180); diff=180-diff;
+        if(diff>maxd) maxd=diff;
+        let sp=b.lon-a.lon; if(sp>180)sp-=360; if(sp<-180)sp+=360;
+        if(sp<0) retro++;
+      }
+      return {maxd,retro};})()`);
+    return (r.maxd>20&&r.retro>10)||`максимум расхождения ${r.maxd.toFixed(1)}°, ретроградных дней ${r.retro} из 160`;
+  });
+  t('истинная Чёрная Луна сходится со сторонним расчётом',()=>{
+    /* 15 июля 1990, 14:30 в Берлине = 12:30 UT. Опубликованный пример даёт
+       среднюю в Скорпионе 28.31 и истинную в Стрельце 24.47, ретроградную.
+       Порог в полградуса: это сверка порядка величины и калибровки, а не
+       эталон - первичной таблицы Swiss Ephemeris у нас нет. */
+    const r=ev(`(()=>{const d=dayNumber(1990,7,15,12.5), jd=2451543.5+d;
+      const T=(jd+deltaTsec(1990,7)/86400-2451545)/36525, [dp]=nutation(T);
+      return {mean:lilithLon(d), tru:lilithTrue(T,dp).lon};})()`);
+    return (near(r.mean,238.31,0.2)&&near(r.tru,264.47,0.5))
+      ||`средняя ${r.mean.toFixed(2)} против 238.31, истинная ${r.tru.toFixed(2)} против 264.47`;
+  });
+  t('переключатель Чёрной Луны меняет положение в карте',()=>{
+    const r=ev(`(()=>{const keep=LILMODE;
+      LILMODE='mean'; const a=computeChart(1990,7,15,12.5,0,52.52,13.405).pos.Lilith.lon;
+      LILMODE='true'; const b=computeChart(1990,7,15,12.5,0,52.52,13.405).pos.Lilith.lon;
+      LILMODE=keep; return {a,b};})()`);
+    let d=Math.abs(r.a-r.b); if(d>180) d=360-d;
+    return d>20||`средняя и истинная разошлись всего на ${d.toFixed(2)}°`;
+  });
+
+  /* ---------- ползунок времени ---------- */
+  group('Ползунок времени');
+  t('месяц прибавляется по календарю, а не 30 сутками',()=>{
+    // 31 января плюс месяц это 28 или 29 февраля, но никак не 2 марта
+    const a=ev(`(()=>{const t=utcMs(2021,1,31,12,0,0); return new Date(addUnits(t,1,'month')).toISOString();})()`);
+    return a.startsWith('2021-02-28')||`получилось ${a}`;
+  });
+  t('год прибавляется к 29 февраля без переезда на март',()=>{
+    const a=ev(`new Date(addUnits(utcMs(2020,2,29,0,0,0),1,'year')).toISOString()`);
+    return a.startsWith('2021-02-28')||`получилось ${a}`;
+  });
+  t('шаг в секунду двигает момент ровно на секунду',()=>{
+    const d=ev(`addUnits(utcMs(1984,5,17,10,30,0),1,'sec')-utcMs(1984,5,17,10,30,0)`);
+    return d===1000||`сдвиг ${d} мс`;
+  });
+  t('век и десятилетие идут в ту же сторону, что и год',()=>{
+    const r=ev(`(()=>{const t=utcMs(1900,6,15,0,0,0);
+      return [addUnits(t,1,'year'),addUnits(t,1,'dec'),addUnits(t,1,'cent')]
+        .map(x=>new Date(x).getUTCFullYear());})()`);
+    return (r[0]===1901&&r[1]===1910&&r[2]===2000)||`получилось ${r.join(', ')}`;
+  });
+  t('года с двузначным номером не уезжают в двадцатый век',()=>{
+    /* Date.UTC(50,...) это 1950 год, и на этом ловятся все, кто им пользуется. */
+    const y=ev(`new Date(utcMs(50,3,4,0,0,0)).getUTCFullYear()`);
+    return y===50||`год 50 превратился в ${y}`;
+  });
+  t('момент отдаётся в UT, а не в местном времени машины',()=>{
+    /* Смещение самого браузера не должно просачиваться в показания. */
+    const s=ev(`momText(utcMs(2000,1,1,0,0,0),0)`);
+    return s==='2000-01-01 00:00:00'||`получилось "${s}"`;
+  });
+  t('транзитная карта считается на выбранный момент',()=>{
+    const r=ev(`(()=>{const ch=computeChart(1984,5,17,14.5,4,55.7558,37.6176);
+      const a=transitChartAt(ch,utcMs(2020,1,1,0,0,0)).pos.Sun.lon;
+      const b=computeChart(2020,1,1,0,0,0,ch.geolat,ch.geolon).pos.Sun.lon;
+      return Math.abs(a-b);})()`);
+    return r<1e-9||`расхождение ${r}`;
+  });
+  t('сходящийся и расходящийся аспект различаются верно',()=>{
+    /* Орбис у сходящегося через час меньше, у расходящегося больше. Проверяется
+       на настоящих попаданиях, а не на выдуманном примере. */
+    const bad=ev(`(()=>{const ch=computeChart(1984,5,17,14.5,4,55.7558,37.6176);
+      const t0=utcMs(2026,3,1,0,0,0);
+      const now=transitChartAt(ch,t0).pos, later=transitChartAt(ch,t0+3600000).pos;
+      const hits=aspectOrbs(ch,now); markApplying(ch,now,later,hits);
+      const l=new Map(); aspectOrbs(ch,later).forEach(h=>l.set(h.tp+h.asp.name+h.np,h.orb));
+      return hits.filter(h=>{const o2=l.get(h.tp+h.asp.name+h.np);
+        return o2!=null && h.applying!==(o2<h.orb);}).length;})()`);
+    return bad===0||`${bad} попаданий помечены не той меткой`;
+  });
+  t('за секунду Луна сдвигается заметно, а Плутон нет',()=>{
+    /* Ради этого и нужен секундный шаг: он должен что-то менять. Луна проходит
+       около 13 градусов в сутки, то есть примерно полсекунды дуги в секунду
+       времени; Плутон - около сорока угловых минут в сутки, то есть в пятьсот
+       раз меньше. */
+    const r=ev(`(()=>{const a=computeChart(2026,1,1,12,0,0,0,0).pos;
+      const b=computeChart(2026,1,1,12+1/3600,0,0,0).pos;
+      const dl=Math.abs(b.Moon.lon-a.Moon.lon)*3600;
+      const dp=Math.abs(b.Pluto.lon-a.Pluto.lon)*3600;
+      return {dl,dp};})()`);
+    return (r.dl>0.4&&r.dl<0.8&&r.dp<0.003&&r.dl/r.dp>100)
+      ||`Луна ${r.dl.toFixed(4)}", Плутон ${r.dp.toFixed(5)}"`;
+  });
+
+  /* ---------- атлас городов ---------- */
+  group('Атлас городов');
+  t('атлас загрузился целиком',()=>{
+    const n=ev('ATLAS.rowAt?ATLAS.rowAt.length:0');
+    return n>230000||`строк в атласе: ${n}`;
+  });
+  t('город находится по русскому и по латинскому написанию',()=>{
+    const r=ev(`(()=>{const a=searchCities('Цюрих')[0], b=searchCities('zurich')[0];
+      return {a:a&&a.e, b:b&&b.e, lat:a&&a.lat, lon:a&&a.lon, z:a&&a.z};})()`);
+    return (r.a==='Zürich'&&r.b==='Zürich'&&near(r.lat,47.3667,0.01)&&near(r.lon,8.55,0.01)&&r.z==='Europe/Zurich')
+      ||`получилось ${JSON.stringify(r)}`;
+  });
+  t('диакритика не мешает: São Paulo находится как sao paulo',()=>{
+    const r=ev(`(()=>{const c=searchCities('sao paulo')[0]; return c&&c.e+'|'+c.c;})()`);
+    return r==='São Paulo|BR'||`получилось ${r}`;
+  });
+  t('запрос без диакритики находит и умляутное написание',()=>{
+    /* Zürich лежит в данных как Zürich, а asciiname у него Zuerich: обе формы
+       должны вести к одному городу, иначе клавиатура решает за пользователя. */
+    const r=ev(`(()=>{const a=searchCities('zuerich')[0]; return a&&a.e;})()`);
+    return r==='Zürich'||`получилось ${r}`;
+  });
+  t('совпадение с начала имени идёт раньше совпадения внутри',()=>{
+    const r=ev(`searchCities('san')[0].e`);
+    return /^San/i.test(r)||`первым выдан ${r}`;
+  });
+  t('часовой пояс из атласа даёт верное смещение для даты',()=>{
+    /* Москва в 1984 году это UTC+4 летом: пояс из атласа должен пройти через
+       ianaOffset и вернуть исторически правильное значение. */
+    const r=ev(`(()=>{const c=searchCities('Москва')[0];
+      return ianaOffset(c.z,1984,5,17,14,30);})()`);
+    return r===4||`получилось ${r}`;
+  });
+  t('поиск по атласу укладывается в кадр',()=>{
+    /* Он выполняется на каждое нажатие клавиши, поэтому 16 мс это потолок. */
+    const ms=ev(`(()=>{const t0=performance.now();
+      for(const q of ['мо','мос','моск','ber','berl','zur']) searchCities(q);
+      return (performance.now()-t0)/6;})()`);
+    return ms<16||`в среднем ${ms.toFixed(1)} мс на запрос`;
+  });
+  t('атлас лежит в service worker как необязательный, а не критический',()=>{
+    /* 7.6 МБ не должны уметь сорвать установку worker: приложение обязано
+       ставиться и считать карты без атласа. */
+    if(!SW_SRC) return 'sw.js не прочитан';
+    if(!SW_SRC.includes("'./cities.txt'")) return 'cities.txt не перечислен в ASSETS';
+    const crit=/const CRITICAL\s*=\s*ASSETS\.filter\(([\s\S]*?)\);/.exec(SW_SRC);
+    if(!crit) return 'не найден список CRITICAL';
+    return !crit[1].includes('cities.txt')||'cities.txt попал в критические';
+  });
+
+  /* ---------- баланс карты ---------- */
+  group('Баланс карты');
+  t('по стихиям и крестам разложены все двенадцать тел',()=>{
+    const r=ev(`(()=>{const b=chartBalance(computeChart(1984,5,17,14.5,4,55.7558,37.6176));
+      return {el:b.el.reduce((a,c)=>a+c,0), mo:b.mo.reduce((a,c)=>a+c,0), total:b.total};})()`);
+    return (r.el===12&&r.mo===12&&r.total===12)||`стихии ${r.el}, кресты ${r.mo}, всего ${r.total}`;
+  });
+  t('полушария разложены по десяти планетам и сходятся попарно',()=>{
+    const r=ev(`(()=>{const b=chartBalance(computeChart(1984,5,17,14.5,4,55.7558,37.6176)).hemi;
+      return {ew:b.e+b.w, ns:b.n+b.s};})()`);
+    return (r.ew===10&&r.ns===10)||`восток+запад ${r.ew}, низ+верх ${r.ns}`;
+  });
+  t('стихия совпадает со знаком, а не с номером тела',()=>{
+    /* Солнце в Овне это огонь, в Тельце земля. Проверяется на построенных
+       картах, а не на таблице, чтобы поймать сдвиг индекса. */
+    const bad=ev(`(()=>{const out=[];
+      for(let m=1;m<=12;m++){
+        const ch=computeChart(2000,m,20,12,0,0,0);
+        const s=Math.floor(((ch.pos.Sun.lon%360)+360)%360/30);
+        const b=chartBalance(ch);
+        if(b.el[s%4]<1) out.push(m);
+      }
+      return out;})()`);
+    return bad.length===0||`месяцы без учёта Солнца: ${bad.join(',')}`;
+  });
+
+  /* ---------- обмен библиотекой ---------- */
+  group('Обмен библиотекой');
+  t('CSV переживает круг: выгрузка, загрузка, те же данные',()=>{
+    const r=ev(`(()=>{
+      const keep=localStorage.getItem('astrarium_charts');
+      const one=[{id:'u1',name:'Тест, "кавычки", запятая',y:1899,mo:2,d:28,t:14.5,
+        lat:-33.8688,lon:151.2093,tz:10,city:'Sydney',rr:'AA',src:'проверка'}];
+      localStorage.setItem('astrarium_charts',JSON.stringify(one));
+      const csv=libToCsv();
+      localStorage.setItem('astrarium_charts','[]');
+      const n=csvToLib(csv);
+      const back=savedCharts()[0];
+      if(keep==null) localStorage.removeItem('astrarium_charts');
+      else localStorage.setItem('astrarium_charts',keep);
+      return {n,back,csv};})()`);
+    if(r.n!==1) return `загрузилось ${r.n} записей`;
+    const b=r.back, w={name:'Тест, "кавычки", запятая',y:1899,mo:2,d:28,t:14.5,lat:-33.8688,lon:151.2093,tz:10};
+    for(const k in w) if(String(b[k])!==String(w[k])) return `${k}: ${b[k]} вместо ${w[k]}`;
+    return true;
+  });
+  t('в CSV есть строка заголовка и она объявляет колонки',()=>{
+    const h=ev('libToCsv().split("\\r\\n")[0]');
+    return h==='name,date,time,utc_offset,latitude,longitude,city,rodden,source'||`заголовок "${h}"`;
+  });
+  t('повторная загрузка того же файла не удваивает библиотеку',()=>{
+    const r=ev(`(()=>{const keep=localStorage.getItem('astrarium_charts');
+      localStorage.setItem('astrarium_charts',JSON.stringify(
+        [{id:'u1',name:'Дубль',y:1970,mo:1,d:2,t:3,lat:1,lon:2,tz:0,city:'',rr:'',src:''}]));
+      const csv=libToCsv();
+      const a=csvToLib(csv), b=csvToLib(csv);
+      const n=savedCharts().length;
+      if(keep==null) localStorage.removeItem('astrarium_charts');
+      else localStorage.setItem('astrarium_charts',keep);
+      return {a,b,n};})()`);
+    return (r.a===0&&r.b===0&&r.n===1)||`добавлено ${r.a} и ${r.b}, всего ${r.n}`;
+  });
+  t('чужой файл отвергается, а не превращается в мусорные карты',()=>{
+    const r=ev(`csvToLib('col1,col2\\r\\nа,б\\r\\n')`);
+    return r===-1||`вернулось ${r}`;
+  });
+
+  /* ---------- интерпретации сняты, но не удалены ---------- */
+  group('Интерпретации');
+  t('флаг выключен и обе карточки скрыты',()=>{
+    const on=ev('FEATURES.interpretation');
+    const a=D.getElementById('readingCard').hidden, b=D.getElementById('learnedCard').hidden;
+    return (on===false&&a&&b)||`флаг ${on}, reading скрыт ${a}, learned скрыт ${b}`;
+  });
+  t('корпус остался в файле и работает при включении флага',()=>{
+    /* Смысл флага в том, что вернуть тексты можно одной строкой. Если корпус
+       вырезали, здесь будет пусто. */
+    const r=ev(`(()=>{const keep=FEATURES.interpretation, kl=LANG;
+      FEATURES.interpretation=true; LANG='ru';
+      const html=natalReading(computeChart(1984,5,17,14.5,4,55.7558,37.6176));
+      FEATURES.interpretation=keep; LANG=kl;
+      return html.length;})()`);
+    return r>2000||`разбор вернул ${r} символов`;
+  });
+  t('в списке транзитов при выключенном флаге нет ни оценок, ни прозы',()=>{
+    const box=D.getElementById('transitlist');
+    const rates=box.querySelectorAll('.rate').length;
+    const syn=D.getElementById('daysyn').textContent.trim().length;
+    return (rates===0&&syn===0)||`блоков оценки ${rates}, синтез дня длиной ${syn}`;
+  });
+
+  /* ---------- бивил ---------- */
+  group('Двойное колесо');
+  t('транзитное кольцо не налезает на натальное',()=>{
+    /* Ради этого кольца и раздвинуты: перекрытие глифов и есть та беда,
+       из-за которой мобильные карты нечитаемы. */
+    const r=ev(`(()=>{const sv=document.querySelector('#wheel svg');
+      if(!sv) return null;
+      const cs=[...sv.querySelectorAll('circle')].filter(c=>+c.getAttribute('r')>=9&&+c.getAttribute('r')<=12);
+      const d=c=>Math.hypot(+c.getAttribute('cx')-190,+c.getAttribute('cy')-190);
+      const tr=cs.filter(c=>c.getAttribute('stroke')==='var(--accent)');
+      const na=cs.filter(c=>c.getAttribute('stroke')!=='var(--accent)');
+      if(!tr.length||!na.length) return null;
+      return {natalOuter:Math.max(...na.map(c=>d(c)+ +c.getAttribute('r'))),
+              transitInner:Math.min(...tr.map(c=>d(c)- +c.getAttribute('r'))),
+              tr:tr.length, na:na.length};})()`);
+    if(!r) return 'на колесе нет двух наборов глифов';
+    return (r.transitInner-r.natalOuter>=6)
+      ||`зазор ${(r.transitInner-r.natalOuter).toFixed(1)} px между кольцами`;
+  });
+  t('в транзитном кольце все десять планет',()=>{
+    const n=ev(`document.querySelectorAll('#wheel g[opacity="0.92"]').length`);
+    return n===10||`нарисовано ${n}`;
+  });
+
   t('на пустой форме кнопка сохранения выключена',()=>{
     const d=D.getElementById('date').value, tm=D.getElementById('time').value;
     const b=D.getElementById('saveChart');
