@@ -34,6 +34,44 @@ A body's house comes from where the body actually is, by Placidus semi-arc on it
 declination, not from its ecliptic projection. That matters most for Pluto, which
 reaches 17.5° of latitude and lands in a different house on about a fifth of charts.
 
+### Progressions and directions
+
+The inner wheel is always natal. The outer ring is one of three things, and the
+same slider drives all three, because all three are a function of one moment.
+
+**Transits** - where the sky actually is.
+
+**Secondary progressions** - a day of ephemeris for a year of life. The
+progressed moment is birth plus the elapsed tropical years counted as days.
+The angles need a rule of their own and the choice matters: casting the
+progressed moment as an ordinary chart looks right and is not, because its time
+of day drifts through a whole day each year, so its Midheaven circles the zodiac
+annually. That is the quotidian method, a real technique but not what
+"progressed Ascendant" means to most people. Here the angles move by solar arc,
+about a degree a year, and the cusps are rebuilt from that Midheaven.
+
+**Solar arc directions** - every natal body and both angles move by one arc, the
+distance the progressed Sun has travelled from the natal Sun. Read against the
+natal cusps.
+
+The Moon is a mover in the last two and not in transits: at thirteen degrees a
+day it swamps a transit list, while the progressed Moon at a degree a month is
+the most used point in the technique. Orbs are capped at one degree for both, or
+an aspect would stay "active" for six years and the list would never change.
+
+### Eight languages
+
+English, Spanish, French, Russian, German, Italian, Ukrainian, Georgian - the
+same set and the same order as Cinemail. English is the default; the header
+control shows only the current language and the rest are in its dropdown; the
+choice persists. A key missing from a language falls through to English, so a
+partial translation costs one string rather than the screen.
+
+The interpretation corpus is deliberately not translated: it exists in Russian
+only, it is switched off, and a machine rendering of it into six languages would
+be worse than not offering it. The added translations are not reviewed by native
+speakers.
+
 ### The time scrubber
 
 One slider moves the transit moment from **seconds to centuries**. The transit ring,
@@ -123,12 +161,14 @@ mattered: before it did, a deliberately broken app passed every check. The runne
 for the city atlas to finish loading, or the atlas tests would silently check the inline
 seed instead.
 
-**103 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
+**124 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
 library, robustness over 1550-2250 and at polar latitudes, house systems (angles land
 on the cusps, cusps run round the circle without crossing, quadrant systems coincide at
 the equator, zero-latitude bodies get the same house from both methods), library data
 quality (chronological order, no calendar-date pile-up, AA entries carry a time and a
 source), the Black Moon and Selena checks above, the scrubber's calendar arithmetic,
+progressions and directions (the arc, the angle rate, the orb cap), the language
+pack (every visible key present in all eight, no language a copy of English),
 the atlas, the balance tallies, the CSV round trip including quotes and commas, the
 interpretation flag, the bi-wheel's ring separation, contrast against WCAG AA in both
 themes, and interface wiring.
@@ -141,8 +181,9 @@ by name.
 
 - Pluto is a fit, valid 1550-2250 and clamped outside.
 - No Chiron, no asteroids.
-- No synastry, progressions, solar returns or composites.
-- The scrubber moves the transit moment. Progressed and directed charts are not there.
+- No synastry, solar returns or composites.
+- Primary directions and the quotidian progressed angles are not offered; solar
+  arc is the only rule for the angles.
 - The interpretation corpus is Russian only, which is why it is switched off.
 - Everything lives in one file plus the atlas. That has kept the project free of a
   build step, and it will eventually stop being an advantage.

@@ -94,6 +94,16 @@ input,select{
 .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
 button{font:inherit;cursor:pointer;border-radius:10px;border:1px solid var(--line);background:var(--paper3);color:var(--ink);padding:9px 14px}
 button.primary{background:var(--accentBtn);border-color:var(--accentBtn);color:var(--accentInk)}
+/* The language control is a select, not a row of buttons: eight will not fit
+   across a phone, and a native select gets the platform's own picker. It sits
+   beside the theme switch and the two read as a pair, so the height is 34 and
+   not 32: the theme switch is a 32px button inside a 1px border. */
+.langsel{width:auto;flex:none;min-height:34px;padding:4px 22px 4px 10px;font-size:13px;letter-spacing:.04em;
+  border-radius:9px;background:var(--paper2);
+  -webkit-appearance:none;appearance:none;
+  background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);
+  background-position:calc(100% - 14px) 52%,calc(100% - 9px) 52%;
+  background-size:5px 5px,5px 5px;background-repeat:no-repeat}
 .lang{display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;flex:none}
 .lang button{border:none;border-radius:0;padding:6px 11px;background:var(--paper2);font-size:13px}
 .lang button.on{background:var(--accentBtn);color:var(--accentInk)}
@@ -118,6 +128,10 @@ svg{display:block;width:100%;height:auto;touch-action:manipulation}
 .detail{background:var(--paper3);border-radius:12px;padding:12px;margin-top:10px;min-height:20px}
 .detail.empty{color:var(--ink3);font-style:italic}
 /* ---- time scrubber ---- */
+/* Reuses the language switch's segmented look, one row, full width, with 44px
+   of height because these are the control the whole card turns on. */
+.lang.ringsw{display:inline-flex;margin:2px 0 0;max-width:100%}
+.lang.ringsw button{flex:1;padding:0 14px;min-height:44px;font-size:13px;white-space:nowrap}
 .scrub{border:1px solid var(--line);border-radius:12px;padding:12px 14px 14px;margin:0 0 14px;background:var(--paper3)}
 .momrow{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:8px}
 .mom{font-family:'Literata',Georgia,serif;font-size:17px;font-variant-numeric:tabular-nums}
@@ -303,9 +317,9 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
          would make the moon look the larger of the two. -->
     <button data-theme-set="light" title="Светлая" aria-label="Светлая тема"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="3.1"/><g stroke-linecap="round"><path d="M8 3.1V1.5M8 12.9v1.6M3.1 8H1.5M12.9 8h1.6M4.54 4.54 3.4 3.4M11.46 11.46l1.14 1.14M11.46 4.54 12.6 3.4M4.54 11.46 3.4 12.6"/></g></svg></button><button data-theme-set="dark" title="Тёмная" aria-label="Тёмная тема"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M14.2 8.54A6.2 6.2 0 1 1 7.46 1.8 4.82 4.82 0 0 0 14.2 8.54z" stroke-linejoin="round"/></svg></button>
   </div>
-  <div class="lang">
-    <button data-lang="ru">RU</button><button data-lang="en">EN</button>
-  </div>
+  <!-- Eight languages will not fit as buttons on a phone, and the same order
+       as Cinemail keeps the family consistent. -->
+  <select id="langSel" class="langsel" aria-label="Language"></select>
 </header>
 
 <div class="wrap">
@@ -399,8 +413,14 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
     </div>
 
     <div class="card">
-      <h2 data-i="transits"></h2>
+      <h2 id="ringTitle"></h2>
       <p class="tiny" style="margin-top:0" data-i="scrubintro"></p>
+      <!-- What the outer ring shows. All three are a function of one moment,
+           so all three ride the same slider. -->
+      <div class="lang ringsw" id="ringSw">
+        <button data-ring="transit"></button><button data-ring="progressed"></button><button data-ring="directed"></button>
+      </div>
+      <p class="tiny" id="ringNote" style="margin:8px 0 12px"></p>
 
       <!-- The scrubber. The date and time fields jump; the slider scrubs. The
            slider is relative on purpose: it spans 60 steps either side of an
@@ -459,7 +479,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
 /* Bump together with CACHE in sw.js: the two are the same release, and the
    number on screen is how you tell from a phone which one you are looking at. */
-const APP_VERSION='2.0.0';
+const APP_VERSION='2.1.0';
 document.getElementById('ver').textContent=APP_VERSION;
 
 /* ---------- feature flags ----------
@@ -480,7 +500,22 @@ const FEATURES={interpretation:false};
 /* ---------- i18n ---------- */
 /* Validated, not just defaulted: a stored value could be anything, and a
    bad one would propagate into every lookup keyed by language. */
-let LANG = ['ru','en'].includes(localStorage.getItem('astrarium_lang')) ? localStorage.getItem('astrarium_lang') : 'en';
+/* Same set and same order as Cinemail: the portfolio should not disagree with
+   itself about which languages it speaks or how they are listed. English is
+   the default; a stored value is validated, because anything could be in
+   localStorage and a bad code would poison every lookup keyed by language. */
+/* Two-letter labels, the same ones Cinemail shows, because the control has to
+   display exactly one language - the current one - and "\u0423\u043a\u0440\u0430\u0457\u043d\u0441\u044c\u043a\u0430" beside the
+   theme switch is a third of a phone's header. The rest live in the dropdown. */
+const LANGS=[['en','EN'],['es','ES'],['fr','FR'],['ru','RU'],
+  ['de','DE'],['it','IT'],['uk','UA'],['ka','KA']];
+const LANG_CODES=LANGS.map(l=>l[0]);
+let LANG = LANG_CODES.includes(localStorage.getItem('astrarium_lang'))
+  ? localStorage.getItem('astrarium_lang') : 'en';
+/* Every table keyed by language goes through this. A language that is missing
+   an entry shows the English one rather than "undefined", so a half-finished
+   translation costs one string, not the screen. */
+const LX=o=>(o&&o[LANG]!==undefined)?o[LANG]:(o?o.en:undefined);
 const STR = {
   tagline:{ru:'Точные карты офлайн, и время, которое можно двигать.', en:'Precise charts offline, and time you can move.'},
   birth:{ru:'Данные рождения',en:'Birth data'},
@@ -508,17 +543,26 @@ const STR = {
   needdata:{ru:'Заполните дату, время и место.',en:'Fill in date, time and place.'},
   empty:{ru:'Введите данные рождения и постройте карту.',en:'Enter birth data and cast the chart.'},
   natal:{ru:'Натальная карта',en:'Natal chart'},
-  housesys:{ru:'дома: Плацидус',en:'houses: Placidus'},
-  housesyseq:{ru:'дома: равнодомные (высокая широта)',en:'houses: equal (high latitude)'},
+  era1:{ru:'До кинематографа',en:'Before the cinema'},
+  era2:{ru:'Рождённые 1880-1919 · эпоха студий',en:'Born 1880-1919 · the studio era'},
+  era3:{ru:'Рождённые 1920-1949',en:'Born 1920-1949'},
+  era4:{ru:'Рождённые с 1950',en:'Born from 1950'},
   tapdetail:{ru:'Коснитесь планеты для детали.',en:'Tap a planet for detail.'},
   positions:{ru:'Позиции',en:'Positions'},
   posnote:{ru:'Движок: VSOP87D, ELP82B и чебышёвская подгонка Плутона, целиком офлайн. Узлы средние. Чёрная Луна - средняя или истинная, на выбор; Селена считается по определению Swiss Ephemeris. Плутон надёжен на 1550-2250, дальше экстраполируется. Хирона пока нет.',en:'Engine: VSOP87D, ELP82B and a Chebyshev fit for Pluto, fully offline. Nodes are mean. The Black Moon is mean or true, your choice; Selena follows the Swiss Ephemeris definition. Pluto is reliable over 1550-2250 and extrapolated beyond. Chiron is not here yet.'},
   reading:{ru:'Разбор карты',en:'Reading'},
   corpusnote:{ru:'Тексты - структурная заготовка: кратко + подробнее по касанию. Настоящий корпус интерпретаций подключается отдельно.',en:'Texts are a structural stub: short + detail on tap. The real interpretation corpus plugs in separately.'},
-  transits:{ru:'Транзиты',en:'Transits'},
+  ring_transit:{ru:'Транзиты',en:'Transits'},
+  ring_progressed:{ru:'Прогрессии',en:'Progressions'},
+  ring_directed:{ru:'Дирекции',en:'Directions'},
+  note_transit:{ru:'Где на самом деле находится небо в этот момент.',en:'Where the sky actually is at that moment.'},
+  note_progressed:{ru:'Вторичные прогрессии: день эфемерид за год жизни. Углы идут солнечной дугой, около градуса в год.',en:'Secondary progressions: a day of ephemeris for a year of life. The angles move by the solar arc, about a degree a year.'},
+  note_directed:{ru:'Соляр-арк: всё натальное смещено на одну дугу, равную пути прогрессивного Солнца от натального. Дома остаются натальными.',en:'Solar arc: everything natal is moved by one arc, the distance the progressed Sun has gone from the natal Sun. The houses stay natal.'},
+  age:{ru:'возраст',en:'age'}, arc:{ru:'дуга',en:'arc'},
+  progmoment:{ru:'прогрессивный момент',en:'progressed moment'},
+  needbirth:{ru:'Постройте карту: прогрессии и дирекции считаются от момента рождения.',en:'Cast a chart first: progressions and directions are measured from the birth moment.'},
   transitdate:{ru:'Дата транзита',en:'Transit date'},
   /* time scrubber */
-  timeline:{ru:'Ход времени',en:'Time'},
   scrubintro:{ru:'Тяните ползунок - транзитное кольцо и список пересчитываются на лету. Шаг задаёт, сколько времени в одном делении: от секунды до столетия.',en:'Drag the slider and the transit ring redraws live. The step sets how much time one notch is worth, from a second to a century.'},
   stepLabel:{ru:'ШАГ',en:'STEP'},
   u_sec:{ru:'секунда',en:'second'}, u_min:{ru:'минута',en:'minute'}, u_hour:{ru:'час',en:'hour'},
@@ -528,8 +572,6 @@ const STR = {
   applying:{ru:'сходится',en:'applying'}, separating:{ru:'расходится',en:'separating'},
   playbtn:{ru:'Пуск',en:'Play'}, pausebtn:{ru:'Стоп',en:'Pause'},
   stepback:{ru:'Шаг назад',en:'Step back'}, stepfwd:{ru:'Шаг вперёд',en:'Step forward'},
-  ringlegend:{ru:'Внешнее кольцо - транзит, внутреннее - натал.',en:'Outer ring is the transit, inner is the natal chart.'},
-  outofrange:{ru:'За пределами 1550-2250 Плутон экстраполируется, остальные тела считаются нормально.',en:'Outside 1550-2250 Pluto is extrapolated; every other body still computes normally.'},
   /* balance */
   balance:{ru:'Баланс карты',en:'Chart balance'},
   el_fire:{ru:'Огонь',en:'Fire'}, el_earth:{ru:'Земля',en:'Earth'},
@@ -547,8 +589,6 @@ const STR = {
   importDone:{ru:'Загружено карт: ',en:'Charts imported: '},
   importBad:{ru:'Не удалось прочитать файл как CSV.',en:'Could not read that file as CSV.'},
   /* atlas */
-  atlasLoading:{ru:'Загружается атлас городов…',en:'Loading the city atlas…'},
-  atlasSeed:{ru:'Пока доступны крупные города. Полный атлас догружается.',en:'Major cities for now. The full atlas is still downloading.'},
   learned:{ru:'Что AstroTrip узнал о вас',en:'What AstroTrip has learned about you'},
   forget:{ru:'Забыть всё',en:'Forget everything'},
   landq:{ru:'Зашло?',en:'Did it land?'}, felt:{ru:'Ощущалось:',en:'Felt:'},
@@ -558,7 +598,262 @@ const STR = {
   learnempty:{ru:'Оцените несколько транзитов выше. Движок строит приватную модель того, как циклы реально проживаются именно вами, ранжирование и тон подстраиваются целиком на этом устройстве.',en:'Rate a few transits above. The engine builds a private model of how cycles actually land for you, ranking and tone adapt entirely on this device.'},
   foot:{ru:'Положения сверены с JPL Horizons на всех картах библиотеки: расхождение меньше четырёх секунд дуги, для XX века меньше половины. Атлас городов - GeoNames, CC BY 4.0. После первой загрузки ничто здесь не выходит в сеть.',en:'Positions are checked against JPL Horizons on every chart in the library, agreeing to within four arcseconds and to half of one for the twentieth century. City atlas from GeoNames, CC BY 4.0. After the first load nothing here contacts the network.'}
 };
-function t(k){const s=STR[k];return s?(s[LANG]!==undefined?s[LANG]:s.en):k;}
+/* ---------- the six added languages ----------
+   Language-major, one block per language, because that is how a translator
+   reads and edits them; STR above stays key-major since that is how English
+   and Russian were written side by side. A key missing here falls through to
+   English, so a partial language costs one string rather than the screen.
+
+   The interpretation corpus is deliberately absent: it exists in Russian only,
+   it is switched off, and a machine rendering of it into six languages would
+   be worse than not offering it.
+
+   Not reviewed by native speakers. The astrological vocabulary follows the
+   standard terms of each tradition; the prose is mine. */
+const I18N={
+  es:{
+    tagline:"Cartas precisas sin conexión, y un tiempo que puedes mover.", birth:"Datos de nacimiento",
+    date:"Fecha", time:"Hora (local)", lat:"Latitud", lng:"Longitud", tz:"Desfase UTC",
+    cast:"Levantar la carta", city:"Ciudad de nacimiento", cityph:"Empieza a escribir un nombre...",
+    hint:"El desfase UTC se rellena solo a partir de la zona horaria de la ciudad para esa fecha exacta, con los cambios históricos incluidos.",
+    libTitle:"Biblioteca de cartas", saveChart:"Guardar la actual",
+    namePh:"¿De quién es esta carta? Por ejemplo, mamá", libFind:"Nombre, lugar, año, «cine», «Chernóbil»…",
+    libNone:"No se encontró nada. Prueba con parte de un nombre o de una ciudad.",
+    libNote:"Las cartas guardadas se quedan solo en este dispositivo",
+    noTime:"hora de nacimiento desconocida, carta al mediodía", rrKnown:"hora tomada de un documento",
+    delChart:"eliminar", hsysLabel:"SISTEMA DE CASAS", lilLabel:"LUNA NEGRA", lil_mean:"Media (Lilith)",
+    lil_true:"Verdadera (osculatriz)", transittime:"Hora UT",
+    secondsLabel:"Mostrar segundos de arco en las posiciones",
+    needdata:"Rellena la fecha, la hora y el lugar.",
+    empty:"Introduce los datos de nacimiento y levanta la carta.", natal:"Carta natal",
+    era1:"Antes del cine", era2:"Nacidos 1880-1919 · la era de los estudios", era3:"Nacidos 1920-1949",
+    era4:"Nacidos desde 1950", tapdetail:"Toca un planeta para ver el detalle.", positions:"Posiciones",
+    posnote:"Motor: VSOP87D, ELP82B y un ajuste de Chebyshev para Plutón, todo sin conexión. Los nodos son medios. La Luna Negra es media o verdadera, a tu elección; Selena sigue la definición de Swiss Ephemeris. Plutón es fiable entre 1550 y 2250 y se extrapola fuera de ese rango. Quirón todavía no está.",
+    reading:"Interpretación", transitdate:"Fecha del tránsito",
+    scrubintro:"Arrastra el control y el anillo exterior se redibuja al instante. El paso indica cuánto tiempo vale una muesca, desde un segundo hasta un siglo.",
+    stepLabel:"PASO", u_sec:"segundo", u_min:"minuto", u_hour:"hora", u_day:"día", u_week:"semana",
+    u_month:"mes", u_year:"año", u_dec:"10 años", u_cent:"100 años", nowbtn:"Ahora",
+    birthbtn:"Momento de nacimiento", applying:"se aplica", separating:"se separa", playbtn:"Reproducir",
+    pausebtn:"Pausa", stepback:"Un paso atrás", stepfwd:"Un paso adelante", ring_transit:"Tránsitos",
+    ring_progressed:"Progresiones", ring_directed:"Direcciones",
+    note_transit:"Dónde está realmente el cielo en ese momento.",
+    note_progressed:"Progresiones secundarias: un día de efemérides por cada año de vida. Los ángulos se mueven con el arco solar.",
+    note_directed:"Arco solar: todo lo natal se desplaza un mismo arco, el que el Sol progresado ha recorrido desde el natal. Las casas siguen siendo las natales.",
+    age:"edad", arc:"arco", progmoment:"momento progresado",
+    needbirth:"Levanta primero una carta: las progresiones y las direcciones se miden desde el momento de nacimiento.",
+    balance:"Equilibrio de la carta", el_fire:"Fuego", el_earth:"Tierra", el_air:"Aire", el_water:"Agua",
+    mo_card:"Cardinales", mo_fix:"Fijos", mo_mut:"Mutables", elements:"Elementos", modes:"Modalidades",
+    hemi:"Hemisferios", hemi_e:"Este", hemi_w:"Oeste", hemi_n:"Norte", hemi_s:"Sur",
+    balnote:"Diez planetas más el Ascendente y el Medio Cielo, cada cuerpo con el mismo peso. Los hemisferios van por casas: el este son las casas 10-3, el sur son las casas 7-12.",
+    exportCsv:"Exportar CSV", importCsv:"Importar CSV", importDone:"Cartas importadas: ",
+    importBad:"No se pudo leer ese archivo como CSV.", orb:"orbe", house:"casa",
+    noaspects:"No hay aspectos mayores dentro del orbe.",
+    notransits:"Ahora mismo no hay nada dentro del orbe.",
+    foot:"Las posiciones están cotejadas con JPL Horizons en todas las cartas de la biblioteca: la diferencia es menor de cuatro segundos de arco, y menor de medio en el siglo XX. Atlas de ciudades de GeoNames, CC BY 4.0. Tras la primera carga nada de aquí sale a la red.",
+  },
+  fr:{
+    tagline:"Des cartes précises hors ligne, et un temps que l’on peut déplacer.",
+    birth:"Données de naissance", date:"Date", time:"Heure (locale)", lat:"Latitude", lng:"Longitude",
+    tz:"Décalage UTC", cast:"Dresser la carte", city:"Ville de naissance",
+    cityph:"Commencez à taper un nom...",
+    hint:"Le décalage UTC se remplit automatiquement à partir du fuseau de la ville pour la date exacte, changements historiques compris.",
+    libTitle:"Bibliothèque de cartes", saveChart:"Enregistrer la carte",
+    namePh:"À qui est cette carte ? Par exemple, maman",
+    libFind:"Nom, lieu, année, « cinéma », « Tchernobyl »…",
+    libNone:"Rien trouvé. Essayez une partie du nom ou de la ville.",
+    libNote:"Les cartes enregistrées restent sur cet appareil uniquement",
+    noTime:"heure de naissance inconnue, carte dressée à midi", rrKnown:"heure tirée d’un document",
+    delChart:"supprimer", hsysLabel:"SYSTÈME DE MAISONS", lilLabel:"LUNE NOIRE",
+    lil_mean:"Moyenne (Lilith)", lil_true:"Vraie (osculatrice)", transittime:"Heure UT",
+    secondsLabel:"Afficher les secondes d’arc dans les positions",
+    needdata:"Renseignez la date, l’heure et le lieu.",
+    empty:"Saisissez les données de naissance et dressez la carte.", natal:"Carte natale",
+    era1:"Avant le cinéma", era2:"Nés en 1880-1919 · l’ère des studios", era3:"Nés en 1920-1949",
+    era4:"Nés à partir de 1950", tapdetail:"Touchez une planète pour le détail.", positions:"Positions",
+    posnote:"Moteur : VSOP87D, ELP82B et un ajustement de Tchebychev pour Pluton, entièrement hors ligne. Les nœuds sont moyens. La Lune Noire est moyenne ou vraie, au choix ; Séléné suit la définition de Swiss Ephemeris. Pluton est fiable de 1550 à 2250 et extrapolé au-delà. Chiron n’est pas encore là.",
+    reading:"Interprétation", transitdate:"Date du transit",
+    scrubintro:"Faites glisser le curseur : l’anneau extérieur se redessine en direct. Le pas indique ce que vaut un cran, de la seconde au siècle.",
+    stepLabel:"PAS", u_sec:"seconde", u_min:"minute", u_hour:"heure", u_day:"jour", u_week:"semaine",
+    u_month:"mois", u_year:"an", u_dec:"10 ans", u_cent:"100 ans", nowbtn:"Maintenant",
+    birthbtn:"Moment de naissance", applying:"appliquant", separating:"séparant", playbtn:"Lecture",
+    pausebtn:"Pause", stepback:"Un pas en arrière", stepfwd:"Un pas en avant", ring_transit:"Transits",
+    ring_progressed:"Progressions", ring_directed:"Directions",
+    note_transit:"Où le ciel se trouve réellement à cet instant.",
+    note_progressed:"Progressions secondaires : un jour d’éphémérides pour une année de vie. Les angles avancent de l’arc solaire.",
+    note_directed:"Arc solaire : tout le thème natal est décalé d’un même arc, celui que le Soleil progressé a parcouru depuis le Soleil natal. Les maisons restent natales.",
+    age:"âge", arc:"arc", progmoment:"moment progressé",
+    needbirth:"Dressez d’abord une carte : les progressions et les directions se mesurent depuis le moment de naissance.",
+    balance:"Équilibre de la carte", el_fire:"Feu", el_earth:"Terre", el_air:"Air", el_water:"Eau",
+    mo_card:"Cardinaux", mo_fix:"Fixes", mo_mut:"Mutables", elements:"Éléments", modes:"Modes",
+    hemi:"Hémisphères", hemi_e:"Est", hemi_w:"Ouest", hemi_n:"Nord", hemi_s:"Sud",
+    balnote:"Dix planètes plus l’Ascendant et le Milieu du Ciel, chaque corps du même poids. Les hémisphères se lisent par maisons : l’est ce sont les maisons 10 à 3, le sud les maisons 7 à 12.",
+    exportCsv:"Exporter en CSV", importCsv:"Importer un CSV", importDone:"Cartes importées : ",
+    importBad:"Impossible de lire ce fichier comme un CSV.", orb:"orbe", house:"maison",
+    noaspects:"Aucun aspect majeur dans l’orbe.", notransits:"Rien dans l’orbe pour le moment.",
+    foot:"Les positions sont vérifiées avec JPL Horizons sur toutes les cartes de la bibliothèque : l’écart est inférieur à quatre secondes d’arc, et à une demi-seconde pour le vingtième siècle. Atlas des villes : GeoNames, CC BY 4.0. Après le premier chargement, rien ici ne contacte le réseau.",
+  },
+  de:{
+    tagline:"Genaue Charts offline, und eine Zeit, die sich bewegen lässt.", birth:"Geburtsdaten",
+    date:"Datum", time:"Zeit (Ortszeit)", lat:"Breite", lng:"Länge", tz:"UTC-Versatz",
+    cast:"Chart berechnen", city:"Geburtsort", cityph:"Namen eintippen...",
+    hint:"Der UTC-Versatz wird automatisch aus der Zeitzone des Ortes für das genaue Datum eingesetzt, historische Umstellungen eingeschlossen.",
+    libTitle:"Chart-Bibliothek", saveChart:"Aktuelles speichern",
+    namePh:"Wessen Chart ist das? Zum Beispiel Mama", libFind:"Name, Ort, Jahr, „Film“, „Tschernobyl“…",
+    libNone:"Nichts gefunden. Versuch einen Teil des Namens oder der Stadt.",
+    libNote:"Gespeicherte Charts bleiben nur auf diesem Gerät",
+    noTime:"Geburtszeit unbekannt, Chart auf Mittag gerechnet", rrKnown:"Zeit aus einem Dokument",
+    delChart:"löschen", hsysLabel:"HÄUSERSYSTEM", lilLabel:"SCHWARZER MOND", lil_mean:"Mittlere (Lilith)",
+    lil_true:"Wahre (oskulierend)", transittime:"Zeit UT",
+    secondsLabel:"Bogensekunden in den Positionen zeigen", needdata:"Datum, Zeit und Ort ausfüllen.",
+    empty:"Geburtsdaten eingeben und das Chart berechnen.", natal:"Radix", era1:"Vor dem Kino",
+    era2:"Geboren 1880-1919 · die Studio-Ära", era3:"Geboren 1920-1949", era4:"Geboren ab 1950",
+    tapdetail:"Für Details einen Planeten antippen.", positions:"Positionen",
+    posnote:"Rechenkern: VSOP87D, ELP82B und eine Tschebyschow-Anpassung für Pluto, vollständig offline. Die Mondknoten sind mittlere. Der Schwarze Mond ist wahlweise mittlere oder wahre Apogäum; Selena folgt der Definition der Swiss Ephemeris. Pluto ist von 1550 bis 2250 verlässlich und wird darüber hinaus extrapoliert. Chiron fehlt noch.",
+    reading:"Deutung", transitdate:"Transitdatum",
+    scrubintro:"Zieh den Regler, und der äußere Ring zeichnet sich live neu. Der Schritt sagt, wie viel Zeit eine Raste wert ist, von der Sekunde bis zum Jahrhundert.",
+    stepLabel:"SCHRITT", u_sec:"Sekunde", u_min:"Minute", u_hour:"Stunde", u_day:"Tag", u_week:"Woche",
+    u_month:"Monat", u_year:"Jahr", u_dec:"10 Jahre", u_cent:"100 Jahre", nowbtn:"Jetzt",
+    birthbtn:"Geburtsmoment", applying:"laufend", separating:"trennend", playbtn:"Start", pausebtn:"Pause",
+    stepback:"Ein Schritt zurück", stepfwd:"Ein Schritt vor", ring_transit:"Transite",
+    ring_progressed:"Progressionen", ring_directed:"Direktionen",
+    note_transit:"Wo der Himmel in diesem Moment tatsächlich steht.",
+    note_progressed:"Sekundärprogressionen: ein Tag Ephemeride für ein Lebensjahr. Die Achsen wandern mit dem Sonnenbogen.",
+    note_directed:"Sonnenbogen: alles Radikale wird um denselben Bogen verschoben, den die progressive Sonne seit der Radixsonne zurückgelegt hat. Die Häuser bleiben radikal.",
+    age:"Alter", arc:"Bogen", progmoment:"progressierter Moment",
+    needbirth:"Erst ein Chart berechnen: Progressionen und Direktionen werden vom Geburtsmoment aus gemessen.",
+    balance:"Chart-Balance", el_fire:"Feuer", el_earth:"Erde", el_air:"Luft", el_water:"Wasser",
+    mo_card:"Kardinal", mo_fix:"Fix", mo_mut:"Veränderlich", elements:"Elemente", modes:"Qualitäten",
+    hemi:"Hemisphären", hemi_e:"Ost", hemi_w:"West", hemi_n:"Nord", hemi_s:"Süd",
+    balnote:"Zehn Planeten plus Aszendent und Medium Coeli, jeder Körper gleich gewichtet. Die Hemisphären gehen nach Häusern: Ost sind die Häuser 10 bis 3, Süd die Häuser 7 bis 12.",
+    exportCsv:"CSV exportieren", importCsv:"CSV importieren", importDone:"Importierte Charts: ",
+    importBad:"Diese Datei ließ sich nicht als CSV lesen.", orb:"Orbis", house:"Haus",
+    noaspects:"Keine Hauptaspekte im Orbis.", notransits:"Im Moment nichts im Orbis.",
+    foot:"Die Positionen sind bei jedem Chart der Bibliothek gegen JPL Horizons geprüft: die Abweichung bleibt unter vier Bogensekunden, im zwanzigsten Jahrhundert unter einer halben. Städte-Atlas von GeoNames, CC BY 4.0. Nach dem ersten Laden geht von hier nichts mehr ins Netz.",
+  },
+  it:{
+    tagline:"Carte precise offline, e un tempo che si può muovere.", birth:"Dati di nascita", date:"Data",
+    time:"Ora (locale)", lat:"Latitudine", lng:"Longitudine", tz:"Scarto UTC", cast:"Calcola la carta",
+    city:"Città di nascita", cityph:"Inizia a scrivere un nome...",
+    hint:"Lo scarto UTC si compila da solo dal fuso della città per la data esatta, cambi storici compresi.",
+    libTitle:"Biblioteca di carte", saveChart:"Salva la corrente",
+    namePh:"Di chi è questa carta? Per esempio, mamma", libFind:"Nome, luogo, anno, «cinema», «Chernobyl»…",
+    libNone:"Non ho trovato nulla. Prova una parte del nome o della città.",
+    libNote:"Le carte salvate restano solo su questo dispositivo",
+    noTime:"ora di nascita ignota, carta calcolata a mezzogiorno", rrKnown:"ora presa da un documento",
+    delChart:"elimina", hsysLabel:"SISTEMA DI CASE", lilLabel:"LUNA NERA", lil_mean:"Media (Lilith)",
+    lil_true:"Vera (osculatrice)", transittime:"Ora UT",
+    secondsLabel:"Mostra i secondi d’arco nelle posizioni", needdata:"Compila data, ora e luogo.",
+    empty:"Inserisci i dati di nascita e calcola la carta.", natal:"Carta natale", era1:"Prima del cinema",
+    era2:"Nati nel 1880-1919 · l’era degli studios", era3:"Nati nel 1920-1949", era4:"Nati dal 1950",
+    tapdetail:"Tocca un pianeta per il dettaglio.", positions:"Posizioni",
+    posnote:"Motore: VSOP87D, ELP82B e un adattamento di Chebyshev per Plutone, tutto offline. I nodi sono medi. La Luna Nera è media o vera, a scelta; Selena segue la definizione di Swiss Ephemeris. Plutone è affidabile fra il 1550 e il 2250 e oltre viene estrapolato. Chirone non c’è ancora.",
+    reading:"Lettura", transitdate:"Data del transito",
+    scrubintro:"Trascina il cursore e l’anello esterno si ridisegna in diretta. Il passo dice quanto tempo vale una tacca, dal secondo al secolo.",
+    stepLabel:"PASSO", u_sec:"secondo", u_min:"minuto", u_hour:"ora", u_day:"giorno", u_week:"settimana",
+    u_month:"mese", u_year:"anno", u_dec:"10 anni", u_cent:"100 anni", nowbtn:"Adesso",
+    birthbtn:"Momento di nascita", applying:"applicante", separating:"separante", playbtn:"Avvia",
+    pausebtn:"Pausa", stepback:"Un passo indietro", stepfwd:"Un passo avanti", ring_transit:"Transiti",
+    ring_progressed:"Progressioni", ring_directed:"Direzioni",
+    note_transit:"Dove si trova davvero il cielo in quel momento.",
+    note_progressed:"Progressioni secondarie: un giorno di effemeridi per un anno di vita. Gli angoli si muovono con l’arco solare.",
+    note_directed:"Arco solare: tutto il natale si sposta di uno stesso arco, quello percorso dal Sole progresso rispetto al Sole natale. Le case restano quelle natali.",
+    age:"età", arc:"arco", progmoment:"momento progresso",
+    needbirth:"Calcola prima una carta: progressioni e direzioni si misurano dal momento di nascita.",
+    balance:"Equilibrio della carta", el_fire:"Fuoco", el_earth:"Terra", el_air:"Aria", el_water:"Acqua",
+    mo_card:"Cardinali", mo_fix:"Fissi", mo_mut:"Mobili", elements:"Elementi", modes:"Qualità",
+    hemi:"Emisferi", hemi_e:"Est", hemi_w:"Ovest", hemi_n:"Nord", hemi_s:"Sud",
+    balnote:"Dieci pianeti più l’Ascendente e il Medio Cielo, ogni corpo con lo stesso peso. Gli emisferi vanno per case: est sono le case 10-3, sud le case 7-12.",
+    exportCsv:"Esporta CSV", importCsv:"Importa CSV", importDone:"Carte importate: ",
+    importBad:"Non sono riuscito a leggere quel file come CSV.", orb:"orbe", house:"casa",
+    noaspects:"Nessun aspetto maggiore entro l’orbe.", notransits:"Al momento non c’è nulla entro l’orbe.",
+    foot:"Le posizioni sono confrontate con JPL Horizons su ogni carta della biblioteca: lo scarto resta sotto i quattro secondi d’arco, e sotto il mezzo secondo per il Novecento. Atlante delle città da GeoNames, CC BY 4.0. Dopo il primo caricamento nulla di qui va in rete.",
+  },
+  uk:{
+    tagline:"Точні карти офлайн, і час, який можна рухати.", birth:"Дані народження", date:"Дата",
+    time:"Час (місцевий)", lat:"Широта", lng:"Довгота", tz:"Зсув UTC", cast:"Побудувати карту",
+    city:"Місто народження", cityph:"Почніть вводити назву...",
+    hint:"Зсув UTC підставляється автоматично з часового поясу міста на точну дату, історичні переходи враховано.",
+    libTitle:"Бібліотека карт", saveChart:"Зберегти поточну", namePh:"Чия це карта? Наприклад, «мама»",
+    libFind:"Ім’я, місце, рік, «кіно», «Чорнобиль»…",
+    libNone:"Нічого не знайшлося. Спробуйте частину імені або міста.",
+    libNote:"Збережені карти лишаються тільки на цьому пристрої",
+    noTime:"час народження невідомий, карта на полудень", rrKnown:"час із документа", delChart:"видалити",
+    hsysLabel:"СИСТЕМА ДОМІВ", lilLabel:"ЧОРНИЙ МІСЯЦЬ", lil_mean:"Середній (Ліліт)",
+    lil_true:"Істинний (оскулюючий)", transittime:"Час UT",
+    secondsLabel:"Показувати кутові секунди в позиціях", needdata:"Заповніть дату, час і місце.",
+    empty:"Введіть дані народження і побудуйте карту.", natal:"Натальна карта", era1:"До кінематографа",
+    era2:"Народжені 1880-1919 · доба студій", era3:"Народжені 1920-1949", era4:"Народжені від 1950",
+    tapdetail:"Торкніться планети, щоб побачити деталі.", positions:"Позиції",
+    posnote:"Рушій: VSOP87D, ELP82B і чебишовська підгонка Плутона, цілком офлайн. Вузли середні. Чорний Місяць - середній або істинний, на вибір; Селена рахується за визначенням Swiss Ephemeris. Плутон надійний на 1550-2250, далі екстраполюється. Хірона поки немає.",
+    reading:"Розбір карти", transitdate:"Дата транзиту",
+    scrubintro:"Тягніть повзунок - зовнішнє кільце перемальовується на льоту. Крок задає, скільки часу в одній поділці: від секунди до століття.",
+    stepLabel:"КРОК", u_sec:"секунда", u_min:"хвилина", u_hour:"година", u_day:"доба", u_week:"тиждень",
+    u_month:"місяць", u_year:"рік", u_dec:"10 років", u_cent:"100 років", nowbtn:"Зараз",
+    birthbtn:"Момент народження", applying:"сходиться", separating:"розходиться", playbtn:"Пуск",
+    pausebtn:"Стоп", stepback:"Крок назад", stepfwd:"Крок уперед", ring_transit:"Транзити",
+    ring_progressed:"Прогресії", ring_directed:"Дирекції",
+    note_transit:"Де насправді перебуває небо в цю мить.",
+    note_progressed:"Вторинні прогресії: день ефемерид за рік життя. Кути рухаються сонячною дугою.",
+    note_directed:"Соляр-арк: усе натальне зміщене на одну дугу, що її пройшло прогресивне Сонце від натального. Доми лишаються натальними.",
+    age:"вік", arc:"дуга", progmoment:"прогресивний момент",
+    needbirth:"Спершу побудуйте карту: прогресії та дирекції рахуються від моменту народження.",
+    balance:"Баланс карти", el_fire:"Вогонь", el_earth:"Земля", el_air:"Повітря", el_water:"Вода",
+    mo_card:"Кардинальні", mo_fix:"Фіксовані", mo_mut:"Мутабельні", elements:"Стихії", modes:"Хрести",
+    hemi:"Півкулі", hemi_e:"Схід", hemi_w:"Захід", hemi_n:"Низ", hemi_s:"Верх",
+    balnote:"Рахуються десять планет плюс Асцендент і MC, кожне тіло важить однаково. Півкулі - за домами: схід це доми 10-3, верх це доми 7-12.",
+    exportCsv:"Вивантажити CSV", importCsv:"Завантажити CSV", importDone:"Завантажено карт: ",
+    importBad:"Не вдалося прочитати файл як CSV.", orb:"орбіс", house:"дім",
+    noaspects:"Великих аспектів в орбісі немає.", notransits:"Зараз нічого в орбісі немає.",
+    foot:"Положення звірені з JPL Horizons на всіх картах бібліотеки: розбіжність менша за чотири секунди дуги, для XX століття менша за половину. Атлас міст - GeoNames, CC BY 4.0. Після першого завантаження ніщо звідси не виходить у мережу.",
+  },
+  ka:{
+    tagline:"ზუსტი რუკები ოფლაინში, და დრო, რომელიც შეიძლება გადაანაცვლო.", birth:"დაბადების მონაცემები",
+    date:"თარიღი", time:"დრო (ადგილობრივი)", lat:"განედი", lng:"გრძედი", tz:"UTC წანაცვლება",
+    cast:"რუკის აგება", city:"დაბადების ქალაქი", cityph:"დაიწყე სახელის აკრეფა...",
+    hint:"UTC წანაცვლება ავტომატურად ივსება ქალაქის სასაათო სარტყლიდან ზუსტი თარიღისთვის, ისტორიული ცვლილებების ჩათვლით.",
+    libTitle:"რუკების ბიბლიოთეკა", saveChart:"მიმდინარის შენახვა", namePh:"ვისი რუკაა? მაგალითად, დედა",
+    libFind:"სახელი, ადგილი, წელი, „კინო“, „ჩერნობილი“…",
+    libNone:"ვერაფერი მოიძებნა. სცადე სახელის ან ქალაქის ნაწილი.",
+    libNote:"შენახული რუკები რჩება მხოლოდ ამ მოწყობილობაზე",
+    noTime:"დაბადების დრო უცნობია, რუკა შუადღეზეა აგებული", rrKnown:"დრო დოკუმენტიდან", delChart:"წაშლა",
+    hsysLabel:"სახლების სისტემა", lilLabel:"შავი მთვარე", lil_mean:"საშუალო (ლილიტი)",
+    lil_true:"ჭეშმარიტი (ოსკულირებადი)", transittime:"დრო UT",
+    secondsLabel:"რკალის წამების ჩვენება პოზიციებში", needdata:"შეავსე თარიღი, დრო და ადგილი.",
+    empty:"შეიყვანე დაბადების მონაცემები და ააგე რუკა.", natal:"ნატალური რუკა", era1:"კინომდე",
+    era2:"დაბადებულები 1880-1919 · სტუდიების ეპოქა", era3:"დაბადებულები 1920-1949",
+    era4:"დაბადებულები 1950-იდან", tapdetail:"დეტალისთვის შეეხე პლანეტას.", positions:"პოზიციები",
+    posnote:"ძრავი: VSOP87D, ELP82B და პლუტონისთვის ჩებიშევის მიახლოება, სრულად ოფლაინში. კვანძები საშუალოა. შავი მთვარე საშუალოა ან ჭეშმარიტი, არჩევანით; სელენა Swiss Ephemeris-ის განსაზღვრებას მიჰყვება. პლუტონი საიმედოა 1550-2250 შუალედში, მის გარეთ ექსტრაპოლირდება. ქირონი ჯერ არ არის.",
+    reading:"განმარტება", transitdate:"ტრანზიტის თარიღი",
+    scrubintro:"გადაატარე სლაიდერი და გარე რგოლი მაშინვე გადაიხატება. ნაბიჯი განსაზღვრავს, რამდენ დროს უდრის ერთი დანაყოფი: წამიდან საუკუნემდე.",
+    stepLabel:"ნაბიჯი", u_sec:"წამი", u_min:"წუთი", u_hour:"საათი", u_day:"დღე", u_week:"კვირა",
+    u_month:"თვე", u_year:"წელი", u_dec:"10 წელი", u_cent:"100 წელი", nowbtn:"ახლა",
+    birthbtn:"დაბადების მომენტი", applying:"უახლოვდება", separating:"შორდება", playbtn:"გაშვება",
+    pausebtn:"პაუზა", stepback:"ნაბიჯი უკან", stepfwd:"ნაბიჯი წინ", ring_transit:"ტრანზიტები",
+    ring_progressed:"პროგრესიები", ring_directed:"დირექციები",
+    note_transit:"სად არის ცა სინამდვილეში ამ მომენტში.",
+    note_progressed:"მეორეული პროგრესიები: ეფემერიდების ერთი დღე სიცოცხლის ერთ წელზე. კუთხეები მზის რკალით მოძრაობს.",
+    note_directed:"მზის რკალი: ყველა ნატალური წერტილი ერთი და იმავე რკალით ინაცვლებს, რომელიც პროგრესირებულმა მზემ ნატალურიდან გაიარა. სახლები ნატალური რჩება.",
+    age:"ასაკი", arc:"რკალი", progmoment:"პროგრესირებული მომენტი",
+    needbirth:"ჯერ ააგე რუკა: პროგრესიები და დირექციები დაბადების მომენტიდან იზომება.",
+    balance:"რუკის ბალანსი", el_fire:"ცეცხლი", el_earth:"მიწა", el_air:"ჰაერი", el_water:"წყალი",
+    mo_card:"კარდინალური", mo_fix:"ფიქსირებული", mo_mut:"მუტაბელური", elements:"სტიქიები", modes:"ჯვრები",
+    hemi:"ნახევარსფეროები", hemi_e:"აღმოსავლეთი", hemi_w:"დასავლეთი", hemi_n:"ქვემოთ", hemi_s:"ზემოთ",
+    balnote:"ათი პლანეტა პლუს ასცენდენტი და MC, თითოეული სხეული თანაბარი წონით. ნახევარსფეროები სახლების მიხედვით: აღმოსავლეთი არის სახლები 10-3, ზემოთ - სახლები 7-12.",
+    exportCsv:"CSV-ის გატანა", importCsv:"CSV-ის შემოტანა", importDone:"შემოტანილი რუკები: ",
+    importBad:"ფაილის CSV-ად წაკითხვა ვერ მოხერხდა.", orb:"ორბისი", house:"სახლი",
+    noaspects:"ორბისში მთავარი ასპექტები არ არის.", notransits:"ამჟამად ორბისში არაფერია.",
+    foot:"პოზიციები შედარებულია JPL Horizons-თან ბიბლიოთეკის ყველა რუკაზე: სხვაობა ოთხ რკალის წამზე ნაკლებია, მეოცე საუკუნისთვის კი ნახევარზე ნაკლები. ქალაქების ატლასი - GeoNames, CC BY 4.0. პირველი ჩატვირთვის შემდეგ აქედან ქსელში არაფერი გადის.",
+  },
+};
+/* STR holds the two languages the app was written in, key-major, which is how
+   they were edited. I18N holds the six added afterwards, language-major, which
+   is how a translator reads them. Lookup order: added pack, then STR for this
+   language, then English. */
+function t(k){
+  const add=I18N[LANG];
+  if(add&&add[k]!==undefined) return add[k];
+  return LX(STR[k])!==undefined?LX(STR[k]):k;
+}
 
 const D2R=Math.PI/180, R2D=180/Math.PI;
 const rev=x=>{x=x%360;return x<0?x+360:x;};
@@ -877,7 +1172,7 @@ const PLANET_NAME={
   en:{Sun:'Sun',Moon:'Moon',Mercury:'Mercury',Venus:'Venus',Mars:'Mars',Jupiter:'Jupiter',Saturn:'Saturn',Uranus:'Uranus',Neptune:'Neptune',Pluto:'Pluto',
       NNode:'North Node',SNode:'South Node',Lilith:'Lilith (Black Moon)',Selena:'Selena (White Moon)',ASC:'Ascendant',MC:'MC'}
 };
-const PN=n=>PLANET_NAME[LANG][n]||n;
+const PN=n=>LX(PLANET_NAME)[n]||n;
 const SIGN_NAME={
   ru:['Овен','Телец','Близнецы','Рак','Лев','Дева','Весы','Скорпион','Стрелец','Козерог','Водолей','Рыбы'],
   en:['Aries','Taurus','Gemini','Cancer','Leo','Virgo','Libra','Scorpio','Sagittarius','Capricorn','Aquarius','Pisces']
@@ -3286,7 +3581,7 @@ function natalReading(ch){
   }
   /* EN fallback: simple structural stub until the corpus is translated */
   const u=[];
-  const f=FRAME[LANG], loc=SIGN_LOC[LANG], noun=SIGN_NOUN[LANG], det=SIGN_DETAIL[LANG], pc=PLANET_CLAUSE[LANG];
+  const f=LX(FRAME), loc=LX(SIGN_LOC), noun=LX(SIGN_NOUN), det=LX(SIGN_DETAIL), pc=LX(PLANET_CLAUSE);
   const items=[['Sun',ch.pos.Sun.lon],['Moon',ch.pos.Moon.lon],['ASC',ch.asc]];
   items.forEach(([p,lon])=>{
     const s=Math.floor(rev(lon)/30);
@@ -3294,10 +3589,10 @@ function natalReading(ch){
   });
   findAspects(ch.pos).filter(x=>['Sun','Moon','Venus','Mars','Saturn'].includes(x.p1)||['Sun','Moon','Venus','Mars','Saturn'].includes(x.p2))
     .sort((a,b)=>a.orb-b.orb).slice(0,4).forEach(x=>{
-      const label=`${PN(x.p1)} ${ASPECT_NAME[LANG][x.asp.name]} ${PN(x.p2)} · ${t('orb')} ${x.orb.toFixed(1)}°`;
-      const fn=PLANET_FN[LANG];
+      const label=`${PN(x.p1)} ${LX(ASPECT_NAME)[x.asp.name]} ${PN(x.p2)} · ${t('orb')} ${x.orb.toFixed(1)}°`;
+      const fn=LX(PLANET_FN);
       const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
-      u.push(unitHTML(label,ASPECT_SHORT[LANG][x.asp.name],`${cap(fn[x.p1]||x.p1)} and ${fn[x.p2]||x.p2} ${ASPECT_DETAIL[LANG][x.asp.name]}.`));
+      u.push(unitHTML(label,LX(ASPECT_SHORT)[x.asp.name],`${cap(fn[x.p1]||x.p1)} and ${fn[x.p2]||x.p2} ${LX(ASPECT_DETAIL)[x.asp.name]}.`));
     });
   return u.join('');
 }
@@ -3442,10 +3737,10 @@ function showDetail(p,ch){
   const f=fmtPos(ch.pos[p].lon),hs=bodyHouse(ch,p);
   const asps=findAspects(ch.pos).filter(a=>a.p1===p||a.p2===p);
   let html=`<div style="font-size:16px"><span class="af">${GLYPH[p]}</span> <b>${PN(p)}</b> - <span class="deg">${f.html}</span>, ${t('house')} ${hs}</div>`;
-  if(PLANET_FN[LANG][p]) html+=`<div class="tiny" style="margin:4px 0 8px">${PLANET_FN[LANG][p]}</div>`;
+  if(LX(PLANET_FN)[p]) html+=`<div class="tiny" style="margin:4px 0 8px">${LX(PLANET_FN)[p]}</div>`;
   html+= asps.length? asps.sort((a,b)=>a.orb-b.orb).map(a=>{
       const other=a.p1===p?a.p2:a.p1;
-      return `<div style="padding:3px 0"><span style="color:${a.asp.color}"><span class="af">${ASPECT_GLYPH[a.asp.name]}</span> ${ASPECT_NAME[LANG][a.asp.name]}</span> <span class="af">${GLYPH[other]}</span> ${PN(other)} <span class="tiny">${t('orb')} ${a.orb.toFixed(1)}°</span></div>`;
+      return `<div style="padding:3px 0"><span style="color:${a.asp.color}"><span class="af">${ASPECT_GLYPH[a.asp.name]}</span> ${LX(ASPECT_NAME)[a.asp.name]}</span> <span class="af">${GLYPH[other]}</span> ${PN(other)} <span class="tiny">${t('orb')} ${a.orb.toFixed(1)}°</span></div>`;
     }).join('') : `<div class="tiny">${t('noaspects')}</div>`;
   el.innerHTML=html;
 }
@@ -3458,16 +3753,87 @@ function learn(){const o=loadLearn();o.obs=o.obs||[];o.feat=o.feat||{};return o;
 function featStat(o,k){return o.feat[k]||{rSum:0,rN:0,vSum:0,vN:0};}
 function learnedRes(o,k){const f=featStat(o,k);return (2+f.rSum)/(2+f.rN);}
 function learnedVal(o,k){const f=featStat(o,k);return (0+f.vSum)/(2+f.vN);}
-const TRANSITERS=['Jupiter','Saturn','Uranus','Neptune','Pluto','Mars','Sun','Venus','Mercury'];
+/* ---------- what the outer ring is showing ----------
+   The inner wheel is always the natal chart. The outer ring is one of three
+   things, and all three are driven by the same slider, because all three are
+   a function of one moment.
+
+   TRANSIT - where the sky actually is at that moment.
+
+   PROGRESSED - secondary progressions, a day of ephemeris for a year of life.
+   The progressed moment is birth + (elapsed tropical years) days, and the
+   planets are read there.
+
+   The angles need a rule of their own, and the choice matters. Casting the
+   progressed moment as an ordinary chart looks tempting and is wrong for this
+   purpose: the progressed moment's time of day drifts through a whole day
+   over each year of life, so its sidereal time - and with it the Midheaven -
+   goes round the entire circle every year. That is the quotidian method, a
+   real technique but not what "progressed Ascendant" means to almost anyone.
+   Here the angles move by the solar arc instead, which is the common default:
+   progressed MC = natal MC + arc, and the Ascendant and cusps are rebuilt
+   from that Midheaven at the birth latitude. About a degree a year, smooth.
+
+   DIRECTED - solar arc. Every natal body and both angles move by one arc, the
+   arc being the distance the progressed Sun has travelled from the natal Sun,
+   which is close to a degree a year. Read against the natal cusps, since
+   nothing about the houses is being directed.
+
+   The Moon is a transiting body only in the last two: at thirteen degrees a
+   day it swamps a transit list, but the progressed Moon at a degree a month
+   is the single most used point in the technique. */
+const RING_MODES=['transit','progressed','directed'];
+let RING_MODE=RING_MODES.includes(localStorage.getItem('astrarium_ring'))
+  ? localStorage.getItem('astrarium_ring') : 'transit';
+const TROPICAL_YEAR=365.242190;
+/* How far ahead to look when deciding applying or separating. A progressed or
+   directed chart moves about a degree a year, so an hour would move it by
+   four ten-thousandths of a degree and the comparison would be measuring
+   rounding rather than motion. */
+const PROBE_MS={transit:3600000, progressed:7*86400000, directed:30*86400000};
+function progressedMs(ch,ms){
+  return BIRTH_MS==null?ms:BIRTH_MS+(ms-BIRTH_MS)/TROPICAL_YEAR;
+}
+/* Ascendant and house cusps rebuilt from a Midheaven that was moved by hand.
+   Same construction the natal chart uses, run backwards from MC to RAMC. */
+function anglesFromMC(mc,lat,ecl){
+  const ramc=atan2d(sind(mc)*cosd(ecl),cosd(mc));
+  let asc=atan2d(cosd(ramc),-(sind(ramc)*cosd(ecl)+tand(lat)*sind(ecl)));
+  if(rev(asc-mc)>180) asc=rev(asc+180);
+  return {ramc,asc,houses:HOUSE_SYSTEMS[HSYS].fn(ramc,lat,ecl,asc,mc)};
+}
+/* Positions for the outer ring, plus its own angles. */
+function outerChart(ch,ms){
+  if(RING_MODE==='transit') return transitChartAt(ch,ms);
+  const pr=transitChartAt(ch,progressedMs(ch,ms));
+  const arc=rev(pr.pos.Sun.lon-ch.pos.Sun.lon);
+  const mc=rev(ch.mc+arc);
+  const a=anglesFromMC(mc,ch.geolat,ch.ecl);
+  if(RING_MODE==='progressed')
+    return {...pr, mc, asc:a.asc, ramc:a.ramc, houses:a.houses, arc};
+  const pos={};
+  Object.keys(ch.pos).forEach(k=>{ pos[k]={...ch.pos[k], lon:rev(ch.pos[k].lon+arc)}; });
+  return {...ch, pos, mc, asc:a.asc, ramc:a.ramc, houses:a.houses, arc};
+}
+const RING_MOVERS={
+  transit:['Jupiter','Saturn','Uranus','Neptune','Pluto','Mars','Sun','Venus','Mercury'],
+  progressed:['Moon','Sun','Mercury','Venus','Mars','Jupiter','Saturn','Uranus','Neptune','Pluto'],
+  directed:['Moon','Sun','Mercury','Venus','Mars','Jupiter','Saturn','Uranus','Neptune','Pluto']
+};
 function aspectOrbs(ch,tp){
   const hits=[];
   const receivers=BODIES.concat(['ASC','MC','NNode','Lilith']);
-  TRANSITERS.forEach(T=>{
+  RING_MOVERS[RING_MODE].forEach(T=>{
+    if(!tp[T]) return;
     receivers.forEach(np=>{
       const nlon=np==='ASC'?ch.asc:np==='MC'?ch.mc:(ch.pos[np]?ch.pos[np].lon:null);
       if(nlon==null)return;
       let diff=Math.abs(rev(tp[T].lon-nlon));if(diff>180)diff=360-diff;
-      for(const asp of ASPECTS){const orb=Math.abs(diff-asp.angle),maxo=Math.min(asp.orb,SPEED_ORB[T]+2);if(orb<=maxo){hits.push({tp:T,np,asp,orb,maxo});break;}}
+      /* Progressed and directed points move about a degree a year, so a
+         six-degree orb would keep an aspect "active" for six years and the
+         list would never change. One degree is the working convention. */
+      const cap=RING_MODE==='transit'?SPEED_ORB[T]+2:1;
+      for(const asp of ASPECTS){const orb=Math.abs(diff-asp.angle),maxo=Math.min(asp.orb,cap);if(orb<=maxo){hits.push({tp:T,np,asp,orb,maxo});break;}}
     });
   });
   return hits;
@@ -3640,8 +4006,25 @@ function setMoment(ms,{recenter=false}={}){
 }
 function renderMoment(){
   document.getElementById('momUT').textContent=momText(TR_MS,0)+' UT';
-  document.getElementById('momLoc').textContent=
-    TR_TZ ? momText(TR_MS,TR_TZ)+' '+formatOffset(TR_TZ) : '';
+  /* The second line answers a different question in each mode: for transits
+     it is the same instant on the birthplace's clock, for the other two it is
+     how old the person is and where that puts the ephemeris. */
+  let sub = TR_TZ ? momText(TR_MS,TR_TZ)+' '+formatOffset(TR_TZ) : '';
+  if(RING_MODE!=='transit'&&BIRTH_MS!=null){
+    const yrs=(TR_MS-BIRTH_MS)/86400000/TROPICAL_YEAR;
+    sub=`${t('age')} ${yrs.toFixed(2)}`;
+    if(RING_MODE==='progressed') sub+=` · ${t('progmoment')} ${momText(progressedMs(null,TR_MS),0).slice(0,10)}`;
+    else if(TR_CHART&&TR_CHART.arc!=null) sub+=` · ${t('arc')} ${fmtOrb(TR_CHART.arc)}`;
+  }
+  document.getElementById('momLoc').textContent=sub;
+}
+function renderRingSwitch(){
+  document.querySelectorAll('#ringSw button[data-ring]').forEach(b=>{
+    b.textContent=t('ring_'+b.dataset.ring);
+    b.classList.toggle('on',b.dataset.ring===RING_MODE);
+  });
+  document.getElementById('ringTitle').textContent=t('ring_'+RING_MODE);
+  document.getElementById('ringNote').textContent=t('note_'+RING_MODE);
 }
 function fillScrubUnit(){
   const sel=document.getElementById('scrubUnit');
@@ -3665,12 +4048,16 @@ function setPlaying(on){
 
 function renderTransits(ch){
   const o=learn();
-  const tr=transitChartAt(ch,TR_MS);
+  const tr=outerChart(ch,TR_MS);
   TR_CHART=tr;
   renderMoment();
+  /* Outer-planet-to-outer-planet hits are dropped for transits because they
+     are generational: everyone born that decade has them. In a progressed or
+     directed chart they are personal again, since the arc is this person's. */
   let hits=aspectOrbs(ch,tr.pos)
-    .filter(h=>!(['Uranus','Neptune','Pluto'].includes(h.tp)&&['Uranus','Neptune','Pluto'].includes(h.np)));
-  markApplying(ch,tr.pos,transitChartAt(ch,TR_MS+3600000).pos,hits);
+    .filter(h=>RING_MODE!=='transit'
+      ||!(['Uranus','Neptune','Pluto'].includes(h.tp)&&['Uranus','Neptune','Pluto'].includes(h.np)));
+  markApplying(ch,tr.pos,outerChart(ch,TR_MS+PROBE_MS[RING_MODE]).pos,hits);
   TR_HITS=hits;
   drawWheel(ch,tr);
   /* Ranked by receiver rank times exactness. With the interpretation flag on,
@@ -3696,11 +4083,11 @@ function renderTransits(ch){
         <span class="stars" data-sig="${s}">${[1,2,3].map(n=>`<span data-r="${n}">${rated&&rated.r>=n?'<b>★</b>':'☆'}</span>`).join('')}</span>
         <span class="tiny" style="margin-left:8px">${t('felt')}</span>
         ${[['hard','−'],['neutral','·'],['easy','+']].map(([k,g])=>`<span class="chip val ${rated&&rated.val===k?'on':''}" data-sig="${s}" data-val="${k}">${g}</span>`).join('')}
-        ${AREA_KEYS.map(a=>`<span class="chip area ${rated&&rated.area===a?'on':''}" data-sig="${s}" data-area="${a}">${AREA_NAME[LANG][a]}</span>`).join('')}
+        ${AREA_KEYS.map(a=>`<span class="chip area ${rated&&rated.area===a?'on':''}" data-sig="${s}" data-area="${a}">${LX(AREA_NAME)[a]}</span>`).join('')}
       </div>`:'';
     return `<div class="transit" data-sig="${s}">
       <div class="head"><span class="af" style="font-size:18px">${GLYPH[h.tp]}</span><span class="af" style="font-size:14px;color:var(--ink3)">${ASPECT_GLYPH[h.asp.name]}</span><span class="af" style="font-size:18px">${GLYPH[h.np]||''}</span>${prose}${app}</div>
-      <div class="tiny">${PN(h.tp)} ${ASPECT_NAME[LANG][h.asp.name]} ${PN(h.np)} · ${t('orb')} ${fmtOrb(h.orb)}${weight}</div>
+      <div class="tiny">${PN(h.tp)} ${LX(ASPECT_NAME)[h.asp.name]} ${PN(h.np)} · ${t('orb')} ${fmtOrb(h.orb)}${weight}</div>
       <div class="bar"><i style="width:${Math.round(intensity*100)}%"></i></div>
       ${rating}</div>`;
   }).join('');
@@ -3832,16 +4219,20 @@ function renderBalance(ch){
   document.getElementById('balBrief').textContent=
     ELEM_KEYS.map((k,i)=>`${t(k)} ${b.el[i]}`).join(' · ');
 }
+/* Russian gets the Russian name where the atlas has one; every other language
+   gets the place's own name, which is what GeoNames column 1 holds and what a
+   Spanish or Georgian reader is most likely to recognise on a map. */
+const cityLabel=c=>(LANG==='ru'&&c.r)?c.r:c.e;
 function renderCityList(items){
   const box=document.getElementById('citylist');
   if(!items.length){box.style.display='none';box.innerHTML='';return;}
-  box.innerHTML=items.map(c=>`<div><span>${LANG==='ru'?c.r:c.e}</span><span class="cc">${c.c}</span></div>`).join('');
+  box.innerHTML=items.map(c=>`<div><span>${cityLabel(c)}</span><span class="cc">${c.c}</span></div>`).join('');
   box.style.display='block';
   [...box.children].forEach((el,i)=>el.addEventListener('mousedown',ev=>{ev.preventDefault();selectCity(items[i]);}));
 }
 function selectCity(c){
   SELECTED_CITY=c; TZ_AUTO=true;
-  document.getElementById('city').value=LANG==='ru'?c.r:c.e;
+  document.getElementById('city').value=cityLabel(c);
   document.getElementById('lat').value=c.lat;
   document.getElementById('lng').value=c.lon;
   document.getElementById('citylist').style.display='none';
@@ -3858,10 +4249,10 @@ function applyStatic(){
      back on needs no other change anywhere. */
   document.getElementById('readingCard').hidden=!FEATURES.interpretation;
   document.getElementById('learnedCard').hidden=!FEATURES.interpretation;
-  document.querySelectorAll('.lang button[data-lang]').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG));
+  document.getElementById('langSel').value=LANG;
   document.getElementById('detail').textContent=t('tapdetail');
   document.getElementById('city').placeholder=t('cityph');
-  if(SELECTED_CITY) document.getElementById('city').value=LANG==='ru'?SELECTED_CITY.r:SELECTED_CITY.e;
+  if(SELECTED_CITY) document.getElementById('city').value=cityLabel(SELECTED_CITY);
   document.title='AstroTrip';
 }
 function todayStr(){
@@ -3882,7 +4273,7 @@ function run(){
   document.getElementById('emptycard').style.display='none';
   const hs=HOUSE_SYSTEMS[CURRENT.houses.system];
   document.getElementById('charttitle').textContent=
-    `${t('natal')} · ${(hs?hs[LANG]:CURRENT.houses.system)}`;
+    `${t('natal')} · ${(hs?LX(hs):CURRENT.houses.system)}`;
   renderPositions(CURRENT); renderBalance(CURRENT);
   if(FEATURES.interpretation) document.getElementById('reading').innerHTML=natalReading(CURRENT);
   renderTransits(CURRENT);          // casts the transit ring and draws the wheel
@@ -3911,6 +4302,11 @@ document.getElementById('reset').addEventListener('click',()=>{localStorage.remo
     SCRUB_UNIT=e.target.value; localStorage.setItem('astrarium_unit',SCRUB_UNIT);
     TR_ANCHOR=TR_MS; document.getElementById('scrub').value=0;
   });
+  document.querySelectorAll('#ringSw button[data-ring]').forEach(b=>b.addEventListener('click',()=>{
+    if(b.dataset.ring!=='transit'&&BIRTH_MS==null){ alert(t('needbirth')); return; }
+    RING_MODE=b.dataset.ring; localStorage.setItem('astrarium_ring',RING_MODE);
+    setPlaying(false); renderRingSwitch(); if(CURRENT) renderTransits(CURRENT);
+  }));
   document.getElementById('momNow').addEventListener('click',()=>{setPlaying(false);setMoment(Date.now(),{recenter:true});});
   document.getElementById('momBirth').addEventListener('click',()=>{
     if(BIRTH_MS==null) return; setPlaying(false); setMoment(BIRTH_MS,{recenter:true});
@@ -3932,10 +4328,17 @@ document.getElementById('showSeconds').addEventListener('change',e=>{
   localStorage.setItem('astrarium_seconds',SHOW_SECONDS?'1':'0');
   if(CURRENT){ renderPositions(CURRENT); if(ISO) showDetail(ISO,CURRENT); }
 });
-/* Must not match the theme switcher, which shares the .lang styling. */
- document.querySelectorAll('.lang button[data-lang]').forEach(b=>b.addEventListener('click',()=>{
-  LANG=b.dataset.lang; localStorage.setItem('astrarium_lang',LANG); applyStatic(); fillHsys(); fillLil(); fillScrubUnit(); setPlaying(PLAYING); fillNamePh(); fillLibSort(); renderLibrary(); if(CURRENT)run();
-}));
+function fillLangSel(){
+  const sel=document.getElementById('langSel');
+  sel.innerHTML=LANGS.map(([c,n])=>`<option value="${c}"${c===LANG?' selected':''}>${n}</option>`).join('');
+}
+document.getElementById('langSel').addEventListener('change',e=>{
+  LANG=e.target.value; localStorage.setItem('astrarium_lang',LANG);
+  document.documentElement.lang=LANG;
+  applyStatic(); fillHsys(); fillLil(); fillScrubUnit(); renderRingSwitch();
+  setPlaying(PLAYING); fillNamePh(); fillLibSort(); renderLibrary(); if(CURRENT)run();
+});
+fillLangSel();
 document.getElementById('city').addEventListener('input',e=>renderCityList(searchCities(e.target.value)));
 document.getElementById('city').addEventListener('focus',e=>renderCityList(searchCities(e.target.value)));
 document.getElementById('city').addEventListener('blur',()=>{setTimeout(()=>{document.getElementById('citylist').style.display='none';},150);});
@@ -3953,7 +4356,7 @@ function fillNamePh(){
 function fillHsys(){
   const sel=document.getElementById('hsys');
   sel.innerHTML=Object.entries(HOUSE_SYSTEMS)
-    .map(([k,v])=>`<option value="${k}"${k===HSYS?' selected':''}>${v[LANG]}</option>`).join('');
+    .map(([k,v])=>`<option value="${k}"${k===HSYS?' selected':''}>${LX(v)}</option>`).join('');
 }
 document.getElementById('hsys').addEventListener('change',e=>{
   HSYS=e.target.value; localStorage.setItem('astrarium_hsys',HSYS);
@@ -3971,6 +4374,7 @@ document.getElementById('lilmode').addEventListener('change',e=>{
 fillLil();
 fillHsys();
 fillScrubUnit();
+renderRingSwitch();
 setPlaying(false);
 setMoment(Date.now(),{recenter:true});
 fillNamePh();
@@ -4012,8 +4416,8 @@ else setTimeout(atlasLoad,1200);
 const LKEY_CHARTS='astrarium_charts';
 function savedCharts(){ try{ return JSON.parse(localStorage.getItem(LKEY_CHARTS))||[] }catch(e){ return [] } }
 function libRow(e,own){
-  const nm=e._n!==undefined?e._n:(own?e.name:e.name[LANG]);
-  const city=e._c!==undefined?e._c:(own?e.city:e.city[LANG]);
+  const nm=e._n!==undefined?e._n:(own?e.name:LX(e.name));
+  const city=e._c!==undefined?e._c:(own?e.city:LX(e.city));
   const date=`${String(e.d).padStart(2,'0')}.${String(e.mo).padStart(2,'0')}.${e.y}`;
   const time=e.t==null
     ? `<span class="libwarn">${t('noTime')}</span>`
@@ -4027,12 +4431,6 @@ function libRow(e,own){
 }
 /* Russian needs three forms where English needs two, so the count cannot be
    a single STR entry. */
-function libCountText(n){
-  if(LANG==='en') return n+(n===1?' chart':' charts');
-  const a=n%10, b=n%100;
-  return n+' '+(a===1&&b!==11 ? 'карта'
-    : (a>=2&&a<=4&&(b<12||b>14) ? 'карты' : 'карт'));
-}
 /* Search over everything visible in a row - name, city, year - because that is
    what a person actually remembers about a chart. Diacritics are folded so
    "Rozsa" finds Rózsa and "ё" does not hide Ёранссон. */
@@ -4042,39 +4440,142 @@ const LIB_SORTS={
   date:{ru:'по дате рождения',en:'by birth date',
         fn:(a,b)=>a.y-b.y||a.mo-b.mo||a.d-b.d},
   name:{ru:'по имени',en:'by name',
-        fn:(a,b)=>libFold(a._n).localeCompare(libFold(b._n),'ru')},
+        fn:(a,b)=>libFold(a._n).localeCompare(libFold(b._n),LANG)},
   place:{ru:'по месту',en:'by place',
-        fn:(a,b)=>libFold(a._c).localeCompare(libFold(b._c),'ru')||a.y-b.y}
+        fn:(a,b)=>libFold(a._c).localeCompare(libFold(b._c),LANG)||a.y-b.y}
 };
+/* Names for the added languages, attached to the tables the app already had.
+   Assigned rather than merged into the literals above so those stay short and
+   the two original languages stay easy to read next to each other. */
+PLANET_NAME.es={Sun:"Sol",Moon:"Luna",Mercury:"Mercurio",Venus:"Venus",Mars:"Marte",Jupiter:"Júpiter",Saturn:"Saturno",Uranus:"Urano",Neptune:"Neptuno",Pluto:"Plutón",NNode:"Nodo Norte",SNode:"Nodo Sur",Lilith:"Lilith (Luna Negra)",Selena:"Selena (Luna Blanca)",ASC:"Ascendente",MC:"MC"};
+PLANET_NAME.fr={Sun:"Soleil",Moon:"Lune",Mercury:"Mercure",Venus:"Vénus",Mars:"Mars",Jupiter:"Jupiter",Saturn:"Saturne",Uranus:"Uranus",Neptune:"Neptune",Pluto:"Pluton",NNode:"Nœud Nord",SNode:"Nœud Sud",Lilith:"Lilith (Lune Noire)",Selena:"Séléné (Lune Blanche)",ASC:"Ascendant",MC:"MC"};
+PLANET_NAME.de={Sun:"Sonne",Moon:"Mond",Mercury:"Merkur",Venus:"Venus",Mars:"Mars",Jupiter:"Jupiter",Saturn:"Saturn",Uranus:"Uranus",Neptune:"Neptun",Pluto:"Pluto",NNode:"Aufsteigender Knoten",SNode:"Absteigender Knoten",Lilith:"Lilith (Schwarzer Mond)",Selena:"Selena (Weißer Mond)",ASC:"Aszendent",MC:"MC"};
+PLANET_NAME.it={Sun:"Sole",Moon:"Luna",Mercury:"Mercurio",Venus:"Venere",Mars:"Marte",Jupiter:"Giove",Saturn:"Saturno",Uranus:"Urano",Neptune:"Nettuno",Pluto:"Plutone",NNode:"Nodo Nord",SNode:"Nodo Sud",Lilith:"Lilith (Luna Nera)",Selena:"Selena (Luna Bianca)",ASC:"Ascendente",MC:"MC"};
+PLANET_NAME.uk={Sun:"Сонце",Moon:"Місяць",Mercury:"Меркурій",Venus:"Венера",Mars:"Марс",Jupiter:"Юпітер",Saturn:"Сатурн",Uranus:"Уран",Neptune:"Нептун",Pluto:"Плутон",NNode:"Північний вузол",SNode:"Південний вузол",Lilith:"Ліліт (Чорний Місяць)",Selena:"Селена (Білий Місяць)",ASC:"Асцендент",MC:"MC"};
+PLANET_NAME.ka={Sun:"მზე",Moon:"მთვარე",Mercury:"მერკური",Venus:"ვენერა",Mars:"მარსი",Jupiter:"იუპიტერი",Saturn:"სატურნი",Uranus:"ურანი",Neptune:"ნეპტუნი",Pluto:"პლუტონი",NNode:"ჩრდილოეთის კვანძი",SNode:"სამხრეთის კვანძი",Lilith:"ლილიტი (შავი მთვარე)",Selena:"სელენა (თეთრი მთვარე)",ASC:"ასცენდენტი",MC:"MC"};
+SIGN_NAME.es=["Aries", "Tauro", "Géminis", "Cáncer", "Leo", "Virgo", "Libra", "Escorpio", "Sagitario", "Capricornio", "Acuario", "Piscis"];
+SIGN_NAME.fr=["Bélier", "Taureau", "Gémeaux", "Cancer", "Lion", "Vierge", "Balance", "Scorpion", "Sagittaire", "Capricorne", "Verseau", "Poissons"];
+SIGN_NAME.de=["Widder", "Stier", "Zwillinge", "Krebs", "Löwe", "Jungfrau", "Waage", "Skorpion", "Schütze", "Steinbock", "Wassermann", "Fische"];
+SIGN_NAME.it=["Ariete", "Toro", "Gemelli", "Cancro", "Leone", "Vergine", "Bilancia", "Scorpione", "Sagittario", "Capricorno", "Acquario", "Pesci"];
+SIGN_NAME.uk=["Овен", "Телець", "Близнюки", "Рак", "Лев", "Діва", "Терези", "Скорпіон", "Стрілець", "Козеріг", "Водолій", "Риби"];
+SIGN_NAME.ka=["ვერძი", "კურო", "ტყუპები", "კირჩხიბი", "ლომი", "ქალწული", "სასწორი", "მორიელი", "მშვილდოსანი", "თხის რქა", "მერწყული", "თევზები"];
+ASPECT_NAME.es={conjunction:"conjunción",sextile:"sextil",square:"cuadratura",trine:"trígono",opposition:"oposición"};
+ASPECT_NAME.fr={conjunction:"conjonction",sextile:"sextile",square:"carré",trine:"trigone",opposition:"opposition"};
+ASPECT_NAME.de={conjunction:"Konjunktion",sextile:"Sextil",square:"Quadrat",trine:"Trigon",opposition:"Opposition"};
+ASPECT_NAME.it={conjunction:"congiunzione",sextile:"sestile",square:"quadrato",trine:"trigono",opposition:"opposizione"};
+ASPECT_NAME.uk={conjunction:"з’єднання",sextile:"секстиль",square:"квадрат",trine:"тригон",opposition:"опозиція"};
+ASPECT_NAME.ka={conjunction:"შეერთება",sextile:"სექსტილი",square:"კვადრატი",trine:"ტრიგონი",opposition:"ოპოზიცია"};
+PLANET_FN.es={Sun:"núcleo de la identidad",Moon:"vida emocional",Mercury:"pensamiento y palabra",Venus:"amor y valores",Mars:"empuje y afirmación",Jupiter:"crecimiento y fe",Saturn:"estructura y límites",Uranus:"ruptura de lo habitual",Neptune:"imaginación",Pluto:"profundidad y poder"};
+PLANET_FN.fr={Sun:"noyau de l’identité",Moon:"vie émotionnelle",Mercury:"pensée et parole",Venus:"amour et valeurs",Mars:"élan et affirmation",Jupiter:"croissance et foi",Saturn:"structure et limites",Uranus:"rupture de l’habitude",Neptune:"imagination",Pluto:"profondeur et pouvoir"};
+PLANET_FN.de={Sun:"Kern der Persönlichkeit",Moon:"Gefühlsleben",Mercury:"Denken und Sprechen",Venus:"Liebe und Werte",Mars:"Antrieb und Durchsetzung",Jupiter:"Wachstum und Glaube",Saturn:"Struktur und Grenzen",Uranus:"Umbruch des Gewohnten",Neptune:"Vorstellungskraft",Pluto:"Tiefe und Macht"};
+PLANET_FN.it={Sun:"nucleo dell’identità",Moon:"vita emotiva",Mercury:"pensiero e parola",Venus:"amore e valori",Mars:"spinta e affermazione",Jupiter:"crescita e fede",Saturn:"struttura e limiti",Uranus:"rottura dell’abitudine",Neptune:"immaginazione",Pluto:"profondità e potere"};
+PLANET_FN.uk={Sun:"ядро особистості",Moon:"емоційне життя",Mercury:"мислення і мовлення",Venus:"любов і цінності",Mars:"воля і напір",Jupiter:"зростання і віра",Saturn:"структура і межі",Uranus:"злам звичного",Neptune:"уява",Pluto:"глибина і влада"};
+PLANET_FN.ka={Sun:"პიროვნების ბირთვი",Moon:"ემოციური ცხოვრება",Mercury:"აზროვნება და მეტყველება",Venus:"სიყვარული და ღირებულებები",Mars:"ნება და წნეხი",Jupiter:"ზრდა და რწმენა",Saturn:"სტრუქტურა და საზღვრები",Uranus:"ჩვეულის რღვევა",Neptune:"წარმოსახვა",Pluto:"სიღრმე და ძალა"};
+/* SIGN_LOC is "in Aries" and friends. Only Russian needs real case endings;
+   for the rest a preposition in front of the sign name is correct. */
+const SIGN_PREP={es:'en',fr:'en',de:'im',it:'in',uk:'у',ka:''};
+SIGN_LOC.es=SIGN_NAME.es.map(s=>SIGN_PREP.es?SIGN_PREP.es+' '+s:s);
+SIGN_LOC.fr=SIGN_NAME.fr.map(s=>SIGN_PREP.fr?SIGN_PREP.fr+' '+s:s);
+SIGN_LOC.de=SIGN_NAME.de.map(s=>SIGN_PREP.de?SIGN_PREP.de+' '+s:s);
+SIGN_LOC.it=SIGN_NAME.it.map(s=>SIGN_PREP.it?SIGN_PREP.it+' '+s:s);
+SIGN_LOC.uk=SIGN_NAME.uk.map(s=>SIGN_PREP.uk?SIGN_PREP.uk+' '+s:s);
+SIGN_LOC.ka=SIGN_NAME.ka.map(s=>SIGN_PREP.ka?SIGN_PREP.ka+' '+s:s);
+HOUSE_SYSTEMS.placidus.es="Placidus";
+HOUSE_SYSTEMS.regiomontanus.es="Regiomontano";
+HOUSE_SYSTEMS.campanus.es="Campanus";
+HOUSE_SYSTEMS.porphyry.es="Porfirio";
+HOUSE_SYSTEMS.equal.es="Casas iguales";
+HOUSE_SYSTEMS.whole.es="Signo entero";
+HOUSE_SYSTEMS.placidus.fr="Placidus";
+HOUSE_SYSTEMS.regiomontanus.fr="Régiomontanus";
+HOUSE_SYSTEMS.campanus.fr="Campanus";
+HOUSE_SYSTEMS.porphyry.fr="Porphyre";
+HOUSE_SYSTEMS.equal.fr="Maisons égales";
+HOUSE_SYSTEMS.whole.fr="Signe entier";
+HOUSE_SYSTEMS.placidus.de="Placidus";
+HOUSE_SYSTEMS.regiomontanus.de="Regiomontanus";
+HOUSE_SYSTEMS.campanus.de="Campanus";
+HOUSE_SYSTEMS.porphyry.de="Porphyrius";
+HOUSE_SYSTEMS.equal.de="Gleiche Häuser";
+HOUSE_SYSTEMS.whole.de="Ganzzeichen";
+HOUSE_SYSTEMS.placidus.it="Placido";
+HOUSE_SYSTEMS.regiomontanus.it="Regiomontano";
+HOUSE_SYSTEMS.campanus.it="Campano";
+HOUSE_SYSTEMS.porphyry.it="Porfirio";
+HOUSE_SYSTEMS.equal.it="Case uguali";
+HOUSE_SYSTEMS.whole.it="Segno intero";
+HOUSE_SYSTEMS.placidus.uk="Плацидус";
+HOUSE_SYSTEMS.regiomontanus.uk="Регіомонтан";
+HOUSE_SYSTEMS.campanus.uk="Кампанус";
+HOUSE_SYSTEMS.porphyry.uk="Порфирій";
+HOUSE_SYSTEMS.equal.uk="Рівнодомна";
+HOUSE_SYSTEMS.whole.uk="Цілознакова";
+HOUSE_SYSTEMS.placidus.ka="პლაციდუსი";
+HOUSE_SYSTEMS.regiomontanus.ka="რეგიომონტანუსი";
+HOUSE_SYSTEMS.campanus.ka="კამპანუსი";
+HOUSE_SYSTEMS.porphyry.ka="პორფირი";
+HOUSE_SYSTEMS.equal.ka="თანაბარი სახლები";
+HOUSE_SYSTEMS.whole.ka="მთლიანი ნიშანი";
+LIB_SORTS.date.es="por fecha de nacimiento";
+LIB_SORTS.name.es="por nombre";
+LIB_SORTS.place.es="por lugar";
+LIB_SORTS.date.fr="par date de naissance";
+LIB_SORTS.name.fr="par nom";
+LIB_SORTS.place.fr="par lieu";
+LIB_SORTS.date.de="nach Geburtsdatum";
+LIB_SORTS.name.de="nach Name";
+LIB_SORTS.place.de="nach Ort";
+LIB_SORTS.date.it="per data di nascita";
+LIB_SORTS.name.it="per nome";
+LIB_SORTS.place.it="per luogo";
+LIB_SORTS.date.uk="за датою народження";
+LIB_SORTS.name.uk="за іменем";
+LIB_SORTS.place.uk="за місцем";
+LIB_SORTS.date.ka="დაბადების თარიღით";
+LIB_SORTS.name.ka="სახელით";
+LIB_SORTS.place.ka="ადგილით";
 let LIB_SORT=localStorage.getItem('astrarium_libsort');
 if(!LIB_SORTS[LIB_SORT]) LIB_SORT='date';
 function fillLibSort(){
   const sel=document.getElementById('libSort'); if(!sel) return;
   sel.innerHTML=Object.entries(LIB_SORTS).map(([k,v])=>
-    `<option value="${k}"${k===LIB_SORT?' selected':''}>${v[LANG]}</option>`).join('');
+    `<option value="${k}"${k===LIB_SORT?' selected':''}>${LX(v)}</option>`).join('');
   const f=document.getElementById('libFind'); if(f) f.placeholder=t('libFind');
 }
 /* Russian needs three forms where English needs two, so the count cannot be
    a single STR entry. */
+/* Plural of "chart". Russian and Ukrainian take the three-way rule, the
+   Romance and Germanic languages two, and Georgian keeps the singular after a
+   numeral, so it needs only one form. */
+const PLURAL={
+  en:['chart','charts'], es:['carta','cartas'], fr:['carte','cartes'],
+  ru:['карта','карты','карт'], de:['Chart','Charts'], it:['carta','carte'],
+  uk:['карта','карти','карт'], ka:['რუკა']
+};
+function plural(n){
+  const f=PLURAL[LANG]||PLURAL.en;
+  if(f.length===1) return f[0];
+  if(f.length===2) return f[n===1?0:1];
+  const a=n%10, b=n%100;
+  return a===1&&b!==11 ? f[0] : (a>=2&&a<=4&&(b<12||b>14) ? f[1] : f[2]);
+}
 function libCountText(n,total){
-  const w=LANG==='en' ? (n===1?' chart':' charts')
-    : ' '+((n%10===1&&n%100!==11) ? 'карта'
-      : ((n%10>=2&&n%10<=4&&(n%100<12||n%100>14)) ? 'карты' : 'карт'));
-  return n+w+(total!=null&&total!==n ? ` ${LANG==='en'?'of':'из'} ${total}` : '');
+  /* "5 / 1019 charts" rather than "5 of 1019": the preposition would need a
+     case rule in half these languages and carries nothing the slash does not. */
+  return total!=null&&total!==n
+    ? `${n} / ${total} ${plural(total)}`
+    : `${n} ${plural(n)}`;
 }
 /* Era headings come free from the chronological sort and give the eye
    somewhere to land in a list this long. They are meaningless under the other
    sorts, so they only appear under this one. */
 function libEra(y){
-  if(y<1880) return LANG==='en'?'Before the cinema':'До кинематографа';
-  if(y<1920) return LANG==='en'?'Born 1880-1919 · the studio era':'Рождённые 1880-1919 · эпоха студий';
-  if(y<1950) return LANG==='en'?'Born 1920-1949':'Рождённые 1920-1949';
-  return LANG==='en'?'Born from 1950':'Рождённые с 1950';
+  return t(y<1880?'era1':y<1920?'era2':y<1950?'era3':'era4');
 }
 function renderLibrary(){
   const box=document.getElementById('libList'); if(!box) return;
   const own=savedCharts().map(e=>({...e,_own:1,_n:e.name,_c:e.city}));
-  const lib=CHART_LIBRARY.map(e=>({...e,_own:0,_n:e.name[LANG],_c:e.city[LANG]}));
+  const lib=CHART_LIBRARY.map(e=>({...e,_own:0,_n:LX(e.name),_c:LX(e.city)}));
   const all=own.concat(lib);
   /* The haystack is everything you might remember about an entry: the name,
      the place, the year, what the person did, and the note - which for the
@@ -4116,7 +4617,7 @@ function loadChartEntry(e,own){
   document.getElementById('lat').value=e.lat;
   document.getElementById('lng').value=e.lon;
   document.getElementById('tz').value=formatOffset(tz);
-  document.getElementById('city').value=own?e.city:e.city[LANG];
+  document.getElementById('city').value=own?e.city:LX(e.city);
   TZ_AUTO=false;
   /* Fold the list away, otherwise picking a chart leaves the whole library
      between you and the wheel you just asked for. */

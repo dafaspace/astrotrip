@@ -615,9 +615,11 @@ function run(){
     const o=[...new Set(p.map(x=>x.getAttribute('fill-opacity')))];
     return (o.length===1&&o[0]==='1')||'прозрачность: '+o.join(',');
   });
-  t('переключатели одной высоты',()=>{
-    const th=D.getElementById('themeSw');
-    const lg=[...D.querySelectorAll('.lang')].find(x=>x!==th);
+  t('переключатели темы и языка одной высоты',()=>{
+    /* Они стоят рядом в шапке и читаются как пара: разная высота это первое,
+       что бросается в глаза. Кольцевой переключатель сюда не относится - он
+       живёт в карточке и ему положены полные 44 пикселя. */
+    const th=D.getElementById('themeSw'), lg=D.getElementById('langSel');
     if(!th||!lg) return 'переключатель не найден';
     const a=th.getBoundingClientRect().height, b=lg.getBoundingClientRect().height;
     return Math.abs(a-b)<1.5||`${a.toFixed(1)} против ${b.toFixed(1)}`;
@@ -816,6 +818,114 @@ function run(){
       ||`Луна ${r.dl.toFixed(4)}", Плутон ${r.dp.toFixed(5)}"`;
   });
 
+  /* ---------- прогрессии и дирекции ---------- */
+  group('Прогрессии и дирекции');
+  const PRG=`(()=>{const keep=RING_MODE, kb=BIRTH_MS;
+      const ch=computeChart(1984,5,17,14.5,4,55.7558,37.6176);
+      BIRTH_MS=utcMs(1984,5,17,10,30,0);
+      const at=utcMs(2026,9,13,12,0,0);
+      RING_MODE='progressed'; const pr=outerChart(ch,at);
+      RING_MODE='directed';   const dr=outerChart(ch,at);
+      RING_MODE=keep; BIRTH_MS=kb;
+      return {ch,pr,dr,at};})()`;
+  t('прогрессивный момент это день эфемерид за год жизни',()=>{
+    const r=ev(`(()=>{const kb=BIRTH_MS; BIRTH_MS=utcMs(1984,5,17,10,30,0);
+      const at=utcMs(2026,9,13,10,30,0);
+      const days=(progressedMs(null,at)-BIRTH_MS)/86400000;
+      const yrs=(at-BIRTH_MS)/86400000/365.242190;
+      BIRTH_MS=kb; return {days,yrs};})()`);
+    return near(r.days,r.yrs,1e-6)||`сдвинулось на ${r.days.toFixed(4)} суток при возрасте ${r.yrs.toFixed(4)} лет`;
+  });
+  t('дуга это путь прогрессивного Солнца от натального',()=>{
+    const r=ev(PRG);
+    const want=((r.pr.pos.Sun.lon-r.ch.pos.Sun.lon)%360+360)%360;
+    return near(r.dr.arc,want,1e-9)||`дуга ${r.dr.arc} против ${want}`;
+  });
+  t('дирекционное Солнце совпадает с прогрессивным',()=>{
+    /* Так соляр-арк и определён: если они разошлись, дуга взята не оттуда. */
+    const r=ev(PRG);
+    return near(r.dr.pos.Sun.lon,r.pr.pos.Sun.lon,1e-9)
+      ||`${r.dr.pos.Sun.lon} против ${r.pr.pos.Sun.lon}`;
+  });
+  t('в дирекциях всё натальное сдвинуто на одну и ту же дугу',()=>{
+    const r=ev(PRG);
+    const bad=Object.keys(r.ch.pos).filter(k=>{
+      const d=((r.dr.pos[k].lon-r.ch.pos[k].lon)%360+360)%360;
+      return Math.abs(d-r.dr.arc)>1e-9;
+    });
+    const angles=Math.abs(((r.dr.mc-r.ch.mc)%360+360)%360-r.dr.arc);
+    return (bad.length===0&&angles<1e-9)||`разъехались: ${bad.join(',')||'нет'}, MC на ${angles}`;
+  });
+  t('углы прогрессий идут по дуге, а не крутятся полный круг за год',()=>{
+    /* Соблазнительная ошибка: построить прогрессивный момент как обычную карту.
+       Тогда MC проходит все 360° за каждый год жизни, потому что время суток
+       прогрессивного момента уползает на целые сутки. Должно быть около
+       градуса в год. */
+    const r=ev(`(()=>{const keep=RING_MODE, kb=BIRTH_MS;
+      const ch=computeChart(1984,5,17,14.5,4,55.7558,37.6176);
+      BIRTH_MS=utcMs(1984,5,17,10,30,0);
+      RING_MODE='progressed';
+      const out=[];
+      for(let y=1;y<=40;y++){
+        const a=outerChart(ch,BIRTH_MS+(y-1)*365.2422*86400000).mc;
+        const b=outerChart(ch,BIRTH_MS+y*365.2422*86400000).mc;
+        let d=b-a; if(d<-180)d+=360; if(d>180)d-=360;
+        out.push(d);
+      }
+      RING_MODE=keep; BIRTH_MS=kb; return out;})()`);
+    const bad=r.filter(d=>!(d>0.85&&d<1.05));
+    return bad.length===0||`шаги MC вне 0.85-1.05°/год: ${bad.slice(0,4).map(x=>x.toFixed(2)).join(', ')}`;
+  });
+  t('прогрессивный Асцендент восстановлен из своего MC, а не сдвинут на дугу',()=>{
+    /* Асцендент от MC зависит через широту, поэтому его годовой ход обязан
+       отличаться от дуги. Совпадение означало бы, что его просто сложили. */
+    const r=ev(PRG);
+    const dAsc=((r.pr.asc-r.ch.asc)%360+360)%360;
+    return Math.abs(dAsc-r.pr.arc)>1||`Асцендент ушёл на ${dAsc.toFixed(3)}, ровно как дуга ${r.pr.arc.toFixed(3)}`;
+  });
+  t('прогрессивные углы совпадают с дирекционными',()=>{
+    // Обе техники двигают углы одной и той же дугой, планеты у них разные.
+    const r=ev(PRG);
+    return (near(r.pr.mc,r.dr.mc,1e-9)&&near(r.pr.asc,r.dr.asc,1e-9))
+      ||`MC ${r.pr.mc} против ${r.dr.mc}, Asc ${r.pr.asc} против ${r.dr.asc}`;
+  });
+  t('прогрессивная Луна проходит знак примерно за два с половиной года',()=>{
+    const r=ev(`(()=>{const keep=RING_MODE, kb=BIRTH_MS;
+      const ch=computeChart(1984,5,17,14.5,4,55.7558,37.6176);
+      BIRTH_MS=utcMs(1984,5,17,10,30,0); RING_MODE='progressed';
+      const a=outerChart(ch,BIRTH_MS).pos.Moon.lon;
+      const b=outerChart(ch,BIRTH_MS+27.32*365.2422*86400000).pos.Moon.lon;
+      RING_MODE=keep; BIRTH_MS=kb;
+      let d=((b-a)%360+360)%360; return d;})()`);
+    // За 27.32 года прогрессий Луна проходит один сидерический оборот
+    return r<12||r>348||`за один оборот ушла на ${r.toFixed(1)}° мимо`;
+  });
+  t('орбисы прогрессий и дирекций сжаты до градуса',()=>{
+    /* С шестиградусным орбисом аспект держался бы шесть лет и список никогда
+       бы не менялся. */
+    const r=ev(`(()=>{const keep=RING_MODE, kb=BIRTH_MS;
+      const ch=computeChart(1984,5,17,14.5,4,55.7558,37.6176);
+      BIRTH_MS=utcMs(1984,5,17,10,30,0);
+      const at=utcMs(2026,9,13,12,0,0);
+      const out={};
+      for(const m of ['transit','progressed','directed']){
+        RING_MODE=m;
+        out[m]=Math.max(0,...aspectOrbs(ch,outerChart(ch,at).pos).map(h=>h.maxo));
+      }
+      RING_MODE=keep; BIRTH_MS=kb; return out;})()`);
+    return (r.progressed<=1&&r.directed<=1&&r.transit>1)
+      ||`транзит ${r.transit}, прогрессии ${r.progressed}, дирекции ${r.directed}`;
+  });
+  t('в прогрессиях Луна участвует, в транзитах нет',()=>{
+    const r=ev(`({t:RING_MOVERS.transit.includes('Moon'),p:RING_MOVERS.progressed.includes('Moon')})`);
+    return (r.t===false&&r.p===true)||`транзит ${r.t}, прогрессии ${r.p}`;
+  });
+  t('без построенной карты прогрессии не считаются молча от нуля',()=>{
+    const r=ev(`(()=>{const kb=BIRTH_MS; BIRTH_MS=null;
+      const x=progressedMs(null,12345678); BIRTH_MS=kb; return x;})()`);
+    return r===12345678||`вернулось ${r}`;
+  });
+
   /* ---------- атлас городов ---------- */
   group('Атлас городов');
   t('атлас загрузился целиком',()=>{
@@ -890,6 +1000,121 @@ function run(){
       }
       return out;})()`);
     return bad.length===0||`месяцы без учёта Солнца: ${bad.join(',')}`;
+  });
+
+  /* ---------- языки ---------- */
+  group('Языки');
+  t('восемь языков в том же порядке, что и в Cinemail',()=>{
+    const got=ev('LANGS.map(l=>l[0]).join(",")');
+    return got==='en,es,fr,ru,de,it,uk,ka'||`порядок ${got}`;
+  });
+  t('переключатель показывает ровно один язык',()=>{
+    /* Требование прямое: закрытый контрол это текущий язык и ничего больше. */
+    const sel=D.getElementById('langSel');
+    if(!sel||sel.tagName!=='SELECT') return 'это не выпадающий список';
+    const shown=sel.selectedOptions.length;
+    const buttons=D.querySelectorAll('[data-lang]').length;
+    return (shown===1&&buttons===0)||`показано ${shown}, и ещё ${buttons} кнопок языка`;
+  });
+  t('по умолчанию английский, даже если в хранилище мусор',()=>{
+    const r=ev(`(()=>{const keep=localStorage.getItem('astrarium_lang');
+      localStorage.setItem('astrarium_lang','klingon');
+      const ok=LANG_CODES.includes(localStorage.getItem('astrarium_lang'));
+      if(keep==null) localStorage.removeItem('astrarium_lang');
+      else localStorage.setItem('astrarium_lang',keep);
+      return {bad:ok, fallback:LANG_CODES[0]};})()`);
+    return (r.bad===false&&r.fallback==='en')||`мусор принят: ${r.bad}, первый язык ${r.fallback}`;
+  });
+  t('выбор языка переживает перезагрузку',()=>{
+    /* Проверяется не поле в памяти, а то, что реально кладётся в хранилище. */
+    const r=ev(`(()=>{const keep=localStorage.getItem('astrarium_lang'), kl=LANG;
+      const sel=document.getElementById('langSel');
+      sel.value='it'; sel.dispatchEvent(new Event('change'));
+      const stored=localStorage.getItem('astrarium_lang');
+      sel.value=kl; sel.dispatchEvent(new Event('change'));
+      if(keep==null) localStorage.removeItem('astrarium_lang');
+      else localStorage.setItem('astrarium_lang',keep);
+      return stored;})()`);
+    return r==='it'||`в хранилище легло "${r}"`;
+  });
+  t('ни один язык не оставляет видимую строку непереведённой',()=>{
+    /* Ключи, которые реально попадают на экран. Разбор сюда не входит:
+       он выключен и существует только по-русски. */
+    const need=['tagline','birth','date','time','lat','lng','tz','cast','city','cityph','hint',
+      'libTitle','saveChart','namePh','libFind','libNote','noTime','rrKnown','delChart',
+      'hsysLabel','lilLabel','lil_mean','lil_true','transittime','secondsLabel','needdata',
+      'empty','natal','era1','era2','era3','era4','tapdetail','positions','posnote',
+      'transitdate','scrubintro','stepLabel','u_sec','u_min','u_hour','u_day','u_week',
+      'u_month','u_year','u_dec','u_cent','nowbtn','birthbtn','applying','separating',
+      'playbtn','pausebtn','stepback','stepfwd','ring_transit','ring_progressed','ring_directed',
+      'note_transit','note_progressed','note_directed','age','arc','progmoment','needbirth',
+      'balance','el_fire','el_earth','el_air','el_water','mo_card','mo_fix','mo_mut',
+      'elements','modes','hemi','hemi_e','hemi_w','hemi_n','hemi_s','balnote',
+      'exportCsv','importCsv','importDone','importBad','orb','house','noaspects','notransits','foot'];
+    const miss=ev(`(()=>{const keys=${JSON.stringify(need)}, out=[];
+      for(const c of LANG_CODES){
+        if(c==='en'||c==='ru') continue;
+        for(const k of keys) if(!I18N[c]||I18N[c][k]===undefined) out.push(c+'.'+k);
+      }
+      return out;})()`);
+    return miss.length===0||`не переведено ${miss.length}: ${miss.slice(0,6).join(', ')}`;
+  });
+  t('в каждом языке свои планеты, знаки, аспекты и системы домов',()=>{
+    const miss=ev(`(()=>{const out=[];
+      for(const c of LANG_CODES){
+        if(!PLANET_NAME[c]||Object.keys(PLANET_NAME[c]).length<16) out.push(c+': планеты');
+        if(!SIGN_NAME[c]||SIGN_NAME[c].length!==12) out.push(c+': знаки');
+        if(!ASPECT_NAME[c]||Object.keys(ASPECT_NAME[c]).length!==5) out.push(c+': аспекты');
+        if(!PLANET_FN[c]||Object.keys(PLANET_FN[c]).length!==10) out.push(c+': функции планет');
+        for(const h of Object.keys(HOUSE_SYSTEMS)) if(!HOUSE_SYSTEMS[h][c]) out.push(c+': дом '+h);
+        for(const sk of Object.keys(LIB_SORTS)) if(!LIB_SORTS[sk][c]) out.push(c+': сортировка '+sk);
+      }
+      return out;})()`);
+    return miss.length===0||miss.slice(0,6).join(', ');
+  });
+  t('ни один язык не оказался копией английского',()=>{
+    /* Отдельные совпадения законны и их много: Date, Positions, Pause, Air,
+       Transits, West по-французски и по-немецки пишутся как по-английски.
+       Ловить надо другое - целый блок, скопированный вместо перевода, поэтому
+       порог стоит на доле совпавших строк, а не на факте совпадения. */
+    const r=ev(`(()=>{const out={};
+      for(const c of LANG_CODES){
+        if(c==='en'||c==='ru') continue;
+        let n=0, same=0;
+        for(const k in I18N[c]){
+          const en=STR[k]&&STR[k].en; if(!en) continue;
+          n++; if(I18N[c][k]===en) same++;
+        }
+        out[c]=+(same/n).toFixed(3);
+      }
+      return out;})()`);
+    const bad=Object.entries(r).filter(([,v])=>v>0.25);
+    return bad.length===0||`доля совпадений с английским: ${bad.map(([c,v])=>c+' '+v).join(', ')}`;
+  });
+  t('отсутствующий ключ отдаёт английский, а не undefined',()=>{
+    const r=ev(`(()=>{const kl=LANG; LANG='ka';
+      const a=t('learned'), b=LX(PLANET_NAME).Sun; LANG=kl; return {a,b};})()`);
+    return (r.a===STRen('learned')&&typeof r.b==='string')||`получилось ${JSON.stringify(r)}`;
+    function STRen(k){ return ev(`STR[${JSON.stringify(k)}].en`); }
+  });
+  t('множественное число считается по правилам своего языка',()=>{
+    const r=ev(`(()=>{const kl=LANG, out={};
+      for(const [c,n] of [['ru',1],['ru',3],['ru',11],['uk',2],['en',1],['en',5],['ka',7]]){
+        LANG=c; out[c+':'+n]=plural(n);
+      }
+      LANG=kl; return out;})()`);
+    return (r['ru:1']==='карта'&&r['ru:3']==='карты'&&r['ru:11']==='карт'
+      &&r['uk:2']==='карти'&&r['en:1']==='chart'&&r['en:5']==='charts'&&r['ka:7']==='რუკა')
+      ||JSON.stringify(r);
+  });
+  t('смена языка не ломает тему',()=>{
+    /* Это уже случалось однажды, поэтому проверка осталась и на новом контроле. */
+    const before=D.documentElement.dataset.theme;
+    ev(`(()=>{const kl=LANG; const sel=document.getElementById('langSel');
+      sel.value='ka'; sel.dispatchEvent(new Event('change'));
+      sel.value=kl; sel.dispatchEvent(new Event('change'));})()`);
+    return D.documentElement.dataset.theme===before
+      ||`тема была ${before}, стала ${D.documentElement.dataset.theme}`;
   });
 
   /* ---------- обмен библиотекой ---------- */
