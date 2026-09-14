@@ -1074,6 +1074,116 @@ function run(){
     return bad.length===0||`месяцы без учёта Солнца: ${bad.join(',')}`;
   });
 
+  /* ---------- выбор планеты ---------- */
+  group('Выбор планеты');
+  t('глифы не налезают друг на друга ни в одном колесе',()=>{
+    /* Тот самый баг: в двойном колесе натальное кольцо ушло внутрь со 114 на
+       86, а разведение осталось прежним, 8.5 градуса. На радиусе 86 это 12.7
+       единицы между центрами при диаметре кружка 24 - планеты легли друг на
+       друга, и тап доставался нарисованному последним. */
+    const bad=ev(`(()=>{const keep=RING_MODE, out=[];
+      for(const m of ['transit','progressed','directed']){
+        RING_MODE=m; renderTransits(CURRENT);
+        const cs=[...document.querySelectorAll('#wheel .pl circle')]
+          .map(c=>({x:+c.getAttribute('cx'),y:+c.getAttribute('cy'),r:+c.getAttribute('r')}));
+        for(let i=0;i<cs.length;i++)for(let j=i+1;j<cs.length;j++){
+          const d=Math.hypot(cs[i].x-cs[j].x,cs[i].y-cs[j].y);
+          if(d<cs[i].r+cs[j].r) out.push(m+' '+i+'/'+j+' на '+(cs[i].r+cs[j].r-d).toFixed(1));
+        }
+      }
+      RING_MODE=keep; renderTransits(CURRENT);
+      return out;})()`);
+    return bad.length===0||`перекрытия: ${bad.slice(0,4).join(', ')}`;
+  });
+  t('разведение глифов растёт, когда кольцо сужается',()=>{
+    /* Угол обязан зависеть от радиуса: одна и та же константа не может быть
+       верна для двух разных колец. */
+    const r=ev(`(()=>{const sep=(R,rad)=>2*Math.asin(Math.min(1,(rad+1)/R))*180/Math.PI;
+      return {wide:sep(190-76,12), narrow:sep(190-104,12)};})()`);
+    return r.narrow>r.wide*1.25||`широкое ${r.wide.toFixed(1)}°, узкое ${r.narrow.toFixed(1)}°`;
+  });
+  t('тап по кольцу выбирает ближайшую планету, а не только по кружку',()=>{
+    /* Кружок 19 px, палец требует 44. Цель это сектор кольца, поэтому точка
+       заметно в стороне от глифа обязана выбирать его же. */
+    const r=ev(`(()=>{
+      const centres=[...document.querySelectorAll('#wheel .pl')].map(g=>{
+        const b=g.querySelector('circle').getBoundingClientRect();
+        return {p:g.dataset.p,cx:b.left+b.width/2,cy:b.top+b.height/2,w:b.width};});
+      if(!centres.length||!centres[0].w) return null;
+      const probe=(x,y)=>{ISO=null;
+        document.querySelector('#wheel svg').dispatchEvent(
+          new MouseEvent('click',{bubbles:true,clientX:x,clientY:y}));
+        const got=ISO; ISO=null; drawWheel(CURRENT,TR_CHART); return got;};
+      let ok=0;
+      for(const c of centres){ if(probe(c.cx,c.cy)===c.p) ok++; }
+      return {n:centres.length, ok};})()`);
+    if(!r) return 'колесо не отрисовано или панель скрыта';
+    return r.ok===r.n||`выбираются ${r.ok} из ${r.n}`;
+  });
+  t('строка в таблице позиций это цель по правилу 44 пикселей',()=>{
+    /* На колесе тесная планета владеет примерно 19 px дуги, и шире её не
+       сделать. Значит должна быть вторая, надёжная цель. */
+    const rows=D.querySelectorAll('#positions .planet-row.hit');
+    if(!rows.length) return 'строки позиций не кликабельны';
+    const short=[...rows].filter(r=>r.getBoundingClientRect().height<44);
+    return short.length===0||`${short.length} строк ниже 44 px`;
+  });
+  t('строка позиций выбирает то же тело, что и колесо',()=>{
+    const r=ev(`(()=>{ISO=null;
+      const row=document.querySelector('#positions .planet-row.hit[data-p="Pluto"]');
+      if(!row) return null;
+      row.dispatchEvent(new MouseEvent('click',{bubbles:true}));
+      const got=ISO; ISO=null; drawWheel(CURRENT,TR_CHART);
+      return got;})()`);
+    return r==='Pluto'||`выбралось ${r}`;
+  });
+
+  /* ---------- колесо и время на одном экране ---------- */
+  group('Одним экраном');
+  t('бегунок стоит в той же карточке, что и колесо',()=>{
+    /* Тянуть ползунок, не видя колеса, невозможно: тянешь, потом листаешь,
+       потом гадаешь. */
+    const card=D.getElementById('chartCard');
+    return (card&&card.contains(D.getElementById('wheel'))&&card.contains(D.getElementById('scrub')))
+      ||'колесо и ползунок в разных карточках';
+  });
+  t('колесо, момент и органы управления помещаются в экран телефона',()=>{
+    /* Считается высота, а не вид: iframe тут 900 px шириной, поэтому меряем
+       сумму блоков против 812 минус липкая шапка. */
+    const r=ev(`(()=>{const card=document.getElementById('chartCard');
+      const h=document.querySelector('header').offsetHeight;
+      const parts=['#charttitle','#ringSw','#wheel svg','.scrub'].map(s=>{
+        const e=document.querySelector(s); return e?e.getBoundingClientRect().height:0;});
+      return {parts, sum:parts.reduce((a,b)=>a+b,0), header:h};})()`);
+    const budget=812-r.header-24;
+    return r.sum<=budget||`блоки занимают ${Math.round(r.sum)} px при бюджете ${Math.round(budget)}`;
+  });
+  t('перетаскивание непрерывно, а не прыгает целыми делениями',()=>{
+    const r=ev(`(()=>{const sc=document.getElementById('scrub');
+      const keep=TR_MS, keepA=TR_ANCHOR;
+      const pts=[];
+      for(const v of [0,0.05,0.1,0.15]){ sc.value=v; sc.dispatchEvent(new Event('input')); pts.push(TR_MS); }
+      sc.value=0; sc.dispatchEvent(new Event('input'));
+      TR_MS=keep; TR_ANCHOR=keepA;
+      return {step:sc.getAttribute('step'), d:pts.slice(1).map((x,i)=>x-pts[i])};})()`);
+    const uniform=r.d.every(x=>x>0&&Math.abs(x-r.d[0])<1);
+    return (r.step==='any'&&uniform)||`step="${r.step}", шаги ${r.d.join(', ')}`;
+  });
+  t('кнопка шага остаётся календарной, хотя перетаскивание усреднённое',()=>{
+    /* Плавно там, где целятся, точно там, где считают. Месяц при
+       перетаскивании усреднён, а по кнопке - настоящий календарный. */
+    const r=ev(`(()=>{const keep=TR_MS, keepA=TR_ANCHOR, keepU=SCRUB_UNIT;
+      SCRUB_UNIT='month';
+      const t0=utcMs(2021,1,31,12,0,0);
+      const byButton=addUnits(t0,1,'month');
+      const byDrag=t0+UNIT_MS.month;
+      SCRUB_UNIT=keepU; TR_MS=keep; TR_ANCHOR=keepA;
+      return {button:new Date(byButton).toISOString().slice(0,10),
+              drag:new Date(byDrag).toISOString().slice(0,10)};})()`);
+    return (r.button==='2021-02-28'&&r.drag!=='2021-02-28')
+      ||`кнопка ${r.button}, перетаскивание ${r.drag}`;
+  });
+
   /* ---------- языки ---------- */
   group('Языки');
   t('восемь языков в том же порядке, что и в Cinemail',()=>{

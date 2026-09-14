@@ -1,7 +1,7 @@
 {
   "name": "AstroTrip",
   "short_name": "AstroTrip",
-  "description": "Offline natal chart calculation and interpretation core. No network, no API.",
+  "description": "Precise natal charts offline, with a slider that moves transits, progressions and directions from seconds to centuries. No network, no account.",
   "lang": "en",
   "start_url": "./",
   "scope": "./",

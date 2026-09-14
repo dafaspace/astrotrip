@@ -86,6 +86,26 @@ in their own outer band, with dashed chords for hits inside 2°. Each hit is mar
 applying or separating, decided by measuring the orb again an hour later rather than
 from a table of mean motions, so retrograde loops come out right.
 
+Wheel and control live in one card, sized to fit a phone screen together. A slider a
+screen away from the wheel cannot be aimed: you drag, then scroll, then guess.
+
+Dragging is continuous and stepping is exact, which are two different jobs. The drag
+interpolates over average unit lengths so the wheel turns smoothly under the finger;
+the step buttons and the date fields use calendar arithmetic, so one press of "month"
+from 31 January lands on 28 February. Play advances one unit per second measured
+against the wall clock, so the sweep runs at the same speed on a 60 Hz phone and a
+120 Hz one.
+
+**Picking a body.** Glyph separation is an angle computed from the ring's radius, not
+a constant: the 8.5° that kept discs clear at radius 114 leaves 12.7 units between
+centres at radius 86, where the discs are 24 across, and they then lie on top of each
+other so only the last one drawn can be tapped. The tap target is the ring *wedge*
+rather than the disc - the whole sector belonging to the nearest glyph - because a
+drawn glyph is 19 px across on a phone and cannot be made bigger without the discs
+colliding again. Where planets cluster even a wedge is only about 19 px of arc, which
+is the honest limit of fourteen bodies on a 300 px circle, so every body is also a
+full-width row in the Positions table, above the 44 px floor and always reliable.
+
 ### The city atlas
 
 The whole of GeoNames `cities500`: **235,779 places** down to population 500, with
@@ -170,7 +190,7 @@ mattered: before it did, a deliberately broken app passed every check. The runne
 for the city atlas to finish loading, or the atlas tests would silently check the inline
 seed instead.
 
-**128 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
+**137 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
 library, robustness over 1550-2250 and at polar latitudes, house systems (angles land
 on the cusps, cusps run round the circle without crossing, quadrant systems coincide at
 the equator, zero-latitude bodies get the same house from both methods), library data
@@ -179,7 +199,9 @@ source), the Black Moon and Selena checks above, the scrubber's calendar arithme
 progressions and directions (the arc, the angle rate, the orb cap), the language
 pack (every visible key present in all eight, no language a copy of English),
 the atlas and its progress bar, the balance tallies, the CSV round trip including quotes and commas, the
-interpretation flag, the bi-wheel's ring separation, contrast against WCAG AA in both
+interpretation flag, the bi-wheel's ring separation, glyph overlap in all three ring modes, the wedge tap
+and the Positions row target, that wheel and slider share one card and fit one phone
+screen, and that dragging stays continuous while stepping stays calendar-exact, contrast against WCAG AA in both
 themes, and interface wiring.
 
 The suite is falsified, not just green: reintroducing the sector alpha, collapsing the

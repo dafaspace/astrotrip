@@ -118,6 +118,10 @@ button.primary{background:var(--accentBtn);border-color:var(--accentBtn);color:v
 svg{display:block;width:100%;height:auto;touch-action:manipulation}
 .af{font-family:'Astro','Segoe UI Symbol','Apple Symbols',serif;font-style:normal}
 .planet-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+/* A row is a target, so it gets the 44px floor and says so by responding. */
+.planet-row.hit{min-height:44px;cursor:pointer;border-radius:8px;padding-left:6px;padding-right:6px;margin:0 -6px}
+.planet-row.hit:hover,.planet-row.hit:focus-visible{background:var(--paper3);outline:none}
+.planet-row.hit:active{background:var(--paper2)}
 .planet-row:last-child{border-bottom:none}
 .planet-row .g{font-size:19px;width:26px;text-align:center}
 .planet-row .nm{width:150px;color:var(--ink2)}
@@ -142,16 +146,23 @@ svg{display:block;width:100%;height:auto;touch-action:manipulation}
 /* ---- time scrubber ---- */
 /* Reuses the language switch's segmented look, one row, full width, with 44px
    of height because these are the control the whole card turns on. */
-.lang.ringsw{display:inline-flex;margin:2px 0 0;max-width:100%}
+.lang.ringsw{display:flex;margin:0 0 10px;width:100%}
 .lang.ringsw button{flex:1;padding:0 14px;min-height:44px;font-size:13px;white-space:nowrap}
-.scrub{border:1px solid var(--line);border-radius:12px;padding:12px 14px 14px;margin:0 0 14px;background:var(--paper3)}
-.momrow{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+/* Wheel and controls share one screen, so the wheel gets whatever height is
+   left rather than a fixed size. 46vh is measured, not guessed: on a 375x812
+   phone it leaves room for the moment line, the rail, one row of controls and
+   the tap-detail box without scrolling, and on a desktop the 420px ceiling
+   stops the wheel from filling a tall window on its own. */
+#chartCard #wheel{max-width:min(100%,420px);margin:0 auto}
+#chartCard #wheel svg{max-height:46vh;width:auto;max-width:100%;margin:0 auto}
+.scrub{border:1px solid var(--line);border-radius:12px;padding:10px 12px 12px;margin:10px 0 0;background:var(--paper3)}
+.momrow{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:4px}
 .mom{font-family:'Literata',Georgia,serif;font-size:17px;font-variant-numeric:tabular-nums}
 /* A 32px thumb on a 4px rail: the rail is a hairline you read, the thumb is a
    target you hit with a thumb. Both native appearances are removed because
    Safari and Chrome disagree about everything else on a range input. */
-#scrub{-webkit-appearance:none;appearance:none;width:100%;height:32px;padding:0;border:none;
-  background:transparent;margin:2px 0 10px;touch-action:pan-y}
+#scrub{-webkit-appearance:none;appearance:none;width:100%;height:34px;padding:0;border:none;
+  background:transparent;margin:0 0 6px;touch-action:none}
 #scrub::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:var(--line)}
 #scrub::-moz-range-track{height:4px;border-radius:2px;background:var(--line)}
 #scrub::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:26px;height:26px;
@@ -160,8 +171,10 @@ svg{display:block;width:100%;height:auto;touch-action:manipulation}
 #scrub::-moz-range-thumb{width:26px;height:26px;border-radius:50%;background:var(--accentBtn);
   border:2px solid var(--paper);box-shadow:0 1px 3px rgba(0,0,0,.28);cursor:grab}
 #scrub:active::-webkit-slider-thumb{cursor:grabbing}
-.scrubctl{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.scrubctl select{width:auto;flex:none;min-width:104px}
+.scrubctl{display:flex;align-items:center;gap:8px}
+.scrubctl.jump{margin-top:8px}
+.scrubctl.jump button{flex:1}
+.scrubctl select{width:auto;flex:1;min-width:0}
 .scrubctl button{min-height:44px}
 /* Square icon buttons: 44px is the floor a thumb needs, and it is cheaper to
    set here than to retrofit across thirteen classes later. */
@@ -171,8 +184,7 @@ button.ico{width:44px;height:44px;padding:0;display:inline-flex;align-items:cent
    button: the target is for the thumb, the drawing is for the eye. */
 button.ico svg{width:18px;height:18px;flex:none}
 button.ico:disabled{opacity:.4;cursor:default}
-.steplab{display:inline;margin:0}
-.ctlgrp{display:inline-flex;align-items:center;gap:8px}
+.steplab{display:inline;margin:0 0 0 2px;flex:none}
 /* ---- balance ---- */
 .balrow{display:flex;align-items:center;gap:8px;padding:4px 0;font-variant-numeric:tabular-nums}
 .balrow .nm{width:112px;color:var(--ink2);font-size:13px}
@@ -402,9 +414,38 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
   <div id="results" style="display:none">
 
-    <div class="card">
+    <!-- Wheel and time control in one card, deliberately. The whole point of a
+         scrubber is watching the chart move, and a slider a screen away from
+         the wheel cannot be aimed: you drag, then scroll, then guess. Wheel,
+         moment, slider and step controls are sized to fit one phone screen
+         together. -->
+    <div class="card" id="chartCard">
       <h2 id="charttitle"></h2>
+      <div class="lang ringsw" id="ringSw">
+        <button data-ring="transit"></button><button data-ring="progressed"></button><button data-ring="directed"></button>
+      </div>
       <div id="wheel"></div>
+      <div class="scrub">
+        <div class="momrow">
+          <div class="mom" id="momUT"></div>
+          <div class="tiny" id="momLoc"></div>
+        </div>
+        <input id="scrub" type="range" min="-60" max="60" value="0" step="any" data-i-title="scrubintro">
+        <div class="scrubctl">
+          <button class="ico" id="stepBack" data-i-title="stepback">
+            <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 3.5 5.5 8l5 4.5"/><path d="M3.6 3.5v9"/></svg></button>
+          <button class="ico" id="playBtn" data-i-title="playbtn">
+            <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M4.8 3.2 12.4 8l-7.6 4.8z"/></svg></button>
+          <button class="ico" id="stepFwd" data-i-title="stepfwd">
+            <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 3.5 10.5 8l-5 4.5"/><path d="M12.4 3.5v9"/></svg></button>
+          <label class="steplab" data-i="stepLabel"></label><select id="scrubUnit"></select>
+        </div>
+        <!-- Second row rather than a wrap: left to itself the flex row broke
+             into three on a phone and the card stopped fitting the screen. -->
+        <div class="scrubctl jump">
+          <button id="momNow" data-i="nowbtn"></button><button id="momBirth" data-i="birthbtn"></button>
+        </div>
+      </div>
       <div class="detail empty" id="detail"></div>
     </div>
 
@@ -434,40 +475,11 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
     <div class="card">
       <h2 id="ringTitle"></h2>
-      <p class="tiny" style="margin-top:0" data-i="scrubintro"></p>
-      <!-- What the outer ring shows. All three are a function of one moment,
-           so all three ride the same slider. -->
-      <div class="lang ringsw" id="ringSw">
-        <button data-ring="transit"></button><button data-ring="progressed"></button><button data-ring="directed"></button>
-      </div>
-      <p class="tiny" id="ringNote" style="margin:8px 0 12px"></p>
-
-      <!-- The scrubber. The date and time fields jump; the slider scrubs. The
-           slider is relative on purpose: it spans 60 steps either side of an
-           anchor and re-centres on release, so the same 300 px of travel works
-           whether one notch is a second or a century. -->
-      <div class="scrub">
-        <div class="momrow">
-          <div class="mom" id="momUT"></div>
-          <div class="tiny" id="momLoc"></div>
-        </div>
-        <input id="scrub" type="range" min="-60" max="60" value="0" step="1" aria-label="Time">
-        <div class="scrubctl">
-          <button class="ico" id="stepBack" data-i-title="stepback">
-            <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 3.5 5.5 8l5 4.5"/><path d="M3.6 3.5v9"/></svg></button>
-          <button class="ico" id="playBtn" data-i-title="playbtn">
-            <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M4.8 3.2 12.4 8l-7.6 4.8z"/></svg></button>
-          <button class="ico" id="stepFwd" data-i-title="stepfwd">
-            <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 3.5 10.5 8l-5 4.5"/><path d="M12.4 3.5v9"/></svg></button>
-          <!-- Grouped so a narrow screen wraps between the groups and never
-               between a label and the control it names. -->
-          <span class="ctlgrp"><label class="steplab" data-i="stepLabel"></label><select id="scrubUnit"></select></span>
-          <span class="ctlgrp"><button id="momNow" data-i="nowbtn"></button><button id="momBirth" data-i="birthbtn"></button></span>
-        </div>
-        <div class="grid" style="margin-top:10px">
-          <div><label data-i="transitdate"></label><input id="transitDate" type="date"></div>
-          <div><label data-i="transittime"></label><input id="transitTime" type="time" step="1"></div>
-        </div>
+      <p class="tiny" id="ringNote" style="margin:0 0 12px"></p>
+      <!-- Jump rather than scrub: type a moment instead of dragging to it. -->
+      <div class="grid" style="margin-bottom:14px">
+        <div><label data-i="transitdate"></label><input id="transitDate" type="date"></div>
+        <div><label data-i="transittime"></label><input id="transitTime" type="time" step="1"></div>
       </div>
 
       <div id="daysyn" class="daysyn"></div>
@@ -499,7 +511,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
 /* Bump together with CACHE in sw.js: the two are the same release, and the
    number on screen is how you tell from a phone which one you are looking at. */
-const APP_VERSION='2.1.1';
+const APP_VERSION='2.2.0';
 document.getElementById('ver').textContent=APP_VERSION;
 
 /* ---------- feature flags ----------
@@ -3706,6 +3718,15 @@ function drawWheel(ch,tr){
   const rHouOut=C-3, rHouIn=C-26, rZodIn=C-52, rTickEnd=C-60;
   const rTr=tr?rZodIn-16:0;
   const rPl=tr?C-104:C-76, rAsp=tr?C-120:C-94;
+  /* How far apart two glyphs must sit so their discs do not overlap. It is an
+     angle, and an angle that depends on the radius: the same 8.5 degrees that
+     kept them clear at radius 114 leaves 12.7 units between centres at radius
+     86, and the discs are 24 across. They then lie on top of each other and
+     only the last one drawn can be tapped, which is exactly what the bi-wheel
+     broke. Chord 2*R*sin(sep/2) >= diameter, solved for sep, plus a unit of
+     air. Points are drawn smaller and get their own figure. */
+  const sepFor=(R,rad)=>2*Math.asin(Math.min(1,(rad+1)/R))*R2D;
+  const sepPl=sepFor(rPl,12), sepTr=tr?sepFor(rTr,10):0;
   const cusps=ch.houses.cusps;
   function sector(l0,l1,r1,r2,fill,op){
     const [ax,ay]=polar(l0,r2),[bx,by]=polar(l1,r2),[cx,cy]=polar(l1,r1),[dx,dy]=polar(l0,r1);
@@ -3772,12 +3793,12 @@ function drawWheel(ch,tr){
   });
   // --- planets + karmic points ---
   const shown=BODIES.concat(POINTS.filter(p=>ch.pos[p]));
-  const placed=[];
+  const placed=[];                                   // [name, displayed longitude]
   shown.forEach(n=>{
     let disp=ch.pos[n].lon;
     let guard=0;
-    while(placed.some(pl=>Math.abs(rev(disp-pl+180)-180)<8.5)&&guard++<48) disp=rev(disp+3);
-    placed.push(disp);
+    while(placed.some(pl=>Math.abs(rev(disp-pl[1]+180)-180)<sepPl)&&guard++<64) disp=rev(disp+sepPl/3);
+    placed.push([n,disp]);
     const [px,py]=polar(disp,rPl);
     const isPoint=POINTS.includes(n);
     const dim=ISO&&ISO!==n&&!asps.some(a=>(a.p1===ISO&&a.p2===n)||(a.p2===ISO&&a.p1===n));
@@ -3810,7 +3831,7 @@ function drawWheel(ch,tr){
     BODIES.forEach(n=>{
       if(!tr.pos[n]) return;
       let disp=tr.pos[n].lon, guard=0;
-      while(tplaced.some(pl=>Math.abs(rev(disp-pl+180)-180)<8)&&guard++<48) disp=rev(disp+2.6);
+      while(tplaced.some(pl=>Math.abs(rev(disp-pl+180)-180)<sepTr)&&guard++<64) disp=rev(disp+sepTr/3);
       tplaced.push(disp);
       const [px,py]=polar(disp,rTr);
       const [tx,ty]=polar(tr.pos[n].lon,rZodIn-1);
@@ -3823,7 +3844,41 @@ function drawWheel(ch,tr){
   }
   s+=`</svg>`;
   document.getElementById('wheel').innerHTML=s;
-  document.querySelectorAll('#wheel .pl').forEach(g=>g.addEventListener('click',()=>{const p=g.dataset.p;ISO=(ISO===p?null:p);drawWheel(ch,tr);showDetail(p,ch);}));
+  document.querySelectorAll('#wheel .pl').forEach(g=>g.addEventListener('click',e=>{
+    e.stopPropagation(); pick(g.dataset.p);
+  }));
+  function pick(p){ ISO=(ISO===p?null:p); drawWheel(ch,tr); showDetail(p,ch); }
+
+  /* Tap anywhere in the ring, not on the glyph itself. A drawn glyph is 19 px
+     across on a phone, well under the 44 px a thumb needs, and making the disc
+     bigger is not available: the discs are already as large as the gaps between
+     them allow. So the target is the wedge instead - the whole sector of the
+     ring belonging to the nearest glyph, which is tens of pixels wide and never
+     overlaps its neighbour. The drawn disc stays small; only the target grows. */
+  const svEl=document.querySelector('#wheel svg');
+  svEl.addEventListener('click',e=>{
+    const m=svEl.getScreenCTM(); if(!m) return;
+    const pt=svEl.createSVGPoint(); pt.x=e.clientX; pt.y=e.clientY;
+    const u=pt.matrixTransform(m.inverse());
+    const dx=u.x-C, dy=C-u.y, rad=Math.hypot(dx,dy);
+    /* The band is deliberately deeper than the glyphs: radial depth is the
+       scarce direction, and everything between the aspect lines and the zodiac
+       ring can only mean one thing. 62 units of depth is about 49 px on a
+       phone, which clears the 44 px floor; anything narrower did not. */
+    if(rad<45||rad>rZodIn) return;
+    if(tr&&rad>rTr-15) return;                       // above this the tap belongs to the transit ring
+    const lon=rev(asc+180-Math.atan2(dy,dx)*R2D);
+    let best=null, bestD=1e9;
+    placed.forEach(([name,disp])=>{
+      const d=Math.abs(rev(lon-disp+180)-180);
+      if(d<bestD){ bestD=d; best=name; }
+    });
+    /* No angular cutoff: inside the band every direction belongs to the
+       nearest glyph, so the targets tile the ring and there are no dead spots
+       between them. A sector is about 26 degrees wide on an even chart, which
+       is roughly 39 px of arc on a phone against the 19 px disc. */
+    if(best) pick(best);
+  });
 }
 function showDetail(p,ch){
   const el=document.getElementById('detail'); el.classList.remove('empty');
@@ -3884,6 +3939,19 @@ const TROPICAL_YEAR=365.242190;
    four ten-thousandths of a degree and the comparison would be measuring
    rounding rather than motion. */
 const PROBE_MS={transit:3600000, progressed:7*86400000, directed:30*86400000};
+/* Two ways to move time, on purpose.
+
+   Dragging uses these lengths and interpolates continuously, so the wheel
+   turns smoothly under the finger instead of snapping between whole units.
+   A month here is the average month and a year the tropical year, which is
+   what you want while sweeping and not what you want when stepping.
+
+   The step buttons and the date fields use addUnits, which is calendar-exact:
+   one press of "month" from 31 January lands on 28 February, not 2 March.
+   Smooth where it is being aimed, exact where it is being counted. */
+const UNIT_MS={sec:1000, min:60000, hour:3600000, day:86400000, week:604800000,
+  month:30.436875*86400000, year:TROPICAL_YEAR*86400000,
+  dec:10*TROPICAL_YEAR*86400000, cent:100*TROPICAL_YEAR*86400000};
 function progressedMs(ch,ms){
   return BIRTH_MS==null?ms:BIRTH_MS+(ms-BIRTH_MS)/TROPICAL_YEAR;
 }
@@ -4133,8 +4201,13 @@ function setPlaying(on){
   b.title=t(on?'pausebtn':'playbtn');
   cancelAnimationFrame(PLAY_RAF);
   if(!on) return;
-  const tick=()=>{ if(!PLAYING) return;
-    setMoment(addUnits(TR_MS,1,SCRUB_UNIT),{recenter:true});
+  /* One unit a second, interpolated per frame against the wall clock, so the
+     sweep runs at the same speed on a 60 Hz phone and a 120 Hz one and does
+     not stall into a slideshow when a frame is slow. */
+  let last=performance.now();
+  const tick=now=>{ if(!PLAYING) return;
+    const dt=Math.min(200,now-last); last=now;
+    setMoment(TR_MS+dt/1000*UNIT_MS[SCRUB_UNIT],{recenter:true});
     PLAY_RAF=requestAnimationFrame(tick); };
   PLAY_RAF=requestAnimationFrame(tick);
 }
@@ -4248,9 +4321,21 @@ function renderPositions(ch){
   const shown=BODIES.concat(POINTS.filter(p=>ch.pos[p]));
   rows+=shown.map(n=>{
     const f=fmtPos(ch.pos[n].lon),hs=bodyHouse(ch,n);
-    return `<div class="planet-row"><span class="g af">${GLYPH[n]}</span><span class="nm">${PN(n)}</span><span class="pos deg">${f.html}</span><span class="hs">${t('house')} ${hs}</span></div>`;
+    return `<div class="planet-row hit" data-p="${n}" role="button" tabindex="0"><span class="g af">${GLYPH[n]}</span><span class="nm">${PN(n)}</span><span class="pos deg">${f.html}</span><span class="hs">${t('house')} ${hs}</span></div>`;
   }).join('');
-  document.getElementById('positions').innerHTML=rows;
+  const box=document.getElementById('positions');
+  box.innerHTML=rows;
+  /* The reliable way to pick a body. On the wheel a crowded planet owns about
+     19 px of arc - fourteen bodies on a 300 px circle leaves no more, and
+     spreading them further makes the drawing unreadable. Here each one is a
+     full-width row taller than the 44 px floor, so the wheel tap is the quick
+     way and this is the one that always works. */
+  box.querySelectorAll('.planet-row.hit').forEach(r=>{
+    const go=()=>{ const p=r.dataset.p; ISO=(ISO===p?null:p);
+      drawWheel(ch,TR_CHART); showDetail(p,ch); scrollChartIntoView(); };
+    r.addEventListener('click',go);
+    r.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){e.preventDefault();go();} });
+  });
 }
 
 /* ---------- run + i18n ---------- */
@@ -4352,6 +4437,12 @@ function todayStr(){
   const n=new Date(), p=x=>String(x).padStart(2,'0');
   return `${n.getFullYear()}-${p(n.getMonth()+1)}-${p(n.getDate())}`;
 }
+function scrollChartIntoView(){
+  const card=document.getElementById('chartCard'), hdr=document.querySelector('header');
+  if(!card) return;
+  const y=card.getBoundingClientRect().top+window.scrollY-(hdr?hdr.offsetHeight:0)-8;
+  window.scrollTo({top:Math.max(0,y),behavior:'smooth'});
+}
 function run(){
   const dv=document.getElementById('date').value, tv=document.getElementById('time').value;
   const lat=parseFloat(document.getElementById('lat').value), lng=parseFloat(document.getElementById('lng').value);
@@ -4372,6 +4463,11 @@ function run(){
   renderTransits(CURRENT);          // casts the transit ring and draws the wheel
   document.getElementById('detail').className='detail empty';
   document.getElementById('detail').textContent=t('tapdetail');
+  /* Land on the chart. Without this the wheel is cast below the fold and the
+     first thing you see after pressing the button is the form you just filled
+     in. The header is sticky and translucent, so the offset is measured rather
+     than written down: it changes with the language and the window width. */
+  scrollChartIntoView();
 }
 /* Birth moment in UTC ms, so the scrubber can jump back to it. Held apart from
    the chart because a chart is positions and a moment is a clock reading. */
@@ -4382,8 +4478,8 @@ document.getElementById('reset').addEventListener('click',()=>{localStorage.remo
 /* ---- scrubber wiring ---- */
 {
   const sc=document.getElementById('scrub');
-  sc.addEventListener('input',()=>{ setPlaying(false); TR_MS=addUnits(TR_ANCHOR,+sc.value,SCRUB_UNIT);
-    setMoment(TR_MS); });
+  sc.addEventListener('input',()=>{ setPlaying(false);
+    setMoment(TR_ANCHOR+ +sc.value*UNIT_MS[SCRUB_UNIT]); });
   /* On release the anchor moves to where the finger left the moment and the
      slider springs back to centre, so a long sweep is many drags of the same
      travel instead of one drag that runs out of rail. */
