@@ -1141,6 +1141,130 @@ function run(){
       ||`ретроградных ${r.retro}, на колесе ${r.onWheel}, в таблице ${r.inTable}`;
   });
 
+  /* ---------- где тело стоит на самом деле ---------- */
+  group('Истинное положение');
+  t('деление на шкале стоит на настоящей долготе',()=>{
+    /* Глиф не может её показать: чтобы диски не перекрывались, их разводят на
+       градусы. Деления - единственные метки на колесе, нарисованные точно. */
+    const r=ev(`(()=>{const sv=document.querySelector('#wheel svg'), C=190, asc=CURRENT.asc;
+      const lonOf=(x,y)=>{const a=Math.atan2(C-y,x-C)*180/Math.PI;return ((asc+180-a)%360+360)%360;};
+      const pick=col=>[...sv.querySelectorAll('line')]
+        .filter(l=>l.getAttribute('stroke')==='var('+col+')'&&l.getAttribute('stroke-width')==='1.7')
+        .map(l=>lonOf(+l.getAttribute('x1'),+l.getAttribute('y1'))).sort((a,b)=>a-b);
+      const truth=(pos,keys)=>keys.filter(k=>pos[k]).map(k=>rev(pos[k].lon)).sort((a,b)=>a-b);
+      const ni=pick('--ink'), nb=truth(CURRENT.pos,BODIES.concat(POINTS));
+      const ti=pick('--accent'), tb=truth(TR_CHART.pos,BODIES);
+      const worst=(a,b)=>a.length!==b.length?999:Math.max(...a.map((v,i)=>Math.abs(v-b[i])));
+      return {natal:{n:ni.length,want:nb.length,err:worst(ni,nb)},
+              transit:{n:ti.length,want:tb.length,err:worst(ti,tb)}};})()`);
+    if(r.natal.n!==r.natal.want) return `делений натала ${r.natal.n} против ${r.natal.want} тел`;
+    if(r.transit.n!==r.transit.want) return `делений транзита ${r.transit.n} против ${r.transit.want}`;
+    return (r.natal.err<0.1&&r.transit.err<0.1)
+      ||`расхождение натал ${r.natal.err.toFixed(3)}°, транзит ${r.transit.err.toFixed(3)}°`;
+  });
+  t('деления натала и транзита смотрят в разные стороны',()=>{
+    /* Направление говорит, какому кольцу принадлежит метка, и это избавляет от
+       легенды. Если оба уйдут внутрь, различить их станет нечем. */
+    const r=ev(`(()=>{const sv=document.querySelector('#wheel svg'), C=190;
+      const rad=(l,i)=>Math.hypot(+l.getAttribute('x'+i)-C,+l.getAttribute('y'+i)-C);
+      const dir=col=>[...sv.querySelectorAll('line')]
+        .filter(l=>l.getAttribute('stroke')==='var('+col+')'&&l.getAttribute('stroke-width')==='1.7')
+        .map(l=>rad(l,2)-rad(l,1));
+      return {natal:dir('--ink'), transit:dir('--accent')};})()`);
+    const allIn=r.natal.every(d=>d<0), allOut=r.transit.every(d=>d>0);
+    return (allIn&&allOut)||`натал внутрь ${allIn}, транзит наружу ${allOut}`;
+  });
+  t('глиф не уезжает от своего тела дальше, чем требует геометрия',()=>{
+    /* Именно этот баг и был: разведение толкало только вперёд, и в скоплении
+       глиф уходил на 121 градус - в чужой знак, в чужой дом, к аспектам,
+       которых он не образует. Порог привязан к самому разведению, а не взят
+       из головы: дальше двух шагов разведения уезжать незачем. */
+    const r=ev(`(()=>{const sv=document.querySelector('#wheel svg'), C=190, asc=CURRENT.asc;
+      const lonOf=(x,y)=>{const a=Math.atan2(C-y,x-C)*180/Math.PI;return ((asc+180-a)%360+360)%360;};
+      let worst=0, who='';
+      sv.querySelectorAll('.pl').forEach(g=>{
+        const c=g.querySelector('circle');
+        const drawn=lonOf(+c.getAttribute('cx'),+c.getAttribute('cy'));
+        let d=Math.abs(drawn-rev(CURRENT.pos[g.dataset.p].lon)); if(d>180)d=360-d;
+        if(d>worst){worst=d;who=g.dataset.p;}
+      });
+      const sep=2*Math.asin(Math.min(1,10.5/(190-104)))*180/Math.PI;
+      return {worst,who,sep};})()`);
+    return r.worst<=r.sep*2
+      ||`${r.who} уехал на ${r.worst.toFixed(1)}° при разведении ${r.sep.toFixed(1)}°`;
+  });
+  t('разведение выдерживает скопление всех тел в пяти градусах',()=>{
+    /* Чистая функция, поэтому проверяется на патологии прямо: четырнадцать тел
+       в пяти градусах. Разойтись они обязаны, но симметрично вокруг скопления,
+       а не гуськом в одну сторону. */
+    const r=ev(`(()=>{const sep=14, lons=[];
+      for(let i=0;i<14;i++) lons.push(100+i*0.35);
+      const out=fanOut(lons,sep);
+      let worst=0, minGap=999;
+      out.forEach((v,i)=>{ let d=Math.abs(v-lons[i]); if(d>180)d=360-d; if(d>worst)worst=d; });
+      const sorted=[...out].sort((a,b)=>a-b);
+      for(let i=0;i<sorted.length;i++){
+        const g=rev(sorted[(i+1)%sorted.length]-sorted[i]);
+        if(g<minGap) minGap=g;
+      }
+      const centreBefore=lons.reduce((a,b)=>a+b,0)/14;
+      const centreAfter=out.reduce((a,b)=>a+b,0)/14;
+      return {worst,minGap,drift:Math.abs(centreAfter-centreBefore)};})()`);
+    if(r.minGap<13.9) return `остался зазор ${r.minGap.toFixed(2)}° вместо 14`;
+    if(r.worst>100) return `тело уехало на ${r.worst.toFixed(1)}°`;
+    return r.drift<1||`скопление сместилось целиком на ${r.drift.toFixed(1)}°`;
+  });
+  t('противоположные точки рисуются по разные стороны колеса',()=>{
+    /* Узлы точно противоположны по построению, и на скриншоте они оказались
+       рядом - это и было тем, что видно глазом. */
+    const r=ev(`(()=>{const sv=document.querySelector('#wheel svg'), C=190, asc=CURRENT.asc;
+      const lonOf=(x,y)=>{const a=Math.atan2(C-y,x-C)*180/Math.PI;return ((asc+180-a)%360+360)%360;};
+      const at=n=>{const e=sv.querySelector('.pl[data-p="'+n+'"] circle');
+        return e?lonOf(+e.getAttribute('cx'),+e.getAttribute('cy')):null;};
+      const dataOpp=Math.abs(rev(CURRENT.pos.SNode.lon-CURRENT.pos.NNode.lon)-180);
+      const N=at('NNode'), S=at('SNode');
+      return {dataOpp, drawnOpp:N==null||S==null?null:Math.abs(rev(S-N)-180)};})()`);
+    if(r.dataOpp>1e-6) return `в данных узлы не противоположны: ${r.dataOpp}`;
+    if(r.drawnOpp==null) return 'узлы не нарисованы';
+    return r.drawnOpp<35||`нарисованы в ${r.drawnOpp.toFixed(1)}° от противостояния`;
+  });
+  t('оба кольца стоят на одинаковом отступе от своей шкалы',()=>{
+    /* Внутреннее кольцо раньше висело в 52 единицах от зодиакальной шкалы,
+       которая ему и не принадлежала, против 16 у внешнего. Длинная
+       направляющая указывала на чужую метку, и скопление планет в знаке
+       переставало читаться. У внутреннего теперь своя шкала, и отступ тот же. */
+    const r=ev(`(()=>{const C=190, sv=document.querySelector('#wheel svg');
+      const rad=e=>Math.hypot(+e.getAttribute('cx')-C,+e.getAttribute('cy')-C);
+      const na=sv.querySelector('.pl circle'), trc=sv.querySelector('.trp circle');
+      if(!na||!trc) return null;
+      const zod=C-52, nat=C-82;
+      const scales=[...sv.querySelectorAll('circle')].map(c=>+c.getAttribute('r'));
+      return {natGap:nat-rad(na), trGap:zod-rad(trc), hasInnerScale:scales.includes(nat)};})()`);
+    if(!r) return 'на колесе нет двух кольцевых наборов';
+    if(!r.hasInnerScale) return 'у внутреннего кольца нет своей шкалы';
+    return Math.abs(r.natGap-r.trGap)<=4
+      ||`внутреннее ${r.natGap.toFixed(0)}, внешнее ${r.trGap.toFixed(0)} единиц от шкалы`;
+  });
+  t('у внутренней шкалы есть градусные деления, как у внешней',()=>{
+    /* Иначе это окружность, а не шкала, и по ней ничего не отсчитать. */
+    const r=ev(`(()=>{const C=190, nat=C-82;
+      const paths=[...document.querySelectorAll('#wheel svg path')]
+        .filter(p=>(p.getAttribute('d')||'').startsWith('M')&&p.getAttribute('stroke')==='var(--ink3)');
+      // деления считаются по числу отрезков в пути
+      return paths.map(p=>(p.getAttribute('d').match(/M/g)||[]).length);})()`);
+    const ticky=r.filter(n=>n>=360);
+    return ticky.length>=2||`шкал с делениями ${ticky.length}, отрезков по путям: ${r.join(', ')}`;
+  });
+  t('диски глифов остаются малой долей колеса',()=>{
+    /* Читаемость вперёд нажимаемости: цель это сектор кольца, поэтому диск
+       больше не обязан вмещать палец и может быть мелким. */
+    const r=ev(`(()=>{const rs=[...document.querySelectorAll('#wheel .pl circle')]
+        .map(c=>+c.getAttribute('r'));
+      return {max:Math.max(...rs), wheel:190-3};})()`);
+    const frac=r.max*2/(r.wheel*2);
+    return frac<0.055||`диск занимает ${(frac*100).toFixed(1)}% диаметра колеса`;
+  });
+
   /* ---------- градусы на колесе ---------- */
   group('Градусы на колесе');
   t('градус у глифа совпадает с положением тела',()=>{
@@ -1561,10 +1685,12 @@ function run(){
        из-за которой мобильные карты нечитаемы. */
     const r=ev(`(()=>{const sv=document.querySelector('#wheel svg');
       if(!sv) return null;
-      const cs=[...sv.querySelectorAll('circle')].filter(c=>+c.getAttribute('r')>=9&&+c.getAttribute('r')<=12);
+      /* Told apart by which group they sit in, not by radius: the discs were
+         made smaller and a radius range silently stopped matching them, so this
+         test reported "no two sets" on a perfectly good wheel. */
+      const na=[...sv.querySelectorAll('.pl circle')];
+      const tr=[...sv.querySelectorAll('.trp circle')];
       const d=c=>Math.hypot(+c.getAttribute('cx')-190,+c.getAttribute('cy')-190);
-      const tr=cs.filter(c=>c.getAttribute('stroke')==='var(--accent)');
-      const na=cs.filter(c=>c.getAttribute('stroke')!=='var(--accent)');
       if(!tr.length||!na.length) return null;
       return {natalOuter:Math.max(...na.map(c=>d(c)+ +c.getAttribute('r'))),
               transitInner:Math.min(...tr.map(c=>d(c)- +c.getAttribute('r'))),
@@ -1574,7 +1700,7 @@ function run(){
       ||`зазор ${(r.transitInner-r.natalOuter).toFixed(1)} px между кольцами`;
   });
   t('в транзитном кольце все десять планет',()=>{
-    const n=ev(`document.querySelectorAll('#wheel g[opacity="0.92"]').length`);
+    const n=ev(`document.querySelectorAll('#wheel .trp').length`);
     return n===10||`нарисовано ${n}`;
   });
 

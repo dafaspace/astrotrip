@@ -123,6 +123,34 @@ outer ring took a frame from 1.3 ms to 21 ms against a 16.7 ms budget and the
 drag stuttered; nothing on the outer ring reads it. A test holds the frame under
 budget.
 
+**Where a body actually stands.** A glyph cannot say it: to stop the discs
+overlapping they are fanned apart by degrees, so a glyph can sit a sign-sixth
+from the body it names. Each body therefore gets a tick at its true longitude
+on the degree scale, and those ticks are the only marks on the wheel that are
+exact. Inner ticks point inward from the inner ring's scale and outer ticks
+outward from the zodiac scale, so the direction says which ring and no legend
+is needed.
+
+Each ring reads against a scale of its own at the same remove - the outer ring
+16 units inside the zodiac scale, the inner ring 19 inside its own, which it
+did not have before. It used to hang 52 units inside a scale that belonged to
+the other ring, so its leader lines pointed at marks it had nothing to do with
+and a stellium in a sign did not read at all.
+
+The discs are small, about 5% of the wheel's diameter, and legibility won that
+trade because the tap target is the ring wedge and no longer the disc.
+
+**Fanning glyphs apart** is a relaxation onto a line, not a walk forward. The
+first version pushed each glyph counter-clockwise until it found a free slot,
+which in a chart with a stellium carried one 121 degrees from its planet - into
+the wrong sign, the wrong house, beside aspects it does not make. That was
+visible on screen as the South Node sitting next to the North Node instead of
+opposite it. The circle is now cut at its widest gap, spread exactly along the
+resulting line and re-centred on the cluster's own centre of mass, so crowding
+opens out both ways and is shared. A relaxation that pushed neighbours apart by
+half their shortfall was tried first and does not converge: fourteen bodies
+inside five degrees were still one degree apart after forty passes.
+
 **Degrees beside every glyph**, and **the cusp degree on its own cusp line**,
 both as the ordinal degree every ephemeris prints - 3°30' is the fourth degree
 and reads 4. Without them a chart has to be tapped body by body to be read,
@@ -227,7 +255,7 @@ mattered: before it did, a deliberately broken app passed every check. The runne
 for the city atlas to finish loading, or the atlas tests would silently check the inline
 seed instead.
 
-**151 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
+**159 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
 library, robustness over 1550-2250 and at polar latitudes, house systems (angles land
 on the cusps, cusps run round the circle without crossing, quadrant systems coincide at
 the equator, zero-latitude bodies get the same house from both methods), library data

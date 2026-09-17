@@ -528,7 +528,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
 /* Bump together with CACHE in sw.js: the two are the same release, and the
    number on screen is how you tell from a phone which one you are looking at. */
-const APP_VERSION='2.3.0';
+const APP_VERSION='2.4.0';
 document.getElementById('ver').textContent=APP_VERSION;
 
 /* ---------- feature flags ----------
@@ -3771,6 +3771,52 @@ function natalReading(ch){
 let CURRENT=null, ISO=null;
 const S=380, C=S/2;
 function polarFor(asc){ return (lon,r)=>{const a=(180-(lon-asc))*D2R;return [C+r*Math.cos(a), C-r*Math.sin(a)];}; }
+/* Fanning glyphs apart so their discs do not overlap, without carrying any of
+   them far from the body it names.
+
+   The first version only ever pushed forward: each glyph stepped counter-
+   clockwise until it found a free slot. In a chart with a stellium that walked
+   a glyph 121 degrees from its planet - a third of the circle, a glyph sitting
+   in the wrong sign, in the wrong house, next to aspects it does not make.
+
+   This relaxes instead. Neighbours that are too close are pushed apart by half
+   the shortfall each, repeatedly, so the crowding is shared and everybody stays
+   as near the truth as the geometry allows. Fourteen bodies at fourteen degrees
+   need 196 degrees of the 360 available, so it always converges.
+
+   The exact-position ticks on the degree scale remain the only marks drawn at
+   the true longitude, and they are why this is a display concern and not a
+   correctness one. */
+function fanOut(lons,sep){
+  const n=lons.length, out=lons.map(v=>rev(v));
+  if(n<2||sep*(n+1)>=360) return out;
+  /* Cut the circle at its widest gap and the problem becomes a line, where
+     spreading is exact rather than iterative. Relaxing neighbours apart by
+     half their shortfall was the first attempt and it does not converge in any
+     sane number of passes: fourteen bodies inside five degrees have to expand
+     to 196, and after forty passes they were still 1 degree apart. */
+  const order=out.map((v,i)=>i).sort((a,b)=>out[a]-out[b]);
+  let cut=0, widest=-1;
+  for(let k=0;k<n;k++){
+    const g=rev(out[order[(k+1)%n]]-out[order[k]]);
+    if(g>widest){ widest=g; cut=(k+1)%n; }
+  }
+  const seq=[]; for(let k=0;k<n;k++) seq.push(order[(cut+k)%n]);
+  /* Unwrap to a monotonic line starting at the body after the gap. */
+  const line=[out[seq[0]]];
+  for(let k=1;k<n;k++) line.push(line[k-1]+rev(out[seq[k]]-out[seq[k-1]]));
+  const want=line.slice();
+  // forward: nobody closer than sep to the one before
+  for(let k=1;k<n;k++) if(line[k]-line[k-1]<sep) line[k]=line[k-1]+sep;
+  // backward: pull anyone back who was pushed further than needed
+  for(let k=n-2;k>=0;k--) if(line[k+1]-line[k]>sep&&line[k]<want[k]) line[k]=Math.min(want[k],line[k+1]-sep);
+  /* Re-centre on the original centre of mass, so a cluster opens out both ways
+     instead of marching off in one direction - the whole point of the fix. */
+  let shift=0; for(let k=0;k<n;k++) shift+=want[k]-line[k];
+  shift/=n;
+  for(let k=0;k<n;k++) out[seq[k]]=rev(line[k]+shift);
+  return out;
+}
 /* Single wheel or bi-wheel. With a transit chart the natal ring moves inward to
    free a band for the transiting bodies, rather than the two sets sharing one
    radius: overlapping glyphs is exactly the failure that makes cheap mobile
@@ -3780,7 +3826,14 @@ function drawWheel(ch,tr){
   const asc=ch.asc, polar=polarFor(asc);
   const rHouOut=C-3, rHouIn=C-26, rZodIn=C-52, rTickEnd=C-60;
   const rTr=tr?rZodIn-16:0;
-  const rPl=tr?C-104:C-76, rAsp=tr?C-128:C-94;
+  /* Each ring reads against a scale of its own, at the same remove. The outer
+     ring sits 16 units inside the zodiac scale; the inner ring used to sit 52
+     units inside it with no scale at all, so a glyph had a long leader line to
+     a mark it did not belong to and a stellium was invisible. The inner ring
+     now has its own degree scale and hugs it the same way. */
+  const rNatScale=tr?C-82:rZodIn;
+  const rPl=rNatScale-19;
+  const rDeg=rPl-16, rAsp=rDeg-12;
   /* How far apart two glyphs must sit so their discs do not overlap. It is an
      angle, and an angle that depends on the radius: the same 8.5 degrees that
      kept them clear at radius 114 leaves 12.7 units between centres at radius
@@ -3788,12 +3841,11 @@ function drawWheel(ch,tr){
      only the last one drawn can be tapped, which is exactly what the bi-wheel
      broke. Chord 2*R*sin(sep/2) >= diameter, solved for sep, plus a unit of
      air. Points are drawn smaller and get their own figure. */
+  /* Smaller discs need less fanning out, so the glyphs sit closer to where
+     the bodies really are. The discs shrank because the tap target is the ring
+     wedge now, not the disc, so the drawing no longer has to carry the finger. */
   const sepFor=(R,rad)=>2*Math.asin(Math.min(1,(rad+1)/R))*R2D;
-  const sepPl=sepFor(rPl,12), sepTr=tr?sepFor(rTr,10):0;
-  /* Where the degree label sits. On a single wheel there are 24 units between
-     the glyph ring and the zodiac, so it goes outward; on a bi-wheel that gap
-     belongs to the transit band and the only room left is inward. */
-  const rDeg=tr?rPl-17:rPl+16;
+  const sepPl=sepFor(rPl,9.5), sepTr=tr?sepFor(rTr,8):0;
   const cusps=ch.houses.cusps;
   function sector(l0,l1,r1,r2,fill,op){
     const [ax,ay]=polar(l0,r2),[bx,by]=polar(l1,r2),[cx,cy]=polar(l1,r1),[dx,dy]=polar(l0,r1);
@@ -3846,6 +3898,38 @@ function drawWheel(ch,tr){
     ticks+=`M${x1.toFixed(1)} ${y1.toFixed(1)}L${x2.toFixed(1)} ${y2.toFixed(1)}`;
   }
   s+=`<path d="${ticks}" stroke="var(--ink3)" stroke-width="0.55" opacity="0.75" fill="none"/>`;
+  /* Where each body actually stands on the degree scale. The glyph cannot say
+     it: to stop the discs overlapping they are fanned apart by up to sixteen
+     degrees, so a glyph can sit a whole sign-sixth away from the body it
+     names. These ticks are drawn at the true longitude, and they are the only
+     marks on the wheel that are.
+
+     Inner ticks belong to the inner wheel and outer ticks to the outer ring,
+     which is why one goes down from the scale and the other up into the sign
+     sector: the direction says which ring, and no legend is needed. */
+  function exactTick(lon,colour,base,len){
+    const [ax,ay]=polar(lon,base);
+    const [bx,by]=polar(lon,base+len);
+    return `<line x1="${ax.toFixed(1)}" y1="${ay.toFixed(1)}" x2="${bx.toFixed(1)}" y2="${by.toFixed(1)}" stroke="${colour}" stroke-width="1.7" stroke-linecap="round"/>`;
+  }
+  BODIES.concat(POINTS.filter(p=>ch.pos[p])).forEach(n=>{
+    const dimT=ISO&&ISO!==n;
+    s+=`<g opacity="${dimT?0.2:1}">${exactTick(ch.pos[n].lon,'var(--ink)',rNatScale,-8)}</g>`;
+  });
+  if(tr) BODIES.forEach(n=>{ if(tr.pos[n]) s+=exactTick(tr.pos[n].lon,'var(--accent)',rZodIn,8); });
+  /* The inner ring's own degree scale, when there is an outer ring taking the
+     zodiac one. Same construction as the outer scale, one tick a degree and a
+     taller one every five, so both rings are read the same way. */
+  if(tr){
+    s+=`<circle cx="${C}" cy="${C}" r="${rNatScale}" fill="none" stroke="var(--line)" stroke-width="0.6" opacity="0.8"/>`;
+    let nt='';
+    for(let g=0;g<360;g++){
+      const len=(g%5===0)?6.5:3.2;
+      const [x1,y1]=polar(g,rNatScale),[x2,y2]=polar(g,rNatScale-len);
+      nt+=`M${x1.toFixed(1)} ${y1.toFixed(1)}L${x2.toFixed(1)} ${y2.toFixed(1)}`;
+    }
+    s+=`<path d="${nt}" stroke="var(--ink3)" stroke-width="0.5" opacity="0.6" fill="none"/>`;
+  }
   // --- aspects with glyph at midpoint, line broken there ---
   const asps=findAspects(ch.pos);
   asps.forEach(a=>{
@@ -3869,21 +3953,19 @@ function drawWheel(ch,tr){
   });
   // --- planets + karmic points ---
   const shown=BODIES.concat(POINTS.filter(p=>ch.pos[p]));
-  const placed=[];                                   // [name, displayed longitude]
-  shown.forEach(n=>{
-    let disp=ch.pos[n].lon;
-    let guard=0;
-    while(placed.some(pl=>Math.abs(rev(disp-pl[1]+180)-180)<sepPl)&&guard++<64) disp=rev(disp+sepPl/3);
-    placed.push([n,disp]);
+  const fanned=fanOut(shown.map(n=>ch.pos[n].lon),sepPl);
+  const placed=shown.map((n,i)=>[n,fanned[i]]);      // [name, displayed longitude]
+  shown.forEach((n,idx)=>{
+    const disp=placed[idx][1];
     const [px,py]=polar(disp,rPl);
     const isPoint=POINTS.includes(n);
     const dim=ISO&&ISO!==n&&!asps.some(a=>(a.p1===ISO&&a.p2===n)||(a.p2===ISO&&a.p1===n));
     const hot=ISO===n;
-    const [tx,ty]=polar(ch.pos[n].lon,rZodIn-8);
+    const [tx,ty]=polar(ch.pos[n].lon,rNatScale-8);
     s+=`<g class="pl" data-p="${n}" style="cursor:pointer" opacity="${dim?0.25:1}">`;
-    s+=`<line x1="${tx.toFixed(1)}" y1="${ty.toFixed(1)}" x2="${px.toFixed(1)}" y2="${py.toFixed(1)}" stroke="var(--ink3)" stroke-width="0.5" opacity="0.5"/>`;
-    s+=`<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${isPoint?10:12}" fill="var(--paper)" stroke="${hot?'var(--accent)':'var(--line)'}" stroke-width="${hot?2:1}"/>`;
-    s+=`<text x="${px.toFixed(1)}" y="${(py+(isPoint?4.5:5)).toFixed(1)}" text-anchor="middle" font-size="${isPoint?12:15}" font-family="Astro" fill="${isPoint?'var(--ink2)':'var(--ink)'}">${GLYPH[n]}</text>`;
+    s+=`<line x1="${tx.toFixed(1)}" y1="${ty.toFixed(1)}" x2="${px.toFixed(1)}" y2="${py.toFixed(1)}" stroke="var(--ink3)" stroke-width="0.7" opacity="0.7"/>`;
+    s+=`<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${isPoint?8:9.5}" fill="var(--paper)" stroke="${hot?'var(--accent)':'var(--line)'}" stroke-width="${hot?2:1}"/>`;
+    s+=`<text x="${px.toFixed(1)}" y="${(py+(isPoint?3.6:4.2)).toFixed(1)}" text-anchor="middle" font-size="${isPoint?10.5:12.5}" font-family="Astro" fill="${isPoint?'var(--ink2)':'var(--ink)'}">${GLYPH[n]}</text>`;
     /* Degree beside the glyph, ordinal the way an ephemeris prints it, with the
        retrograde mark after it. Placed on the side of the ring that has room:
        outward toward the zodiac on a single wheel, inward toward the middle on
@@ -3892,7 +3974,7 @@ function drawWheel(ch,tr){
        between a picture and an instrument. */
     const [gx2,gy2]=polar(disp,rDeg);
     const retro=ch.pos[n].retro?'\u211e':'';
-    s+=`<text x="${gx2.toFixed(1)}" y="${(gy2+3).toFixed(1)}" text-anchor="middle" font-size="10.5" fill="var(--ink2)">${Math.floor(rev(ch.pos[n].lon)%30)+1}${retro}</text>`;
+    s+=`<text x="${gx2.toFixed(1)}" y="${(gy2+3).toFixed(1)}" text-anchor="middle" font-size="9.5" fill="var(--ink2)">${Math.floor(rev(ch.pos[n].lon)%30)+1}${retro}</text>`;
     s+=`</g>`;
   });
   // --- transiting bodies, outer band ---
@@ -3912,18 +3994,19 @@ function drawWheel(ch,tr){
       const [x1,y1]=polar(tr.pos[h.tp].lon,rTr-11), [x2,y2]=polar(nlon,rPl+12);
       s+=`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${h.asp.color}" stroke-width="1" stroke-dasharray="3 3" opacity="0.55"/>`;
     });
-    const tplaced=[];
-    BODIES.forEach(n=>{
-      if(!tr.pos[n]) return;
-      let disp=tr.pos[n].lon, guard=0;
-      while(tplaced.some(pl=>Math.abs(rev(disp-pl+180)-180)<sepTr)&&guard++<64) disp=rev(disp+sepTr/3);
-      tplaced.push(disp);
+    const trShown=BODIES.filter(n=>tr.pos[n]);
+    const trFan=fanOut(trShown.map(n=>tr.pos[n].lon),sepTr);
+    trShown.forEach((n,ti)=>{
+      const disp=trFan[ti];
       const [px,py]=polar(disp,rTr);
       const [tx,ty]=polar(tr.pos[n].lon,rZodIn-1);
-      s+=`<g opacity="0.92">`;
+      /* Named, not identified by an opacity value: two tests used to find
+         these groups by opacity="0.92" and by a radius range, and both broke
+         silently when the drawing changed. */
+      s+=`<g class="trp" opacity="0.92">`;
       s+=`<line x1="${tx.toFixed(1)}" y1="${ty.toFixed(1)}" x2="${px.toFixed(1)}" y2="${py.toFixed(1)}" stroke="var(--accent)" stroke-width="0.5" opacity="0.6"/>`;
-      s+=`<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="10" fill="var(--paper3)" stroke="var(--accent)" stroke-width="0.9"/>`;
-      s+=`<text x="${px.toFixed(1)}" y="${(py+4.5).toFixed(1)}" text-anchor="middle" font-size="13" font-family="Astro" fill="var(--ink2)">${GLYPH[n]}</text>`;
+      s+=`<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="8.5" fill="var(--paper3)" stroke="var(--accent)" stroke-width="0.9"/>`;
+      s+=`<text x="${px.toFixed(1)}" y="${(py+3.8).toFixed(1)}" text-anchor="middle" font-size="11" font-family="Astro" fill="var(--ink2)">${GLYPH[n]}</text>`;
       s+=`</g>`;
     });
   }
@@ -3950,8 +4033,8 @@ function drawWheel(ch,tr){
        scarce direction, and everything between the aspect lines and the zodiac
        ring can only mean one thing. 62 units of depth is about 49 px on a
        phone, which clears the 44 px floor; anything narrower did not. */
-    if(rad<45||rad>rZodIn) return;
-    if(tr&&rad>rTr-15) return;                       // above this the tap belongs to the transit ring
+    if(rad<40||rad>rZodIn) return;
+    if(tr&&rad>rNatScale+3) return;                  // above this the tap belongs to the transit ring
     const lon=rev(asc+180-Math.atan2(dy,dx)*R2D);
     let best=null, bestD=1e9;
     placed.forEach(([name,disp])=>{
