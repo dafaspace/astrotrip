@@ -127,6 +127,15 @@ svg{display:block;width:100%;height:auto;touch-action:manipulation}
 .planet-row .nm{width:150px;color:var(--ink2)}
 .planet-row .pos{font-weight:500}
 .planet-row .hs{margin-left:auto;color:var(--ink3);font-size:12px}
+/* The retrograde mark is a letter, not a colour, so it survives a greyscale
+   print and a colour-blind reader. */
+.rx{color:var(--hard);font-weight:600;margin-left:3px}
+.planet-row .spd{color:var(--ink3);font-size:12px;font-variant-numeric:tabular-nums;margin-left:10px}
+/* Chart header: the data the chart was cast from, stated on the chart itself,
+   the way a printed one carries it. */
+.chartmeta{font-size:12px;color:var(--ink3);line-height:1.45;margin:2px 0 8px;
+  font-variant-numeric:tabular-nums}
+.chartmeta b{color:var(--ink2);font-weight:500}
 .muted{color:var(--ink2)}
 .tiny{font-size:12px;color:var(--ink3)}
 .detail{background:var(--paper3);border-radius:12px;padding:12px;margin-top:10px;min-height:20px}
@@ -155,6 +164,11 @@ svg{display:block;width:100%;height:auto;touch-action:manipulation}
    stops the wheel from filling a tall window on its own. */
 #chartCard #wheel{max-width:min(100%,420px);margin:0 auto}
 #chartCard #wheel svg{max-height:46vh;width:auto;max-width:100%;margin:0 auto}
+/* Six per cent off the wheel on a phone. It buys the last twenty pixels that
+   keep the wheel, the moment and both control rows on one screen, which is
+   the thing the layout exists for; the glyphs and their degrees stay legible
+   at this size, checked on screen and not only in the budget. */
+@media (max-width:430px){ #chartCard #wheel svg{max-width:94%} }
 .scrub{border:1px solid var(--line);border-radius:12px;padding:10px 12px 12px;margin:10px 0 0;background:var(--paper3)}
 .momrow{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:4px}
 .mom{font-family:'Literata',Georgia,serif;font-size:17px;font-variant-numeric:tabular-nums}
@@ -421,6 +435,9 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
          together. -->
     <div class="card" id="chartCard">
       <h2 id="charttitle"></h2>
+      <!-- The data the chart was cast from, on the chart. A printed wheel has
+           always carried it, and without it a screenshot is unverifiable. -->
+      <div class="chartmeta" id="chartMeta"></div>
       <div class="lang ringsw" id="ringSw">
         <button data-ring="transit"></button><button data-ring="progressed"></button><button data-ring="directed"></button>
       </div>
@@ -511,7 +528,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
 /* Bump together with CACHE in sw.js: the two are the same release, and the
    number on screen is how you tell from a phone which one you are looking at. */
-const APP_VERSION='2.2.0';
+const APP_VERSION='2.3.0';
 document.getElementById('ver').textContent=APP_VERSION;
 
 /* ---------- feature flags ----------
@@ -574,6 +591,11 @@ const STR = {
   delChart:{ru:'удалить',en:'delete'},
   hsysLabel:{ru:'СИСТЕМА ДОМОВ',en:'HOUSE SYSTEM'},
   lilLabel:{ru:'ЧЁРНАЯ ЛУНА',en:'BLACK MOON'},
+  retrograde:{ru:'ретроградный',en:'retrograde'},
+  m_mean:{ru:'средняя',en:'mean'}, m_true:{ru:'истинная',en:'true'},
+  dailymotion:{ru:'за сутки',en:'per day'},
+  tropical:{ru:'тропический',en:'tropical'},
+  geocentric:{ru:'геоцентрическая',en:'geocentric'},
   lil_mean:{ru:'Средняя (Лилит)',en:'Mean (Lilith)'},
   lil_true:{ru:'Истинная (оскулирующая)',en:'True (osculating)'},
   transittime:{ru:'Время UT',en:'Time UT'},
@@ -606,7 +628,11 @@ const STR = {
   u_sec:{ru:'секунда',en:'second'}, u_min:{ru:'минута',en:'minute'}, u_hour:{ru:'час',en:'hour'},
   u_day:{ru:'сутки',en:'day'}, u_week:{ru:'неделя',en:'week'}, u_month:{ru:'месяц',en:'month'},
   u_year:{ru:'год',en:'year'}, u_dec:{ru:'10 лет',en:'10 years'}, u_cent:{ru:'100 лет',en:'100 years'},
-  nowbtn:{ru:'Сейчас',en:'Now'}, birthbtn:{ru:'Момент рождения',en:'Birth moment'},
+  nowbtn:{ru:'Сейчас',en:'Now'},
+  /* One word, because two wrapped to a second line on a 375px phone and cost
+     30px of the screen the wheel and the slider are budgeted against. Next to
+     "Now" it needs no more: both are places to jump to. */
+  birthbtn:{ru:'Рождение',en:'Birth'},
   applying:{ru:'сходится',en:'applying'}, separating:{ru:'расходится',en:'separating'},
   playbtn:{ru:'Пуск',en:'Play'}, pausebtn:{ru:'Стоп',en:'Pause'},
   stepback:{ru:'Шаг назад',en:'Step back'}, stepfwd:{ru:'Шаг вперёд',en:'Step forward'},
@@ -650,6 +676,7 @@ const STR = {
    standard terms of each tradition; the prose is mine. */
 const I18N={
   es:{
+    m_mean:"media", m_true:"verdadera",
     atlasLoading:"Descargando el atlas de ciudades", atlasOnce:"{n} lugares, 4 MB. Solo una vez, luego sin conexión.", atlasFail:"El atlas no se descargó. Por ahora solo están las ciudades grandes.", atlasRetry:"Reintentar",
     tagline:"Cartas precisas sin conexión, y un tiempo que puedes mover.", birth:"Datos de nacimiento",
     date:"Fecha", time:"Hora (local)", lat:"Latitud", lng:"Longitud", tz:"Desfase UTC",
@@ -672,7 +699,7 @@ const I18N={
     scrubintro:"Arrastra el control y el anillo exterior se redibuja al instante. El paso indica cuánto tiempo vale una muesca, desde un segundo hasta un siglo.",
     stepLabel:"PASO", u_sec:"segundo", u_min:"minuto", u_hour:"hora", u_day:"día", u_week:"semana",
     u_month:"mes", u_year:"año", u_dec:"10 años", u_cent:"100 años", nowbtn:"Ahora",
-    birthbtn:"Momento de nacimiento", applying:"se aplica", separating:"se separa", playbtn:"Reproducir",
+    birthbtn:"Nacimiento", applying:"se aplica", separating:"se separa", playbtn:"Reproducir",
     pausebtn:"Pausa", stepback:"Un paso atrás", stepfwd:"Un paso adelante", ring_transit:"Tránsitos",
     ring_progressed:"Progresiones", ring_directed:"Direcciones",
     note_transit:"Dónde está realmente el cielo en ese momento.",
@@ -691,6 +718,7 @@ const I18N={
     foot:"Las posiciones están cotejadas con JPL Horizons en todas las cartas de la biblioteca: la diferencia es menor de cuatro segundos de arco, y menor de medio en el siglo XX. Atlas de ciudades de GeoNames, CC BY 4.0. Tras la primera carga nada de aquí sale a la red.",
   },
   fr:{
+    m_mean:"moyenne", m_true:"vraie",
     atlasLoading:"Téléchargement de l’atlas des villes", atlasOnce:"{n} lieux, 4 Mo. Une seule fois, ensuite hors ligne.", atlasFail:"L’atlas ne s’est pas téléchargé. Seules les grandes villes sont disponibles pour l’instant.", atlasRetry:"Réessayer",
     tagline:"Des cartes précises hors ligne, et un temps que l’on peut déplacer.",
     birth:"Données de naissance", date:"Date", time:"Heure (locale)", lat:"Latitude", lng:"Longitude",
@@ -715,7 +743,7 @@ const I18N={
     scrubintro:"Faites glisser le curseur : l’anneau extérieur se redessine en direct. Le pas indique ce que vaut un cran, de la seconde au siècle.",
     stepLabel:"PAS", u_sec:"seconde", u_min:"minute", u_hour:"heure", u_day:"jour", u_week:"semaine",
     u_month:"mois", u_year:"an", u_dec:"10 ans", u_cent:"100 ans", nowbtn:"Maintenant",
-    birthbtn:"Moment de naissance", applying:"appliquant", separating:"séparant", playbtn:"Lecture",
+    birthbtn:"Naissance", applying:"appliquant", separating:"séparant", playbtn:"Lecture",
     pausebtn:"Pause", stepback:"Un pas en arrière", stepfwd:"Un pas en avant", ring_transit:"Transits",
     ring_progressed:"Progressions", ring_directed:"Directions",
     note_transit:"Où le ciel se trouve réellement à cet instant.",
@@ -733,6 +761,7 @@ const I18N={
     foot:"Les positions sont vérifiées avec JPL Horizons sur toutes les cartes de la bibliothèque : l’écart est inférieur à quatre secondes d’arc, et à une demi-seconde pour le vingtième siècle. Atlas des villes : GeoNames, CC BY 4.0. Après le premier chargement, rien ici ne contacte le réseau.",
   },
   de:{
+    m_mean:"mittlere", m_true:"wahre",
     atlasLoading:"Städte-Atlas wird geladen", atlasOnce:"{n} Orte, 4 MB. Nur einmal, danach offline.", atlasFail:"Der Atlas wurde nicht geladen. Vorerst gibt es nur die großen Städte.", atlasRetry:"Erneut versuchen",
     tagline:"Genaue Charts offline, und eine Zeit, die sich bewegen lässt.", birth:"Geburtsdaten",
     date:"Datum", time:"Zeit (Ortszeit)", lat:"Breite", lng:"Länge", tz:"UTC-Versatz",
@@ -754,7 +783,7 @@ const I18N={
     scrubintro:"Zieh den Regler, und der äußere Ring zeichnet sich live neu. Der Schritt sagt, wie viel Zeit eine Raste wert ist, von der Sekunde bis zum Jahrhundert.",
     stepLabel:"SCHRITT", u_sec:"Sekunde", u_min:"Minute", u_hour:"Stunde", u_day:"Tag", u_week:"Woche",
     u_month:"Monat", u_year:"Jahr", u_dec:"10 Jahre", u_cent:"100 Jahre", nowbtn:"Jetzt",
-    birthbtn:"Geburtsmoment", applying:"laufend", separating:"trennend", playbtn:"Start", pausebtn:"Pause",
+    birthbtn:"Geburt", applying:"laufend", separating:"trennend", playbtn:"Start", pausebtn:"Pause",
     stepback:"Ein Schritt zurück", stepfwd:"Ein Schritt vor", ring_transit:"Transite",
     ring_progressed:"Progressionen", ring_directed:"Direktionen",
     note_transit:"Wo der Himmel in diesem Moment tatsächlich steht.",
@@ -772,6 +801,7 @@ const I18N={
     foot:"Die Positionen sind bei jedem Chart der Bibliothek gegen JPL Horizons geprüft: die Abweichung bleibt unter vier Bogensekunden, im zwanzigsten Jahrhundert unter einer halben. Städte-Atlas von GeoNames, CC BY 4.0. Nach dem ersten Laden geht von hier nichts mehr ins Netz.",
   },
   it:{
+    m_mean:"media", m_true:"vera",
     atlasLoading:"Scaricamento dell’atlante delle città", atlasOnce:"{n} luoghi, 4 MB. Una volta sola, poi offline.", atlasFail:"L’atlante non si è scaricato. Per ora ci sono solo le città grandi.", atlasRetry:"Riprova",
     tagline:"Carte precise offline, e un tempo che si può muovere.", birth:"Dati di nascita", date:"Data",
     time:"Ora (locale)", lat:"Latitudine", lng:"Longitudine", tz:"Scarto UTC", cast:"Calcola la carta",
@@ -793,7 +823,7 @@ const I18N={
     scrubintro:"Trascina il cursore e l’anello esterno si ridisegna in diretta. Il passo dice quanto tempo vale una tacca, dal secondo al secolo.",
     stepLabel:"PASSO", u_sec:"secondo", u_min:"minuto", u_hour:"ora", u_day:"giorno", u_week:"settimana",
     u_month:"mese", u_year:"anno", u_dec:"10 anni", u_cent:"100 anni", nowbtn:"Adesso",
-    birthbtn:"Momento di nascita", applying:"applicante", separating:"separante", playbtn:"Avvia",
+    birthbtn:"Nascita", applying:"applicante", separating:"separante", playbtn:"Avvia",
     pausebtn:"Pausa", stepback:"Un passo indietro", stepfwd:"Un passo avanti", ring_transit:"Transiti",
     ring_progressed:"Progressioni", ring_directed:"Direzioni",
     note_transit:"Dove si trova davvero il cielo in quel momento.",
@@ -811,6 +841,7 @@ const I18N={
     foot:"Le posizioni sono confrontate con JPL Horizons su ogni carta della biblioteca: lo scarto resta sotto i quattro secondi d’arco, e sotto il mezzo secondo per il Novecento. Atlante delle città da GeoNames, CC BY 4.0. Dopo il primo caricamento nulla di qui va in rete.",
   },
   uk:{
+    m_mean:"середній", m_true:"істинний",
     atlasLoading:"Завантажується атлас міст", atlasOnce:"{n} місць, 4 МБ. Лише один раз, далі офлайн.", atlasFail:"Атлас не завантажився. Поки доступні лише великі міста.", atlasRetry:"Повторити",
     tagline:"Точні карти офлайн, і час, який можна рухати.", birth:"Дані народження", date:"Дата",
     time:"Час (місцевий)", lat:"Широта", lng:"Довгота", tz:"Зсув UTC", cast:"Побудувати карту",
@@ -832,7 +863,7 @@ const I18N={
     scrubintro:"Тягніть повзунок - зовнішнє кільце перемальовується на льоту. Крок задає, скільки часу в одній поділці: від секунди до століття.",
     stepLabel:"КРОК", u_sec:"секунда", u_min:"хвилина", u_hour:"година", u_day:"доба", u_week:"тиждень",
     u_month:"місяць", u_year:"рік", u_dec:"10 років", u_cent:"100 років", nowbtn:"Зараз",
-    birthbtn:"Момент народження", applying:"сходиться", separating:"розходиться", playbtn:"Пуск",
+    birthbtn:"Народження", applying:"сходиться", separating:"розходиться", playbtn:"Пуск",
     pausebtn:"Стоп", stepback:"Крок назад", stepfwd:"Крок уперед", ring_transit:"Транзити",
     ring_progressed:"Прогресії", ring_directed:"Дирекції",
     note_transit:"Де насправді перебуває небо в цю мить.",
@@ -850,6 +881,7 @@ const I18N={
     foot:"Положення звірені з JPL Horizons на всіх картах бібліотеки: розбіжність менша за чотири секунди дуги, для XX століття менша за половину. Атлас міст - GeoNames, CC BY 4.0. Після першого завантаження ніщо звідси не виходить у мережу.",
   },
   ka:{
+    m_mean:"საშუალო", m_true:"ჭეშმარიტი",
     atlasLoading:"ქალაქების ატლასი იტვირთება", atlasOnce:"{n} ადგილი, 4 მბ. მხოლოდ ერთხელ, შემდეგ ოფლაინში.", atlasFail:"ატლასი ვერ ჩამოიტვირთა. ჯერჯერობით მხოლოდ დიდი ქალაქებია.", atlasRetry:"ხელახლა",
     tagline:"ზუსტი რუკები ოფლაინში, და დრო, რომელიც შეიძლება გადაანაცვლო.", birth:"დაბადების მონაცემები",
     date:"თარიღი", time:"დრო (ადგილობრივი)", lat:"განედი", lng:"გრძედი", tz:"UTC წანაცვლება",
@@ -871,7 +903,7 @@ const I18N={
     scrubintro:"გადაატარე სლაიდერი და გარე რგოლი მაშინვე გადაიხატება. ნაბიჯი განსაზღვრავს, რამდენ დროს უდრის ერთი დანაყოფი: წამიდან საუკუნემდე.",
     stepLabel:"ნაბიჯი", u_sec:"წამი", u_min:"წუთი", u_hour:"საათი", u_day:"დღე", u_week:"კვირა",
     u_month:"თვე", u_year:"წელი", u_dec:"10 წელი", u_cent:"100 წელი", nowbtn:"ახლა",
-    birthbtn:"დაბადების მომენტი", applying:"უახლოვდება", separating:"შორდება", playbtn:"გაშვება",
+    birthbtn:"დაბადება", applying:"უახლოვდება", separating:"შორდება", playbtn:"გაშვება",
     pausebtn:"პაუზა", stepback:"ნაბიჯი უკან", stepfwd:"ნაბიჯი წინ", ring_transit:"ტრანზიტები",
     ring_progressed:"პროგრესიები", ring_directed:"დირექციები",
     note_transit:"სად არის ცა სინამდვილეში ამ მომენტში.",
@@ -1562,7 +1594,17 @@ function ianaOffset(zone,y,mo,da,hh,mi){
 }
 
 /* ---------- chart computation ---------- */
-function computeChart(y,mo,day,localH,tzOff,lat,lng){
+/* Daily motion, and with it retrograde. Measured rather than tabulated: the
+   chart is cast again six hours either side and the longitude difference is
+   scaled to a day. Six hours is the compromise - the Moon moves three degrees
+   over it, which is far above the noise, and Pluto still moves 36 arc-seconds
+   against a position error of half a second, so the sign is safe except within
+   a few hours of a station, where no baseline can help.
+
+   The extra work is two more chart casts. Measured at 0.5 ms each, so a chart
+   with speed costs about 1.5 ms and the scrubber still has ten times the frame
+   budget it needs. */
+function computeChart(y,mo,day,localH,tzOff,lat,lng,withSpeed){
   const utH=localH-tzOff, d=dayNumber(y,mo,day,utH), pos={};
   /* Three clocks, and they are not interchangeable: the form gives UT, the
      series wants TT, and sidereal time wants UT again. */
@@ -1583,7 +1625,28 @@ function computeChart(y,mo,day,localH,tzOff,lat,lng){
   let asc=atan2d(cosd(ramc),-(sind(ramc)*cosd(ecl)+tand(lat)*sind(ecl)));
   if(rev(asc-mc)>180) asc=rev(asc+180);
   const houses=HOUSE_SYSTEMS[HSYS].fn(ramc,lat,ecl,asc,mc);
+  if(withSpeed!==false){
+    const h=6/24;
+    const A=computeChart(y,mo,day,localH-h*24,tzOff,lat,lng,false).pos;
+    const B=computeChart(y,mo,day,localH+h*24,tzOff,lat,lng,false).pos;
+    Object.keys(pos).forEach(k=>{
+      if(!A[k]||!B[k]) return;
+      let dl=B[k].lon-A[k].lon;
+      if(dl>180) dl-=360; else if(dl<-180) dl+=360;
+      pos[k].spd=dl/(2*h);                      // degrees per day
+      pos[k].retro=dl<0;
+    });
+  }
   return {pos,asc,mc,ecl,houses,d,ramc,geolat:lat,geolon:lng,jdUT};
+}
+/* Latitude and longitude the way an ephemeris prints them: 59n55, 30e15. */
+function fmtGeo(lat,lon){
+  const one=(v,pos,neg)=>{
+    const a=Math.abs(v), d=Math.floor(a), m=Math.round((a-d)*60);
+    const dd=m===60?d+1:d, mm=m===60?0:m;
+    return `${dd}${v<0?neg:pos}${String(mm).padStart(2,'0')}`;
+  };
+  return `${one(lat,'n','s')} ${one(lon,'e','w')}`;
 }
 
 /* Placidus intermediate cusps by semi-arc trisection (standard iteration).
@@ -3717,7 +3780,7 @@ function drawWheel(ch,tr){
   const asc=ch.asc, polar=polarFor(asc);
   const rHouOut=C-3, rHouIn=C-26, rZodIn=C-52, rTickEnd=C-60;
   const rTr=tr?rZodIn-16:0;
-  const rPl=tr?C-104:C-76, rAsp=tr?C-120:C-94;
+  const rPl=tr?C-104:C-76, rAsp=tr?C-128:C-94;
   /* How far apart two glyphs must sit so their discs do not overlap. It is an
      angle, and an angle that depends on the radius: the same 8.5 degrees that
      kept them clear at radius 114 leaves 12.7 units between centres at radius
@@ -3727,6 +3790,10 @@ function drawWheel(ch,tr){
      air. Points are drawn smaller and get their own figure. */
   const sepFor=(R,rad)=>2*Math.asin(Math.min(1,(rad+1)/R))*R2D;
   const sepPl=sepFor(rPl,12), sepTr=tr?sepFor(rTr,10):0;
+  /* Where the degree label sits. On a single wheel there are 24 units between
+     the glyph ring and the zodiac, so it goes outward; on a bi-wheel that gap
+     belongs to the transit band and the only room left is inward. */
+  const rDeg=tr?rPl-17:rPl+16;
   const cusps=ch.houses.cusps;
   function sector(l0,l1,r1,r2,fill,op){
     const [ax,ay]=polar(l0,r2),[bx,by]=polar(l1,r2),[cx,cy]=polar(l1,r1),[dx,dy]=polar(l0,r1);
@@ -3744,14 +3811,23 @@ function drawWheel(ch,tr){
     const angleCusp=(h===0||h===3||h===6||h===9);
     s+=`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${angleCusp?(h===0||h===6?'var(--axis)':'var(--mc)'):'var(--line)'}" stroke-width="${angleCusp?1.5:0.7}"/>`;
     const mid=rev(a+rev(b-a)/2);
-    const [rx,ry]=polar(mid,(rHouIn+rHouOut)/2);
-    s+=`<text x="${rx.toFixed(1)}" y="${(ry+3.5).toFixed(1)}" text-anchor="middle" font-size="10" fill="var(--ink3)">${ROMAN[h]}</text>`;
+    const [rx,ry]=polar(mid,rHouOut-8);
+    s+=`<text x="${rx.toFixed(1)}" y="${(ry+3.2).toFixed(1)}" text-anchor="middle" font-size="10" fill="var(--ink3)">${ROMAN[h]}</text>`;
+    /* The cusp's own degree, on the cusp line rather than in the middle of the
+       house, which is what makes it readable as belonging to that line. The
+       ordinal degree, the way every ephemeris prints it: 3 deg 30 min is the
+       fourth degree, so it reads 4. Skipped at the four angles, which carry
+       their degree in their own label. */
+    if(!angleCusp){
+      const [dx2,dy2]=polar(a,rHouIn+8);
+      s+=`<text x="${dx2.toFixed(1)}" y="${(dy2+3).toFixed(1)}" text-anchor="middle" font-size="9.5" fill="var(--ink3)" opacity="0.95">${Math.floor(rev(a)%30)+1}</text>`;
+    }
   }
   // angle labels outside
   [[cusps[0],'Asc','var(--axis)'],[cusps[6],'Dsc','var(--axis)'],[cusps[9],'MC','var(--mc)'],[cusps[3],'IC','var(--mc)']].forEach(([lon,lbl,col])=>{
     const [lx,ly]=polar(lon,rHouOut+1);
     const dx=lx-C, anchor=Math.abs(dx)<30?'middle':(dx>0?'start':'end');
-    s+=`<text x="${lx.toFixed(1)}" y="${(ly+(ly>C?9:-3)).toFixed(1)}" text-anchor="${anchor}" font-size="10" font-weight="500" fill="${col}">${lbl}</text>`;
+    s+=`<text x="${lx.toFixed(1)}" y="${(ly+(ly>C?9:-3)).toFixed(1)}" text-anchor="${anchor}" font-size="10" font-weight="500" fill="${col}">${lbl} ${Math.floor(rev(lon)%30)+1}</text>`;
   });
   // --- zodiac ring (12 x 30°) ---
   for(let i=0;i<12;i++){
@@ -3808,6 +3884,15 @@ function drawWheel(ch,tr){
     s+=`<line x1="${tx.toFixed(1)}" y1="${ty.toFixed(1)}" x2="${px.toFixed(1)}" y2="${py.toFixed(1)}" stroke="var(--ink3)" stroke-width="0.5" opacity="0.5"/>`;
     s+=`<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${isPoint?10:12}" fill="var(--paper)" stroke="${hot?'var(--accent)':'var(--line)'}" stroke-width="${hot?2:1}"/>`;
     s+=`<text x="${px.toFixed(1)}" y="${(py+(isPoint?4.5:5)).toFixed(1)}" text-anchor="middle" font-size="${isPoint?12:15}" font-family="Astro" fill="${isPoint?'var(--ink2)':'var(--ink)'}">${GLYPH[n]}</text>`;
+    /* Degree beside the glyph, ordinal the way an ephemeris prints it, with the
+       retrograde mark after it. Placed on the side of the ring that has room:
+       outward toward the zodiac on a single wheel, inward toward the middle on
+       a bi-wheel, where the transit band takes the outside. Without this you
+       have to tap every planet to read a chart, which is the difference
+       between a picture and an instrument. */
+    const [gx2,gy2]=polar(disp,rDeg);
+    const retro=ch.pos[n].retro?'\u211e':'';
+    s+=`<text x="${gx2.toFixed(1)}" y="${(gy2+3).toFixed(1)}" text-anchor="middle" font-size="10.5" fill="var(--ink2)">${Math.floor(rev(ch.pos[n].lon)%30)+1}${retro}</text>`;
     s+=`</g>`;
   });
   // --- transiting bodies, outer band ---
@@ -3884,7 +3969,10 @@ function showDetail(p,ch){
   const el=document.getElementById('detail'); el.classList.remove('empty');
   const f=fmtPos(ch.pos[p].lon),hs=bodyHouse(ch,p);
   const asps=findAspects(ch.pos).filter(a=>a.p1===p||a.p2===p);
-  let html=`<div style="font-size:16px"><span class="af">${GLYPH[p]}</span> <b>${PN(p)}</b> - <span class="deg">${f.html}</span>, ${t('house')} ${hs}</div>`;
+  const sp=ch.pos[p].spd;
+  const rx=ch.pos[p].retro?` <span class="rx">\u211e</span> ${t('retrograde')}`:'';
+  const spd=sp==null?'':` · ${t('dailymotion')} ${sp>=0?'+':'\u2212'}${Math.abs(sp).toFixed(3)}\u00b0`;
+  let html=`<div style="font-size:16px"><span class="af">${GLYPH[p]}</span> <b>${PN(p)}</b> - <span class="deg">${f.html}</span>${rx}, ${t('house')} ${hs}${spd}</div>`;
   if(LX(PLANET_FN)[p]) html+=`<div class="tiny" style="margin:4px 0 8px">${LX(PLANET_FN)[p]}</div>`;
   html+= asps.length? asps.sort((a,b)=>a.orb-b.orb).map(a=>{
       const other=a.p1===p?a.p2:a.p1;
@@ -4145,7 +4233,11 @@ function momText(ms,offH){
 }
 function transitChartAt(ch,ms){
   const p=momParts(ms);
-  return computeChart(p.y,p.mo,p.d,p.h,0,ch.geolat||0,ch.geolon||0);
+  /* No speed for the outer ring. It costs two extra chart casts and nothing on
+     the outer ring reads it: retrograde and the degree labels belong to the
+     natal wheel, which is cast once. With speed on here a scrub frame measured
+     21 ms against a 16.7 ms budget and stuttered; without it, 8. */
+  return computeChart(p.y,p.mo,p.d,p.h,0,ch.geolat||0,ch.geolon||0,false);
 }
 /* rAF coalescing: a drag fires input events faster than a chart can be cast,
    and without this the queue outruns the finger and the slider feels sticky. */
@@ -4321,7 +4413,10 @@ function renderPositions(ch){
   const shown=BODIES.concat(POINTS.filter(p=>ch.pos[p]));
   rows+=shown.map(n=>{
     const f=fmtPos(ch.pos[n].lon),hs=bodyHouse(ch,n);
-    return `<div class="planet-row hit" data-p="${n}" role="button" tabindex="0"><span class="g af">${GLYPH[n]}</span><span class="nm">${PN(n)}</span><span class="pos deg">${f.html}</span><span class="hs">${t('house')} ${hs}</span></div>`;
+    const sp=ch.pos[n].spd;
+    const rx=ch.pos[n].retro?`<span class="rx" title="${t('retrograde')}">\u211e</span>`:'';
+    const spd=sp==null?'':`<span class="spd">${sp>=0?'+':'\u2212'}${Math.abs(sp).toFixed(2)}\u00b0</span>`;
+    return `<div class="planet-row hit" data-p="${n}" role="button" tabindex="0"><span class="g af">${GLYPH[n]}</span><span class="nm">${PN(n)}</span><span class="pos deg">${f.html}${rx}</span>${spd}<span class="hs">${t('house')} ${hs}</span></div>`;
   }).join('');
   const box=document.getElementById('positions');
   box.innerHTML=rows;
@@ -4437,11 +4532,56 @@ function todayStr(){
   const n=new Date(), p=x=>String(x).padStart(2,'0');
   return `${n.getFullYear()}-${p(n.getMonth()+1)}-${p(n.getDate())}`;
 }
+/* Weekday from the platform rather than a table of our own: Intl already has
+   it in every language the app speaks, including Georgian. Built in UTC and
+   read back in UTC so no local timezone can shift the day. */
+function weekdayName(y,mo,d){
+  try{
+    const dt=new Date(0); dt.setUTCFullYear(y,mo-1,d); dt.setUTCHours(12,0,0,0);
+    return new Intl.DateTimeFormat(LANG,{weekday:'short',timeZone:'UTC'}).format(dt);
+  }catch(e){ return ''; }
+}
+function renderChartMeta(ch,y,mo,da,hh,mi,tz){
+  const el=document.getElementById('chartMeta'); if(!el) return;
+  const name=(document.getElementById('chartName').value||'').trim();
+  const city=(document.getElementById('city').value||'').trim();
+  const hs=HOUSE_SYSTEMS[ch.houses.system];
+  /* One line, and every abbreviation in it is there to keep it one line on a
+     375px phone: no brackets round the offset, no minutes when the offset has
+     none, and the date, weekday and time run together the way a printed chart
+     writes them. */
+  const off=tz===Math.trunc(tz)?`UTC${tz<0?'-':'+'}${Math.abs(tz)}`:`UTC${formatOffset(tz)}`;
+  const line1=[
+    `<b>${String(da).padStart(2,'0')}.${String(mo).padStart(2,'0')}.${y}</b>`
+      +` ${weekdayName(y,mo,da)} <b>${pad2(hh)}:${pad2(mi)}</b> ${off}`,
+    fmtGeo(ch.geolat,ch.geolon)
+  ].filter(Boolean).join(' · ');
+  /* "Geocentric" is dropped: it is the only thing this app computes, and a
+     constant printed as though it were a setting is noise. "Tropical" stays -
+     it changes how the chart is read, and a screenshot has to say which it is. */
+  /* The Black Moon variant as its glyph plus one word. Spelling it out took a
+     second line, and which of the two is in use has to be on the chart: they
+     differ by up to a whole sign, so a screenshot without it is ambiguous. */
+  const line2=[t('tropical'),(hs?LX(hs):ch.houses.system),
+    `<span class="af">${GLYPH.Lilith}</span> ${t(LILMODE==='true'?'m_true':'m_mean')}`
+  ].join(' · ');
+  /* Name and place share a line. On their own they cost two lines of the
+     phone screen the wheel and the slider are budgeted against, and the card
+     then stopped fitting - which is the whole point of that budget. */
+  const who=[name?`<b>${name}</b>`:'', city].filter(Boolean).join(' · ');
+  el.innerHTML=[who, line1, line2]
+    .filter(Boolean).map(x=>`<div>${x}</div>`).join('');
+}
 function scrollChartIntoView(){
   const card=document.getElementById('chartCard'), hdr=document.querySelector('header');
   if(!card) return;
   const y=card.getBoundingClientRect().top+window.scrollY-(hdr?hdr.offsetHeight:0)-8;
-  window.scrollTo({top:Math.max(0,y),behavior:'smooth'});
+  /* Instant, not smooth. A smooth scroll is an animation, and any scroll that
+     arrives during it - including the layout settling as the wheel draws -
+     cancels it, which left the page exactly where it started often enough to
+     be the normal case. After pressing a button, arriving is better than
+     gliding. */
+  window.scrollTo(0,Math.max(0,y));
 }
 function run(){
   const dv=document.getElementById('date').value, tv=document.getElementById('time').value;
@@ -4458,7 +4598,7 @@ function run(){
   const hs=HOUSE_SYSTEMS[CURRENT.houses.system];
   document.getElementById('charttitle').textContent=
     `${t('natal')} · ${(hs?LX(hs):CURRENT.houses.system)}`;
-  renderPositions(CURRENT); renderBalance(CURRENT);
+  renderPositions(CURRENT); renderBalance(CURRENT); renderChartMeta(CURRENT,y,mo,da,hh,mi,tz);
   if(FEATURES.interpretation) document.getElementById('reading').innerHTML=natalReading(CURRENT);
   renderTransits(CURRENT);          // casts the transit ring and draws the wheel
   document.getElementById('detail').className='detail empty';

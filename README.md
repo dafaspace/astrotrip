@@ -106,6 +106,43 @@ colliding again. Where planets cluster even a wedge is only about 19 px of arc, 
 is the honest limit of fourteen bodies on a 300 px circle, so every body is also a
 full-width row in the Positions table, above the 44 px floor and always reliable.
 
+### What the wheel says without being asked
+
+Four things a printed chart has always carried and this one did not.
+
+**Retrograde.** Daily motion is measured, not tabulated: the chart is cast
+again six hours either side and the difference is scaled to a day. Six hours is
+the compromise - the Moon moves three degrees over it, far above the noise, and
+Pluto still moves 36 arc-seconds against a position error of half a second, so
+the sign is safe except within a few hours of a station, where no baseline
+helps. The mark is the letter ℞, not a colour, so it survives a greyscale print
+and a colour-blind reader.
+
+Speed is computed for the natal chart only. Turning it on for the scrubbed
+outer ring took a frame from 1.3 ms to 21 ms against a 16.7 ms budget and the
+drag stuttered; nothing on the outer ring reads it. A test holds the frame under
+budget.
+
+**Degrees beside every glyph**, and **the cusp degree on its own cusp line**,
+both as the ordinal degree every ephemeris prints - 3°30' is the fourth degree
+and reads 4. Without them a chart has to be tapped body by body to be read,
+which is the difference between a picture and an instrument.
+
+**A header** carrying what the chart was cast from: name, place, date, weekday,
+time, UTC offset, coordinates in the `59n55 30e15` form, zodiac, house system
+and which Black Moon is in use. A screenshot without it cannot be checked.
+Every abbreviation in it exists to keep the block to three lines on a phone,
+because the wheel and the slider are budgeted against that screen.
+
+**Checked against ZET 9.** For 3 November 1985, 13:37, GMT+3, 59n55 30e15,
+Placidus, all twelve house cusps agree with ZET to the degree, and so does the
+Sun. That comparison is a test, and it is the only house-system check in the
+suite that uses another program as the reference: our own formulas cannot
+confirm our own formulas.
+
+Still missing against ZET, in the order they matter: minor aspects and
+configurable orbs, an aspect grid, aspect-pattern figures, Chiron, and printing.
+
 ### The city atlas
 
 The whole of GeoNames `cities500`: **235,779 places** down to population 500, with
@@ -190,7 +227,7 @@ mattered: before it did, a deliberately broken app passed every check. The runne
 for the city atlas to finish loading, or the atlas tests would silently check the inline
 seed instead.
 
-**137 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
+**151 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
 library, robustness over 1550-2250 and at polar latitudes, house systems (angles land
 on the cusps, cusps run round the circle without crossing, quadrant systems coincide at
 the equator, zero-latitude bodies get the same house from both methods), library data

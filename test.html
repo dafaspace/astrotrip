@@ -1074,6 +1074,157 @@ function run(){
     return bad.length===0||`месяцы без учёта Солнца: ${bad.join(',')}`;
   });
 
+  /* ---------- ретроградность и суточное движение ---------- */
+  group('Ретроградность');
+  t('Солнце и Луна никогда не ретроградны, средний узел всегда',()=>{
+    /* Проверяется на году выборок, а не на одной дате: знак скорости обязан
+       быть свойством тела, а не удачно выбранного дня. */
+    const r=ev(`(()=>{let sunR=0,moonR=0,nodeD=0;
+      for(let k=0;k<120;k++){
+        const p=computeChart(1900+Math.floor(k/4),1+(k%12),3+(k%20),7,0,50,10).pos;
+        if(p.Sun.retro) sunR++;
+        if(p.Moon.retro) moonR++;
+        if(!p.NNode.retro) nodeD++;
+      }
+      return {sunR,moonR,nodeD};})()`);
+    return (r.sunR===0&&r.moonR===0&&r.nodeD===0)
+      ||`Солнце ретро ${r.sunR}, Луна ${r.moonR}, узел прямым ${r.nodeD}`;
+  });
+  t('доля ретроградных дней сходится с известной для каждой планеты',()=>{
+    /* Меркурий около 18% времени, Сатурн около 36%, Плутон около 44%. Числа
+       известны из астрономии, а не из наших же расчётов, поэтому это внешняя
+       проверка знака скорости, а не нас самих.
+
+       Окно - шесть лет с шагом 15 суток, и оба числа выбраны не наугад. Год
+       был мало: Венера ретроградна 42 дня раз в 19 месяцев, и в 2000 году
+       такого окна просто не случилось, так что тест падал на верном
+       приложении. Шаг же должен быть короче самого короткого попятного
+       периода, иначе его можно перешагнуть: у Меркурия это 21 сутки. */
+    const r=ev(`(()=>{const bodies=['Mercury','Venus','Saturn','Pluto'], n={};
+      bodies.forEach(b=>n[b]=0);
+      const N=146;
+      for(let k=0;k<N;k++){
+        const jd=2451545+k*15;
+        const d=new Date((jd-2440587.5)*86400000);
+        const p=computeChart(d.getUTCFullYear(),d.getUTCMonth()+1,d.getUTCDate(),12,0,0,0).pos;
+        bodies.forEach(b=>{ if(p[b].retro) n[b]++; });
+      }
+      const out={}; bodies.forEach(b=>out[b]=+(n[b]/N*100).toFixed(1));
+      return out;})()`);
+    const want={Mercury:[11,27],Venus:[2,15],Saturn:[28,44],Pluto:[36,52]};
+    const bad=Object.keys(want).filter(b=>r[b]<want[b][0]||r[b]>want[b][1]);
+    return bad.length===0
+      ||bad.map(b=>`${b} ${r[b]}% вне ${want[b][0]}-${want[b][1]}%`).join(', ');
+  });
+  t('суточное движение каждого тела в известных пределах',()=>{
+    const bad=ev(`(()=>{const lim={Sun:[0.95,1.02],Moon:[11.7,15.5],Mercury:[-1.5,2.3],
+        Venus:[-0.7,1.27],Mars:[-0.45,0.8],Jupiter:[-0.14,0.25],Saturn:[-0.09,0.14],
+        Uranus:[-0.045,0.065],Neptune:[-0.03,0.04],Pluto:[-0.03,0.045]};
+      const out=[];
+      for(let k=0;k<60;k++){
+        const p=computeChart(1960+k,1+(k%12),5+(k%20),9,0,30,20).pos;
+        for(const b in lim){
+          const v=p[b].spd;
+          if(v==null||v<lim[b][0]||v>lim[b][1]) out.push(b+' '+(v==null?'нет':v.toFixed(3)));
+        }
+      }
+      return out;})()`);
+    return bad.length===0||`вне пределов: ${[...new Set(bad)].slice(0,5).join(', ')}`;
+  });
+  t('ретроградность видна и на колесе, и в таблице',()=>{
+    const r=ev(`(()=>{const sv=document.querySelector('#wheel svg');
+      const onWheel=(sv.innerHTML.match(/\\u211e/g)||[]).length;
+      const inTable=document.querySelectorAll('#positions .rx').length;
+      const retro=BODIES.concat(POINTS).filter(p=>CURRENT.pos[p]&&CURRENT.pos[p].retro).length;
+      return {onWheel,inTable,retro};})()`);
+    return (r.onWheel===r.retro&&r.inTable===r.retro&&r.retro>0)
+      ||`ретроградных ${r.retro}, на колесе ${r.onWheel}, в таблице ${r.inTable}`;
+  });
+
+  /* ---------- градусы на колесе ---------- */
+  group('Градусы на колесе');
+  t('градус у глифа совпадает с положением тела',()=>{
+    /* Порядковый градус, как печатает любая эфемерида: 3°30' это четвёртый
+       градус знака и читается 4. */
+    const bad=ev(`(()=>{const out=[];
+      document.querySelectorAll('#wheel .pl').forEach(g=>{
+        const p=g.dataset.p;
+        const txt=[...g.querySelectorAll('text')].map(t=>t.textContent)
+          .find(x=>/^\\d/.test(x));
+        const want=String(Math.floor(((CURRENT.pos[p].lon%360)+360)%360%30)+1);
+        if(!txt||txt.replace(/\\u211e/,'')!==want) out.push(p+': '+txt+' вместо '+want);
+      });
+      return out;})()`);
+    return bad.length===0||bad.slice(0,4).join(', ');
+  });
+  t('градусы куспидов на ободе совпадают с расчётными',()=>{
+    const bad=ev(`(()=>{const cusps=CURRENT.houses.cusps, out=[];
+      const want=new Set(); for(let h=0;h<12;h++) if(h%3!==0) want.add(Math.floor(cusps[h]%30)+1);
+      const shown=[...document.querySelectorAll('#wheel svg text')]
+        .filter(t=>t.getAttribute('font-size')==='9.5'&&!t.closest('.pl'))
+        .map(t=>+t.textContent);
+      if(shown.length!==8) out.push('подписей '+shown.length+' вместо 8');
+      shown.forEach(v=>{ if(!want.has(v)) out.push('лишний градус '+v); });
+      return out;})()`);
+    return bad.length===0||bad.slice(0,4).join(', ');
+  });
+  t('четыре угла подписаны вместе со своим градусом',()=>{
+    const r=ev(`(()=>{const txt=[...document.querySelectorAll('#wheel svg text')]
+        .map(t=>t.textContent).filter(x=>/^(Asc|Dsc|MC|IC) \\d+$/.test(x));
+      return {found:txt.sort().join(' '),
+        asc:'Asc '+(Math.floor(CURRENT.asc%30)+1), mc:'MC '+(Math.floor(CURRENT.mc%30)+1)};})()`);
+    return (r.found.includes(r.asc)&&r.found.includes(r.mc)&&r.found.split(' ').length===8)
+      ||`подписи "${r.found}", ожидались ${r.asc} и ${r.mc}`;
+  });
+
+  /* ---------- сверка с ZET ---------- */
+  group('Сверка с ZET');
+  t('все двенадцать куспидов совпадают с ZET на карте 3.11.1985',()=>{
+    /* Внешний эталон: скриншот ZET 9 для 3 ноября 1985, 13:37, GMT+3,
+       59n55 30e15, Плацидус. ZET печатает порядковый градус, поэтому
+       сравнение идёт в его записи. Это единственная в наборе проверка домов
+       против чужой программы, и она стоит того: свои же формулы подтвердить
+       своими же формулами нельзя. */
+    const zet={1:4,2:14,3:2,4:25,5:10,6:22,7:4,8:14,9:2,10:25,11:10,12:22};
+    const got=ev(`(()=>{const ch=computeChart(1985,11,3,13+37/60,3,59.9167,30.25);
+      const o={}; ch.houses.cusps.forEach((c,i)=>o[i+1]=Math.floor(((c%360)+360)%360%30)+1);
+      return {cusps:o, system:ch.houses.system};})()`);
+    if(got.system!=='placidus') return 'система домов '+got.system;
+    const bad=Object.keys(zet).filter(h=>got.cusps[h]!==zet[h]);
+    return bad.length===0
+      ||bad.map(h=>`дом ${h}: у нас ${got.cusps[h]}, у ZET ${zet[h]}`).join(', ');
+  });
+  t('Солнце на той же карте попадает в градус ZET',()=>{
+    const r=ev(`(()=>{const ch=computeChart(1985,11,3,13+37/60,3,59.9167,30.25);
+      const l=ch.pos.Sun.lon;
+      return {deg:Math.floor(l%30)+1, sign:Math.floor(l/30)};})()`);
+    return (r.deg===11&&r.sign===7)||`у нас ${r.deg} в знаке ${r.sign}, у ZET 11 в Скорпионе (7)`;
+  });
+
+  /* ---------- шапка карты ---------- */
+  group('Шапка карты');
+  t('шапка несёт дату, время, смещение, координаты и систему домов',()=>{
+    const txt=D.getElementById('chartMeta').innerText;
+    /* The offset drops its minutes when it has none, so both UTC+3 and
+       UTC+05:30 have to pass. */
+    const need=[/\d{2}\.\d{2}\.\d{4}/, /\d{2}:\d{2}/, /UTC[+-]\d{1,2}(:\d{2})?/,
+      /\d+[nsNS]\d{2}\s+\d+[ewEW]\d{2}/];
+    const miss=need.filter(re=>!re.test(txt));
+    if(miss.length) return `нет: ${miss.join(' ')} в "${txt.replace(/\n/g,' | ')}"`;
+    const hs=ev(`LX(HOUSE_SYSTEMS[CURRENT.houses.system])`);
+    return txt.includes(hs)||`система домов "${hs}" не названа`;
+  });
+  t('координаты записаны как в эфемеридах',()=>{
+    const r=ev(`[fmtGeo(59.9167,30.25), fmtGeo(-33.8688,-151.2093), fmtGeo(0,0)]`);
+    return (r[0]==='59n55 30e15'&&r[1]==='33s52 151w13'&&r[2]==='0n00 0e00')
+      ||r.join(' / ');
+  });
+  t('день недели берётся из платформы и меняется с языком',()=>{
+    const r=ev(`(()=>{const k=LANG; LANG='ru'; const a=weekdayName(1985,11,3);
+      LANG='en'; const b=weekdayName(1985,11,3); LANG=k; return {a,b};})()`);
+    return (r.a&&r.b&&r.a!==r.b)||`ru "${r.a}", en "${r.b}"`;
+  });
+
   /* ---------- выбор планеты ---------- */
   group('Выбор планеты');
   t('глифы не налезают друг на друга ни в одном колесе',()=>{
@@ -1148,15 +1299,37 @@ function run(){
       ||'колесо и ползунок в разных карточках';
   });
   t('колесо, момент и органы управления помещаются в экран телефона',()=>{
-    /* Считается высота, а не вид: iframe тут 900 px шириной, поэтому меряем
-       сумму блоков против 812 минус липкая шапка. */
+    /* The iframe is 900 px wide, and the promise is about a phone, so the
+       frame is narrowed to 375 for the measurement and put back afterwards.
+       Measured at the wrong width this passed while the real card overflowed,
+       and then failed while the real card fitted - the number was never about
+       the thing it claimed to be about. */
+    /* The frame is put at a real phone size and the app is asked to scroll the
+       way it does after casting; then the bottom of the last control row is
+       measured against the viewport. Two earlier versions of this test added
+       up block heights instead, and both lied: one passed while the card
+       overflowed by 22 px, the next passed while it overflowed by 10, because
+       a sum of parts is not a layout. */
+    const wasW=frame.style.width, wasH=frame.style.height;
+    frame.style.width='375px'; frame.style.height='812px';
+    void frame.offsetWidth;
+    /* The same arithmetic scrollChartIntoView uses, applied instantly. The
+       function itself scrolls smoothly, which is asynchronous, and reading the
+       position straight after it reported the unscrolled page - 1413 px on an
+       812 px screen. */
     const r=ev(`(()=>{const card=document.getElementById('chartCard');
-      const h=document.querySelector('header').offsetHeight;
-      const parts=['#charttitle','#ringSw','#wheel svg','.scrub'].map(s=>{
-        const e=document.querySelector(s); return e?e.getBoundingClientRect().height:0;});
-      return {parts, sum:parts.reduce((a,b)=>a+b,0), header:h};})()`);
-    const budget=812-r.header-24;
-    return r.sum<=budget||`блоки занимают ${Math.round(r.sum)} px при бюджете ${Math.round(budget)}`;
+      const h=document.querySelector('header');
+      window.scrollTo(0,Math.max(0,card.getBoundingClientRect().top+window.scrollY-h.offsetHeight-8));
+      const rows=document.querySelectorAll('.scrubctl');
+      const last=rows[rows.length-1].getBoundingClientRect().bottom;
+      const top=document.getElementById('charttitle').getBoundingClientRect().top;
+      const hdr=document.querySelector('header').offsetHeight;
+      return {last, top, hdr, vh:window.innerHeight};})()`);
+    frame.style.width=wasW; frame.style.height=wasH;
+    void frame.offsetWidth;
+    if(r.top<r.hdr-2) return `заголовок ушёл под шапку: ${Math.round(r.top)} против ${r.hdr}`;
+    return r.last<=r.vh
+      ||`последний ряд кнопок на ${Math.round(r.last)} px при экране ${r.vh}`;
   });
   t('перетаскивание непрерывно, а не прыгает целыми делениями',()=>{
     const r=ev(`(()=>{const sc=document.getElementById('scrub');
@@ -1168,6 +1341,23 @@ function run(){
       return {step:sc.getAttribute('step'), d:pts.slice(1).map((x,i)=>x-pts[i])};})()`);
     const uniform=r.d.every(x=>x>0&&Math.abs(x-r.d[0])<1);
     return (r.step==='any'&&uniform)||`step="${r.step}", шаги ${r.d.join(', ')}`;
+  });
+  t('кадр перерисовки укладывается в бюджет кадра',()=>{
+    /* Мера против конкретной регрессии: расчёт скоростей утроил стоимость
+       карты, и кадр вырос до 21 мс против 16.7 - протяжка начала дёргаться.
+       Внешнему кольцу скорость не нужна, оно ретроградность не рисует, и
+       отключение вернуло кадр к полутора миллисекундам. */
+    const ms=ev(`(()=>{for(let i=0;i<10;i++) renderTransits(CURRENT);
+      const a=performance.now();
+      for(let i=0;i<30;i++){ TR_MS+=86400000; renderTransits(CURRENT); }
+      return (performance.now()-a)/30;})()`);
+    return ms<16.7||`${ms.toFixed(1)} мс на кадр`;
+  });
+  t('скорость считается для натальной карты и не считается для кольца',()=>{
+    const r=ev(`(()=>{const n=CURRENT.pos.Mercury.spd!=null;
+      const o=transitChartAt(CURRENT,TR_MS).pos.Mercury.spd==null;
+      return {natalHasSpeed:n, ringSkipsSpeed:o};})()`);
+    return (r.natalHasSpeed&&r.ringSkipsSpeed)||JSON.stringify(r);
   });
   t('кнопка шага остаётся календарной, хотя перетаскивание усреднённое',()=>{
     /* Плавно там, где целятся, точно там, где считают. Месяц при
