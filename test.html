@@ -106,11 +106,19 @@ const frame=document.getElementById('app');
       out.recovered=ATLAS.state;
       return out;
     })()`); }catch(e){}
+    /* The app now opens with an empty outer ring, which is the right default
+       and leaves most of this suite with no bi-wheel to look at. The default is
+       recorded here, before anything touches it, and the ring is then filled so
+       the rest of the checks have two rings to measure. */
+    try{ DEFAULT_RING=await W.eval('RING_MODE'); }catch(e){}
+    try{ await W.eval(`(async()=>{
+      RING_MODE='transit'; renderRingSwitch(); if(CURRENT) renderTransits(CURRENT);
+    })()`); }catch(e){}
     run();
   },220));
   frame.src='./index.html?notacache='+Date.now();
 })();
-let SW_SRC='', ATLAS_REAL_BYTES=null, ATLAS_BAR=null, ATLAS_FAIL=null;
+let SW_SRC='', ATLAS_REAL_BYTES=null, ATLAS_BAR=null, ATLAS_FAIL=null, DEFAULT_RING=null;
 
 function run(){
   const W=frame.contentWindow, D=frame.contentDocument;
@@ -1139,6 +1147,47 @@ function run(){
       return {onWheel,inTable,retro};})()`);
     return (r.onWheel===r.retro&&r.inTable===r.retro&&r.retro>0)
       ||`ретроградных ${r.retro}, на колесе ${r.onWheel}, в таблице ${r.inTable}`;
+  });
+
+  /* ---------- внешнее кольцо как слот ---------- */
+  group('Внешнее кольцо');
+  t('по умолчанию кольцо пустое, показан только натал',()=>{
+    /* Натальную карту смотрят первой и чаще всего, а прежнее умолчание клало
+       на неё транзитное кольцо раньше, чем её успевали прочесть. */
+    return DEFAULT_RING==='none'||`умолчание "${DEFAULT_RING}"`;
+  });
+  t('пустое кольцо убирает и ползунок, и список, а не гасит их',()=>{
+    const r=ev(`(()=>{const keep=RING_MODE;
+      RING_MODE='none'; renderRingSwitch(); renderTransits(CURRENT);
+      const bare={scrub:document.querySelector('.scrub').hidden,
+        list:document.getElementById('transitsCard').hidden,
+        outerGlyphs:document.querySelectorAll('#wheel .trp').length,
+        natalGlyphs:document.querySelectorAll('#wheel .pl').length,
+        drawn:!!document.querySelector('#wheel svg')};
+      RING_MODE=keep; renderRingSwitch(); renderTransits(CURRENT);
+      return bare;})()`);
+    return (r.scrub&&r.list&&r.outerGlyphs===0&&r.natalGlyphs===14&&r.drawn)
+      ||JSON.stringify(r);
+  });
+  t('список режимов начинается с пустого и держит все четыре',()=>{
+    const r=ev(`[...document.getElementById('ringSel').options].map(o=>o.value).join(',')`);
+    return r==='none,transit,progressed,directed'||`получилось ${r}`;
+  });
+  t('прогрессии без построенной карты не выбираются',()=>{
+    /* Они отсчитываются от момента рождения, которого ещё нет. Раньше кнопка
+       просто ругалась; выпадающий список обязан ещё и вернуться назад. */
+    const r=ev(`(()=>{const keep=RING_MODE, kb=BIRTH_MS;
+      BIRTH_MS=null;
+      const sel=document.getElementById('ringSel');
+      const before=sel.value;
+      const alertWas=window.alert; let said=false; window.alert=()=>{said=true;};
+      sel.value='progressed'; sel.dispatchEvent(new Event('change'));
+      const after=sel.value, mode=RING_MODE;
+      window.alert=alertWas; BIRTH_MS=kb; RING_MODE=keep;
+      sel.value=keep; renderRingSwitch();
+      return {said, before, after, mode};})()`);
+    return (r.said&&r.after===r.before&&r.mode!=='progressed')
+      ||JSON.stringify(r);
   });
 
   /* ---------- где тело стоит на самом деле ---------- */

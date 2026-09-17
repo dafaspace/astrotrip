@@ -155,8 +155,11 @@ svg{display:block;width:100%;height:auto;touch-action:manipulation}
 /* ---- time scrubber ---- */
 /* Reuses the language switch's segmented look, one row, full width, with 44px
    of height because these are the control the whole card turns on. */
-.lang.ringsw{display:flex;margin:0 0 10px;width:100%}
-.lang.ringsw button{flex:1;padding:0 14px;min-height:44px;font-size:13px;white-space:nowrap}
+/* One line, and the label names the thing being filled rather than the mode
+   being entered, so "none" reads as an answer and not as a switched-off app. */
+.ringrow{display:flex;align-items:center;gap:10px;margin:0 0 10px}
+.ringlab{margin:0;flex:none}
+.ringrow select{flex:1;min-height:44px}
 /* Wheel and controls share one screen, so the wheel gets whatever height is
    left rather than a fixed size. 46vh is measured, not guessed: on a 375x812
    phone it leaves room for the moment line, the rail, one row of controls and
@@ -169,6 +172,10 @@ svg{display:block;width:100%;height:auto;touch-action:manipulation}
    the thing the layout exists for; the glyphs and their degrees stay legible
    at this size, checked on screen and not only in the budget. */
 @media (max-width:430px){ #chartCard #wheel svg{max-width:94%} }
+/* Natal on its own has no slider under it, so the wheel is not competing for
+   the screen and takes its full width back. */
+#chartCard.bare #wheel svg{max-height:62vh}
+@media (max-width:430px){ #chartCard.bare #wheel svg{max-width:100%} }
 .scrub{border:1px solid var(--line);border-radius:12px;padding:10px 12px 12px;margin:10px 0 0;background:var(--paper3)}
 .momrow{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:4px}
 .mom{font-family:'Literata',Georgia,serif;font-size:17px;font-variant-numeric:tabular-nums}
@@ -438,8 +445,9 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
       <!-- The data the chart was cast from, on the chart. A printed wheel has
            always carried it, and without it a screenshot is unverifiable. -->
       <div class="chartmeta" id="chartMeta"></div>
-      <div class="lang ringsw" id="ringSw">
-        <button data-ring="transit"></button><button data-ring="progressed"></button><button data-ring="directed"></button>
+      <div class="ringrow">
+        <label class="ringlab" for="ringSel" data-i="ringLabel"></label>
+        <select id="ringSel"></select>
       </div>
       <div id="wheel"></div>
       <div class="scrub">
@@ -490,7 +498,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
       <div class="tiny" style="margin-top:8px" data-i="corpusnote"></div>
     </div>
 
-    <div class="card">
+    <div class="card" id="transitsCard">
       <h2 id="ringTitle"></h2>
       <p class="tiny" id="ringNote" style="margin:0 0 12px"></p>
       <!-- Jump rather than scrub: type a moment instead of dragging to it. -->
@@ -528,7 +536,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
 /* Bump together with CACHE in sw.js: the two are the same release, and the
    number on screen is how you tell from a phone which one you are looking at. */
-const APP_VERSION='2.4.0';
+const APP_VERSION='2.5.0';
 document.getElementById('ver').textContent=APP_VERSION;
 
 /* ---------- feature flags ----------
@@ -612,6 +620,11 @@ const STR = {
   posnote:{ru:'Движок: VSOP87D, ELP82B и чебышёвская подгонка Плутона, целиком офлайн. Узлы средние. Чёрная Луна - средняя или истинная, на выбор; Селена считается по определению Swiss Ephemeris. Плутон надёжен на 1550-2250, дальше экстраполируется. Хирона пока нет.',en:'Engine: VSOP87D, ELP82B and a Chebyshev fit for Pluto, fully offline. Nodes are mean. The Black Moon is mean or true, your choice; Selena follows the Swiss Ephemeris definition. Pluto is reliable over 1550-2250 and extrapolated beyond. Chiron is not here yet.'},
   reading:{ru:'Разбор карты',en:'Reading'},
   corpusnote:{ru:'Тексты - структурная заготовка: кратко + подробнее по касанию. Настоящий корпус интерпретаций подключается отдельно.',en:'Texts are a structural stub: short + detail on tap. The real interpretation corpus plugs in separately.'},
+  ringLabel:{ru:'Внешнее кольцо',en:'Outer ring'},
+  /* One word: the label beside it already says what is empty, and the longer
+     form was cut off mid-word in the closed select on a phone. */
+  ring_none:{ru:'Пусто',en:'Empty'},
+  note_none:{ru:'Натальная карта сама по себе.',en:'The natal chart on its own.'},
   ring_transit:{ru:'Транзиты',en:'Transits'},
   ring_progressed:{ru:'Прогрессии',en:'Progressions'},
   ring_directed:{ru:'Дирекции',en:'Directions'},
@@ -676,6 +689,7 @@ const STR = {
    standard terms of each tradition; the prose is mine. */
 const I18N={
   es:{
+    ringLabel:"Anillo exterior", ring_none:"Vacío", note_none:"La carta natal por sí sola.",
     m_mean:"media", m_true:"verdadera",
     atlasLoading:"Descargando el atlas de ciudades", atlasOnce:"{n} lugares, 4 MB. Solo una vez, luego sin conexión.", atlasFail:"El atlas no se descargó. Por ahora solo están las ciudades grandes.", atlasRetry:"Reintentar",
     tagline:"Cartas precisas sin conexión, y un tiempo que puedes mover.", birth:"Datos de nacimiento",
@@ -718,6 +732,7 @@ const I18N={
     foot:"Las posiciones están cotejadas con JPL Horizons en todas las cartas de la biblioteca: la diferencia es menor de cuatro segundos de arco, y menor de medio en el siglo XX. Atlas de ciudades de GeoNames, CC BY 4.0. Tras la primera carga nada de aquí sale a la red.",
   },
   fr:{
+    ringLabel:"Anneau extérieur", ring_none:"Vide", note_none:"Le thème natal seul.",
     m_mean:"moyenne", m_true:"vraie",
     atlasLoading:"Téléchargement de l’atlas des villes", atlasOnce:"{n} lieux, 4 Mo. Une seule fois, ensuite hors ligne.", atlasFail:"L’atlas ne s’est pas téléchargé. Seules les grandes villes sont disponibles pour l’instant.", atlasRetry:"Réessayer",
     tagline:"Des cartes précises hors ligne, et un temps que l’on peut déplacer.",
@@ -761,6 +776,7 @@ const I18N={
     foot:"Les positions sont vérifiées avec JPL Horizons sur toutes les cartes de la bibliothèque : l’écart est inférieur à quatre secondes d’arc, et à une demi-seconde pour le vingtième siècle. Atlas des villes : GeoNames, CC BY 4.0. Après le premier chargement, rien ici ne contacte le réseau.",
   },
   de:{
+    ringLabel:"Äußerer Ring", ring_none:"Leer", note_none:"Das Radix für sich allein.",
     m_mean:"mittlere", m_true:"wahre",
     atlasLoading:"Städte-Atlas wird geladen", atlasOnce:"{n} Orte, 4 MB. Nur einmal, danach offline.", atlasFail:"Der Atlas wurde nicht geladen. Vorerst gibt es nur die großen Städte.", atlasRetry:"Erneut versuchen",
     tagline:"Genaue Charts offline, und eine Zeit, die sich bewegen lässt.", birth:"Geburtsdaten",
@@ -801,6 +817,7 @@ const I18N={
     foot:"Die Positionen sind bei jedem Chart der Bibliothek gegen JPL Horizons geprüft: die Abweichung bleibt unter vier Bogensekunden, im zwanzigsten Jahrhundert unter einer halben. Städte-Atlas von GeoNames, CC BY 4.0. Nach dem ersten Laden geht von hier nichts mehr ins Netz.",
   },
   it:{
+    ringLabel:"Anello esterno", ring_none:"Vuoto", note_none:"La carta natale da sola.",
     m_mean:"media", m_true:"vera",
     atlasLoading:"Scaricamento dell’atlante delle città", atlasOnce:"{n} luoghi, 4 MB. Una volta sola, poi offline.", atlasFail:"L’atlante non si è scaricato. Per ora ci sono solo le città grandi.", atlasRetry:"Riprova",
     tagline:"Carte precise offline, e un tempo che si può muovere.", birth:"Dati di nascita", date:"Data",
@@ -841,6 +858,7 @@ const I18N={
     foot:"Le posizioni sono confrontate con JPL Horizons su ogni carta della biblioteca: lo scarto resta sotto i quattro secondi d’arco, e sotto il mezzo secondo per il Novecento. Atlante delle città da GeoNames, CC BY 4.0. Dopo il primo caricamento nulla di qui va in rete.",
   },
   uk:{
+    ringLabel:"Зовнішнє кільце", ring_none:"Порожньо", note_none:"Натальна карта сама по собі.",
     m_mean:"середній", m_true:"істинний",
     atlasLoading:"Завантажується атлас міст", atlasOnce:"{n} місць, 4 МБ. Лише один раз, далі офлайн.", atlasFail:"Атлас не завантажився. Поки доступні лише великі міста.", atlasRetry:"Повторити",
     tagline:"Точні карти офлайн, і час, який можна рухати.", birth:"Дані народження", date:"Дата",
@@ -881,6 +899,7 @@ const I18N={
     foot:"Положення звірені з JPL Horizons на всіх картах бібліотеки: розбіжність менша за чотири секунди дуги, для XX століття менша за половину. Атлас міст - GeoNames, CC BY 4.0. Після першого завантаження ніщо звідси не виходить у мережу.",
   },
   ka:{
+    ringLabel:"გარე რგოლი", ring_none:"ცარიელი", note_none:"ნატალური რუკა თავისთავად.",
     m_mean:"საშუალო", m_true:"ჭეშმარიტი",
     atlasLoading:"ქალაქების ატლასი იტვირთება", atlasOnce:"{n} ადგილი, 4 მბ. მხოლოდ ერთხელ, შემდეგ ოფლაინში.", atlasFail:"ატლასი ვერ ჩამოიტვირთა. ჯერჯერობით მხოლოდ დიდი ქალაქებია.", atlasRetry:"ხელახლა",
     tagline:"ზუსტი რუკები ოფლაინში, და დრო, რომელიც შეიძლება გადაანაცვლო.", birth:"დაბადების მონაცემები",
@@ -4101,9 +4120,20 @@ function learnedVal(o,k){const f=featStat(o,k);return (0+f.vSum)/(2+f.vN);}
    The Moon is a transiting body only in the last two: at thirteen degrees a
    day it swamps a transit list, but the progressed Moon at a degree a month
    is the single most used point in the technique. */
-const RING_MODES=['transit','progressed','directed'];
+/* The outer ring is a slot rather than a mode: it is either empty or filled
+   with transits, progressions, directions - and, when it arrives, another
+   person's chart. Solar Fire splits this into two questions, which charts and
+   how many rings; on a phone one question is better, and it is the question
+   people already ask themselves ("what am I comparing this against").
+
+   Empty is the default. A natal chart on its own is what you look at first and
+   most, and the old default put a transit ring over it before you had read it.
+   A list rather than a row of buttons because four labels in eight languages
+   do not fit across 375 px, and because the list has to hold synastry later
+   without the control changing shape. */
+const RING_MODES=['none','transit','progressed','directed'];
 let RING_MODE=RING_MODES.includes(localStorage.getItem('astrarium_ring'))
-  ? localStorage.getItem('astrarium_ring') : 'transit';
+  ? localStorage.getItem('astrarium_ring') : 'none';
 const TROPICAL_YEAR=365.242190;
 /* How far ahead to look when deciding applying or separating. A progressed or
    directed chart moves about a degree a year, so an hour would move it by
@@ -4136,6 +4166,7 @@ function anglesFromMC(mc,lat,ecl){
 }
 /* Positions for the outer ring, plus its own angles. */
 function outerChart(ch,ms){
+  if(RING_MODE==='none') return null;
   if(RING_MODE==='transit') return transitChartAt(ch,ms);
   const pr=transitChartAt(ch,progressedMs(ch,ms));
   const arc=rev(pr.pos.Sun.lon-ch.pos.Sun.lon);
@@ -4355,12 +4386,18 @@ function renderMoment(){
   document.getElementById('momLoc').textContent=sub;
 }
 function renderRingSwitch(){
-  document.querySelectorAll('#ringSw button[data-ring]').forEach(b=>{
-    b.textContent=t('ring_'+b.dataset.ring);
-    b.classList.toggle('on',b.dataset.ring===RING_MODE);
-  });
+  const sel=document.getElementById('ringSel');
+  sel.innerHTML=RING_MODES.map(m=>
+    `<option value="${m}"${m===RING_MODE?' selected':''}>${t('ring_'+m)}</option>`).join('');
   document.getElementById('ringTitle').textContent=t('ring_'+RING_MODE);
   document.getElementById('ringNote').textContent=t('note_'+RING_MODE);
+  /* With an empty ring there is no moment to scrub and nothing to list, so
+     both disappear rather than sitting there inert. The wheel takes the room
+     they leave. */
+  const bare=RING_MODE==='none';
+  document.getElementById('chartCard').classList.toggle('bare',bare);
+  document.querySelector('.scrub').hidden=bare;
+  document.getElementById('transitsCard').hidden=bare;
 }
 function fillScrubUnit(){
   const sel=document.getElementById('scrubUnit');
@@ -4391,6 +4428,7 @@ function renderTransits(ch){
   const o=learn();
   const tr=outerChart(ch,TR_MS);
   TR_CHART=tr;
+  if(!tr){ TR_HITS=[]; drawWheel(ch,null); renderLearned(); return; }
   renderMoment();
   /* Outer-planet-to-outer-planet hits are dropped for transits because they
      are generational: everyone born that decade has them. In a progressed or
@@ -4714,11 +4752,14 @@ document.getElementById('reset').addEventListener('click',()=>{localStorage.remo
     SCRUB_UNIT=e.target.value; localStorage.setItem('astrarium_unit',SCRUB_UNIT);
     TR_ANCHOR=TR_MS; document.getElementById('scrub').value=0;
   });
-  document.querySelectorAll('#ringSw button[data-ring]').forEach(b=>b.addEventListener('click',()=>{
-    if(b.dataset.ring!=='transit'&&BIRTH_MS==null){ alert(t('needbirth')); return; }
-    RING_MODE=b.dataset.ring; localStorage.setItem('astrarium_ring',RING_MODE);
+  document.getElementById('ringSel').addEventListener('change',e=>{
+    const v=e.target.value;
+    if((v==='progressed'||v==='directed')&&BIRTH_MS==null){
+      alert(t('needbirth')); e.target.value=RING_MODE; return;
+    }
+    RING_MODE=v; localStorage.setItem('astrarium_ring',RING_MODE);
     setPlaying(false); renderRingSwitch(); if(CURRENT) renderTransits(CURRENT);
-  }));
+  });
   document.getElementById('momNow').addEventListener('click',()=>{setPlaying(false);setMoment(Date.now(),{recenter:true});});
   document.getElementById('momBirth').addEventListener('click',()=>{
     if(BIRTH_MS==null) return; setPlaying(false); setMoment(BIRTH_MS,{recenter:true});

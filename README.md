@@ -34,10 +34,24 @@ A body's house comes from where the body actually is, by Placidus semi-arc on it
 declination, not from its ecliptic projection. That matters most for Pluto, which
 reaches 17.5° of latitude and lands in a different house on about a fifth of charts.
 
-### Progressions and directions
+### The outer ring is a slot
 
-The inner wheel is always natal. The outer ring is one of three things, and the
-same slider drives all three, because all three are a function of one moment.
+The inner wheel is always natal. The outer ring is either empty or filled, and
+filling it is one question rather than two. Solar Fire asks which charts and
+then how many rings; on a phone one question is better, and it is the question
+already in the reader's head - what am I comparing this against.
+
+**Empty is the default.** A natal chart on its own is what gets looked at first
+and most, and the previous default laid a transit ring over it before it had
+been read. With the ring empty the slider and the hit list disappear rather
+than sitting there inert, and the wheel takes the room they leave.
+
+A list rather than a row of buttons: four labels in eight languages do not fit
+across 375 px, and the list has to take synastry later without the control
+changing shape.
+
+The three filled options are a function of one moment, so one slider drives
+them all.
 
 **Transits** - where the sky actually is.
 
@@ -255,7 +269,7 @@ mattered: before it did, a deliberately broken app passed every check. The runne
 for the city atlas to finish loading, or the atlas tests would silently check the inline
 seed instead.
 
-**159 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
+**163 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
 library, robustness over 1550-2250 and at polar latitudes, house systems (angles land
 on the cusps, cusps run round the circle without crossing, quadrant systems coincide at
 the equator, zero-latitude bodies get the same house from both methods), library data
