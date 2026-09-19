@@ -36,8 +36,9 @@ reaches 17.5° of latitude and lands in a different house on about a fifth of ch
 
 ### The outer ring is a slot
 
-The inner wheel is always natal. The outer ring is either empty or filled, and
-filling it is one question rather than two. Solar Fire asks which charts and
+The inner wheel is always natal. The outer ring is either empty or filled -
+with transits, progressions, directions or another person - and filling it is
+one question rather than two. Solar Fire asks which charts and
 then how many rings; on a phone one question is better, and it is the question
 already in the reader's head - what am I comparing this against.
 
@@ -72,6 +73,34 @@ The Moon is a mover in the last two and not in transits: at thirteen degrees a
 day it swamps a transit list, while the progressed Moon at a degree a month is
 the most used point in the technique. Orbs are capped at one degree for both, or
 an aspect would stay "active" for six years and the list would never change.
+
+### Synastry
+
+The fifth entry in the same list, which is the point of having made the outer
+ring a slot: another person goes in it exactly where transits or progressions
+would, with no new control and no separate mode.
+
+The inner wheel and the houses stay the first person's, because that is what a
+bi-wheel means, and the aspects run from the outer chart's planets to the inner
+chart's bodies - including its Ascendant, Midheaven, node and Lilith, so "his
+Sun on her Ascendant" is found rather than missed.
+
+The partner is chosen by searching, not from a list: the library holds a
+thousand charts and a select with a thousand options is not a control. The
+search box behaves exactly like the city field, which is the pattern the user
+has already used once by the time they reach this.
+
+They are stored as a reference - which list, which id - rather than as a copy,
+so a chart corrected in the library is not silently frozen here, and a partner
+whose chart has since been deleted degrades to an empty ring rather than
+breaking the wheel.
+
+Two things are deliberately absent. **Applying and separating** do not appear,
+because neither chart is going anywhere and the label would be meaningless
+rather than approximate. **The slider** goes away with them. And the orb is the
+one you configured rather than the one-degree cap progressions and directions
+get: that cap exists because those move about a degree a year, and synastry
+does not move at all.
 
 ### Eight languages
 
@@ -304,7 +333,7 @@ mattered: before it did, a deliberately broken app passed every check. The runne
 for the city atlas to finish loading, or the atlas tests would silently check the inline
 seed instead.
 
-**174 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
+**183 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
 library, robustness over 1550-2250 and at polar latitudes, house systems (angles land
 on the cusps, cusps run round the circle without crossing, quadrant systems coincide at
 the equator, zero-latitude bodies get the same house from both methods), library data

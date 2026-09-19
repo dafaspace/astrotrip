@@ -484,6 +484,15 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
         <label class="ringlab" for="ringSel" data-i="ringLabel"></label>
         <select id="ringSel"></select>
       </div>
+      <!-- Who the outer ring belongs to. A search box rather than a list: the
+           library holds a thousand charts and a select with a thousand options
+           is not a control. Same behaviour as the city field, which is already
+           the pattern people have used once by the time they get here. -->
+      <div class="citywrap" id="synaPick" hidden>
+        <input id="synaFind" type="text" autocomplete="off">
+        <div id="synaList" class="citylist"></div>
+        <div class="tiny" id="synaWho"></div>
+      </div>
       <div id="wheel"></div>
       <div class="scrub">
         <div class="momrow">
@@ -583,7 +592,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
 /* Bump together with CACHE in sw.js: the two are the same release, and the
    number on screen is how you tell from a phone which one you are looking at. */
-const APP_VERSION='2.6.0';
+const APP_VERSION='2.7.0';
 document.getElementById('ver').textContent=APP_VERSION;
 
 /* ---------- feature flags ----------
@@ -672,6 +681,10 @@ const STR = {
      form was cut off mid-word in the closed select on a phone. */
   ring_none:{ru:'Пусто',en:'Empty'},
   note_none:{ru:'Натальная карта сама по себе.',en:'The natal chart on its own.'},
+  ring_synastry:{ru:'Синастрия',en:'Synastry'},
+  note_synastry:{ru:'Карта другого человека поверх вашей. Внутреннее колесо и дома остаются вашими, аспекты считаются от его планет к вашим.',en:'Another person\u2019s chart over yours. The inner wheel and the houses stay yours; the aspects run from their planets to yours.'},
+  synaFind:{ru:'Кого сравниваем? Имя, город или год',en:'Compare with whom? Name, city or year'},
+  synaNone:{ru:'Никто не выбран. Найдите карту выше.',en:'Nobody chosen yet. Find a chart above.'},
   ring_transit:{ru:'Транзиты',en:'Transits'},
   ring_progressed:{ru:'Прогрессии',en:'Progressions'},
   ring_directed:{ru:'Дирекции',en:'Directions'},
@@ -740,6 +753,7 @@ const STR = {
    standard terms of each tradition; the prose is mine. */
 const I18N={
   es:{
+    ring_synastry:"Sinastría", note_synastry:"La carta de otra persona sobre la tuya. La rueda interior y las casas siguen siendo tuyas.", synaFind:"¿Con quién comparamos? Nombre, ciudad o año", synaNone:"Nadie elegido todavía.",
     orbNote:"Orbes en grados. Los menores están desactivados por defecto: con todos activados una carta lleva cerca de la mitad más de aspectos (11,6 frente a 16,4 en 60 cartas de la biblioteca). Se aplica a la carta natal y al anillo exterior.",
     aspects:"Aspectos y orbes", orbReset:"Restablecer", orbOn:"encendido",
     ringLabel:"Anillo exterior", ring_none:"Vacío", note_none:"La carta natal por sí sola.",
@@ -785,6 +799,7 @@ const I18N={
     foot:"Las posiciones están cotejadas con JPL Horizons en todas las cartas de la biblioteca: la diferencia es menor de cuatro segundos de arco, y menor de medio en el siglo XX. Atlas de ciudades de GeoNames, CC BY 4.0. Tras la primera carga nada de aquí sale a la red.",
   },
   fr:{
+    ring_synastry:"Synastrie", note_synastry:"Le thème d’une autre personne sur le vôtre. La roue intérieure et les maisons restent les vôtres.", synaFind:"Comparer avec qui ? Nom, ville ou année", synaNone:"Personne de choisi pour l’instant.",
     orbNote:"Orbes en degrés. Les mineurs sont désactivés par défaut : tous activés, un thème porte environ moitié plus d’aspects (11,6 contre 16,4 sur 60 thèmes de la bibliothèque). Vaut pour le thème natal comme pour l’anneau extérieur.",
     aspects:"Aspects et orbes", orbReset:"Réinitialiser", orbOn:"activé",
     ringLabel:"Anneau extérieur", ring_none:"Vide", note_none:"Le thème natal seul.",
@@ -831,6 +846,7 @@ const I18N={
     foot:"Les positions sont vérifiées avec JPL Horizons sur toutes les cartes de la bibliothèque : l’écart est inférieur à quatre secondes d’arc, et à une demi-seconde pour le vingtième siècle. Atlas des villes : GeoNames, CC BY 4.0. Après le premier chargement, rien ici ne contacte le réseau.",
   },
   de:{
+    ring_synastry:"Synastrie", note_synastry:"Das Chart einer anderen Person über Ihrem. Das innere Rad und die Häuser bleiben Ihre.", synaFind:"Mit wem vergleichen? Name, Ort oder Jahr", synaNone:"Noch niemand gewählt.",
     orbNote:"Orben in Grad. Die kleinen Aspekte sind standardmäßig aus: alle zusammen bringen etwa die Hälfte mehr Aspekte (11,6 gegen 16,4, gemessen an 60 Charts der Bibliothek). Gilt für das Radix und für den äußeren Ring.",
     aspects:"Aspekte und Orben", orbReset:"Zurücksetzen", orbOn:"an",
     ringLabel:"Äußerer Ring", ring_none:"Leer", note_none:"Das Radix für sich allein.",
@@ -874,6 +890,7 @@ const I18N={
     foot:"Die Positionen sind bei jedem Chart der Bibliothek gegen JPL Horizons geprüft: die Abweichung bleibt unter vier Bogensekunden, im zwanzigsten Jahrhundert unter einer halben. Städte-Atlas von GeoNames, CC BY 4.0. Nach dem ersten Laden geht von hier nichts mehr ins Netz.",
   },
   it:{
+    ring_synastry:"Sinastria", note_synastry:"La carta di un’altra persona sopra la tua. La ruota interna e le case restano le tue.", synaFind:"Con chi confrontiamo? Nome, città o anno", synaNone:"Ancora nessuno scelto.",
     orbNote:"Orbi in gradi. I minori sono disattivati per impostazione predefinita: con tutti attivi una carta porta circa metà aspetti in più (11,6 contro 16,4 su 60 carte della biblioteca). Vale per la carta natale e per l’anello esterno.",
     aspects:"Aspetti e orbi", orbReset:"Ripristina", orbOn:"attivo",
     ringLabel:"Anello esterno", ring_none:"Vuoto", note_none:"La carta natale da sola.",
@@ -917,6 +934,7 @@ const I18N={
     foot:"Le posizioni sono confrontate con JPL Horizons su ogni carta della biblioteca: lo scarto resta sotto i quattro secondi d’arco, e sotto il mezzo secondo per il Novecento. Atlante delle città da GeoNames, CC BY 4.0. Dopo il primo caricamento nulla di qui va in rete.",
   },
   uk:{
+    ring_synastry:"Синастрія", note_synastry:"Карта іншої людини поверх вашої. Внутрішнє колесо й доми лишаються вашими.", synaFind:"Кого порівнюємо? Ім’я, місто або рік", synaNone:"Нікого не вибрано.",
     orbNote:"Орбіс у градусах. Мінорні вимкнені типово: з усіма увімкненими аспектів у карті стає приблизно в півтора раза більше - на 60 картах бібліотеки 11.6 проти 16.4. Діє і на натал, і на зовнішнє кільце.",
     aspects:"Аспекти й орбіси", orbReset:"Повернути типові", orbOn:"увімк",
     ringLabel:"Зовнішнє кільце", ring_none:"Порожньо", note_none:"Натальна карта сама по собі.",
@@ -960,6 +978,7 @@ const I18N={
     foot:"Положення звірені з JPL Horizons на всіх картах бібліотеки: розбіжність менша за чотири секунди дуги, для XX століття менша за половину. Атлас міст - GeoNames, CC BY 4.0. Після першого завантаження ніщо звідси не виходить у мережу.",
   },
   ka:{
+    ring_synastry:"სინასტრია", note_synastry:"სხვა ადამიანის რუკა თქვენსაზე. შიდა ბორბალი და სახლები თქვენი რჩება.", synaFind:"ვისთან შევადაროთ? სახელი, ქალაქი ან წელი", synaNone:"ჯერ არავინ არის არჩეული.",
     orbNote:"ორბისი გრადუსებში. მინორული ასპექტები ნაგულისხმევად გამორთულია: ყველას ჩართვისას რუკაში ასპექტები დაახლოებით ნახევრად მეტი ხდება - ბიბლიოთეკის 60 რუკაზე 11.6 და 16.4. მოქმედებს ნატალურ რუკაზეც და გარე რგოლზეც.",
     aspects:"ასპექტები და ორბისები", orbReset:"ნაგულისხმევის დაბრუნება", orbOn:"ჩართ",
     ringLabel:"გარე რგოლი", ring_none:"ცარიელი", note_none:"ნატალური რუკა თავისთავად.",
@@ -4248,7 +4267,7 @@ function learnedVal(o,k){const f=featStat(o,k);return (0+f.vSum)/(2+f.vN);}
    A list rather than a row of buttons because four labels in eight languages
    do not fit across 375 px, and because the list has to hold synastry later
    without the control changing shape. */
-const RING_MODES=['none','transit','progressed','directed'];
+const RING_MODES=['none','transit','progressed','directed','synastry'];
 let RING_MODE=RING_MODES.includes(localStorage.getItem('astrarium_ring'))
   ? localStorage.getItem('astrarium_ring') : 'none';
 const TROPICAL_YEAR=365.242190;
@@ -4284,6 +4303,7 @@ function anglesFromMC(mc,lat,ecl){
 /* Positions for the outer ring, plus its own angles. */
 function outerChart(ch,ms){
   if(RING_MODE==='none') return null;
+  if(RING_MODE==='synastry') return partnerChart(ch);
   if(RING_MODE==='transit') return transitChartAt(ch,ms);
   const pr=transitChartAt(ch,progressedMs(ch,ms));
   const arc=rev(pr.pos.Sun.lon-ch.pos.Sun.lon);
@@ -4298,8 +4318,38 @@ function outerChart(ch,ms){
 const RING_MOVERS={
   transit:['Jupiter','Saturn','Uranus','Neptune','Pluto','Mars','Sun','Venus','Mercury'],
   progressed:['Moon','Sun','Mercury','Venus','Mars','Jupiter','Saturn','Uranus','Neptune','Pluto'],
-  directed:['Moon','Sun','Mercury','Venus','Mars','Jupiter','Saturn','Uranus','Neptune','Pluto']
+  directed:['Moon','Sun','Mercury','Venus','Mars','Jupiter','Saturn','Uranus','Neptune','Pluto'],
+  /* All ten, Moon included: in synastry the Moon is half the reading, and
+     nothing here is moving fast enough to swamp a list. */
+  synastry:['Moon','Sun','Mercury','Venus','Mars','Jupiter','Saturn','Uranus','Neptune','Pluto']
 };
+
+/* ---------- the second person ----------
+   Held as a reference rather than a copy - which list it came from and its id -
+   so a chart edited in the library is not silently frozen here, and so the
+   store stays small. Resolved to an entry only when it is needed. */
+const PARTNER_KEY='astrarium_partner';
+let PARTNER=(function(){
+  try{ const v=JSON.parse(localStorage.getItem(PARTNER_KEY)||'null');
+    return v&&v.id?v:null; }catch(e){ return null; }
+})();
+function partnerEntry(){
+  if(!PARTNER) return null;
+  const list=PARTNER.src==='own'?savedCharts():CHART_LIBRARY;
+  const e=list.find(x=>x.id===PARTNER.id);
+  return e?{...e,_own:PARTNER.src==='own'}:null;
+}
+function partnerName(e){ return e?(e._own?e.name:LX(e.name)):''; }
+function partnerChart(ch){
+  const e=partnerEntry(); if(!e) return null;
+  /* Cast at the partner's own place and time. The houses drawn on the wheel
+     stay the inner person's - a bi-wheel reads the outer chart's bodies
+     against the inner chart's frame - but the partner's own angles are still
+     computed so that their Ascendant and MC can receive aspects. */
+  const tz=e._own?e.tz:libTz(e);
+  const hh=e.t==null?12:e.t;
+  return computeChart(e.y,e.mo,e.d,hh,tz,e.lat,e.lon,false);
+}
 function aspectOrbs(ch,tp){
   const hits=[];
   const receivers=BODIES.concat(['ASC','MC','NNode','Lilith']);
@@ -4309,10 +4359,13 @@ function aspectOrbs(ch,tp){
       const nlon=np==='ASC'?ch.asc:np==='MC'?ch.mc:(ch.pos[np]?ch.pos[np].lon:null);
       if(nlon==null)return;
       let diff=Math.abs(rev(tp[T].lon-nlon));if(diff>180)diff=360-diff;
-      /* Progressed and directed points move about a degree a year, so a
-         six-degree orb would keep an aspect "active" for six years and the
-         list would never change. One degree is the working convention. */
-      const cap=RING_MODE==='transit'?SPEED_ORB[T]+2:1;
+      /* Three different jobs, three different caps. A transit is capped by how
+         fast the body moves. A progression or a direction moves about a degree
+         a year, so a six-degree orb would keep an aspect "active" for six years
+         and the list would never change. Synastry is not moving at all: neither
+         chart advances, so nothing needs narrowing and the orb you configured
+         is the orb you get. */
+      const cap=RING_MODE==='transit'?SPEED_ORB[T]+2:(RING_MODE==='synastry'?99:1);
       for(const asp of ASPECTS){const orb=Math.abs(diff-asp.angle),maxo=Math.min(asp.orb,cap);if(orb<=maxo){hits.push({tp:T,np,asp,orb,maxo});break;}}
     });
   });
@@ -4502,6 +4555,46 @@ function renderMoment(){
   }
   document.getElementById('momLoc').textContent=sub;
 }
+/* Searches saved charts and the built-in library together, the saved ones
+   first: the person you are comparing yourself against is far more often
+   someone you entered than a composer. */
+function searchPeople(q){
+  q=libFold(q.trim()); if(!q) return [];
+  const own=savedCharts().map(e=>({e,own:true,n:e.name,c:e.city}));
+  const lib=CHART_LIBRARY.map(e=>({e,own:false,n:LX(e.name),c:LX(e.city)}));
+  return own.concat(lib)
+    .filter(x=>libFold(x.n).includes(q)||libFold(x.c||'').includes(q)||String(x.e.y).includes(q))
+    .slice(0,8);
+}
+function renderPeopleList(items){
+  const box=document.getElementById('synaList');
+  if(!items.length){ box.style.display='none'; box.innerHTML=''; return; }
+  box.innerHTML=items.map(x=>
+    `<div><span>${x.n}</span><span class="cc">${x.e.y}</span></div>`).join('');
+  box.style.display='block';
+  [...box.children].forEach((el,i)=>el.addEventListener('mousedown',ev=>{
+    ev.preventDefault(); choosePartner(items[i]);
+  }));
+}
+function choosePartner(x){
+  PARTNER={src:x.own?'own':'lib', id:x.e.id};
+  try{ localStorage.setItem(PARTNER_KEY,JSON.stringify(PARTNER)); }catch(e){}
+  document.getElementById('synaFind').value='';
+  document.getElementById('synaList').style.display='none';
+  renderRingSwitch();
+  if(CURRENT) renderTransits(CURRENT);
+}
+function renderPartnerLine(){
+  const el=document.getElementById('synaWho'); if(!el) return;
+  const e=partnerEntry();
+  if(!e){ el.textContent=t('synaNone'); return; }
+  const tz=e._own?e.tz:libTz(e);
+  const hh=e.t==null?12:e.t;
+  el.textContent=`${partnerName(e)} · ${String(e.d).padStart(2,'0')}.${String(e.mo).padStart(2,'0')}.${e.y}`
+    +` ${pad2(Math.floor(hh))}:${pad2(Math.round((hh%1)*60))}`
+    +(e.t==null?` (${t('noTime')})`:'')
+    +` · ${e._own?(e.city||''):LX(e.city)}`;
+}
 function renderRingSwitch(){
   const sel=document.getElementById('ringSel');
   sel.innerHTML=RING_MODES.map(m=>
@@ -4511,10 +4604,18 @@ function renderRingSwitch(){
   /* With an empty ring there is no moment to scrub and nothing to list, so
      both disappear rather than sitting there inert. The wheel takes the room
      they leave. */
+  /* The slider drives a moment, and synastry has no moment to drive: both
+     charts are fixed. So it goes away there too, and only the aspect list
+     stays. */
+  const syn=RING_MODE==='synastry';
   const bare=RING_MODE==='none';
-  document.getElementById('chartCard').classList.toggle('bare',bare);
-  document.querySelector('.scrub').hidden=bare;
+  document.getElementById('chartCard').classList.toggle('bare',bare||syn);
+  document.querySelector('.scrub').hidden=bare||syn;
   document.getElementById('transitsCard').hidden=bare;
+  document.getElementById('synaPick').hidden=!syn;
+  document.getElementById('synaFind').placeholder=t('synaFind');
+  if(syn) renderPartnerLine();
+  if(META_ARGS) renderChartMeta(...META_ARGS);
 }
 function fillScrubUnit(){
   const sel=document.getElementById('scrubUnit');
@@ -4546,14 +4647,18 @@ function renderTransits(ch){
   const tr=outerChart(ch,TR_MS);
   TR_CHART=tr;
   if(!tr){ TR_HITS=[]; drawWheel(ch,null); renderLearned(); return; }
-  renderMoment();
+  const syn=RING_MODE==='synastry';
+  if(!syn) renderMoment();
   /* Outer-planet-to-outer-planet hits are dropped for transits because they
      are generational: everyone born that decade has them. In a progressed or
      directed chart they are personal again, since the arc is this person's. */
   let hits=aspectOrbs(ch,tr.pos)
     .filter(h=>RING_MODE!=='transit'
       ||!(['Uranus','Neptune','Pluto'].includes(h.tp)&&['Uranus','Neptune','Pluto'].includes(h.np)));
-  markApplying(ch,tr.pos,outerChart(ch,TR_MS+PROBE_MS[RING_MODE]).pos,hits);
+  /* Applying and separating mean nothing in synastry: neither chart is going
+     anywhere. Left unset so the label simply does not appear, rather than
+     printed as "separating" because two identical orbs compared equal. */
+  if(!syn) markApplying(ch,tr.pos,outerChart(ch,TR_MS+PROBE_MS[RING_MODE]).pos,hits);
   TR_HITS=hits;
   drawWheel(ch,tr);
   /* Ranked by receiver rank times exactness. With the interpretation flag on,
@@ -4812,7 +4917,9 @@ function weekdayName(y,mo,d){
     return new Intl.DateTimeFormat(LANG,{weekday:'short',timeZone:'UTC'}).format(dt);
   }catch(e){ return ''; }
 }
+let META_ARGS=null;
 function renderChartMeta(ch,y,mo,da,hh,mi,tz){
+  META_ARGS=[ch,y,mo,da,hh,mi,tz];
   const el=document.getElementById('chartMeta'); if(!el) return;
   const name=(document.getElementById('chartName').value||'').trim();
   const city=(document.getElementById('city').value||'').trim();
@@ -4839,7 +4946,14 @@ function renderChartMeta(ch,y,mo,da,hh,mi,tz){
   /* Name and place share a line. On their own they cost two lines of the
      phone screen the wheel and the slider are budgeted against, and the card
      then stopped fitting - which is the whole point of that budget. */
-  const who=[name?`<b>${name}</b>`:'', city].filter(Boolean).join(' · ');
+  let who=[name?`<b>${name}</b>`:'', city].filter(Boolean).join(' · ');
+  /* In synastry the chart is about two people, so the header has to say both.
+     A wheel that names only one of them is the wrong wheel to anyone reading
+     it later. */
+  if(RING_MODE==='synastry'){
+    const pe=partnerEntry();
+    if(pe) who=(who||t('natal'))+' &amp; <b>'+partnerName(pe)+'</b>';
+  }
   el.innerHTML=[who, line1, line2]
     .filter(Boolean).map(x=>`<div>${x}</div>`).join('');
 }
@@ -4901,6 +5015,11 @@ document.getElementById('reset').addEventListener('click',()=>{localStorage.remo
   document.getElementById('scrubUnit').addEventListener('change',e=>{
     SCRUB_UNIT=e.target.value; localStorage.setItem('astrarium_unit',SCRUB_UNIT);
     TR_ANCHOR=TR_MS; document.getElementById('scrub').value=0;
+  });
+  document.getElementById('synaFind').addEventListener('input',e=>renderPeopleList(searchPeople(e.target.value)));
+  document.getElementById('synaFind').addEventListener('focus',e=>renderPeopleList(searchPeople(e.target.value)));
+  document.getElementById('synaFind').addEventListener('blur',()=>{
+    setTimeout(()=>{ document.getElementById('synaList').style.display='none'; },150);
   });
   document.getElementById('ringSel').addEventListener('change',e=>{
     const v=e.target.value;

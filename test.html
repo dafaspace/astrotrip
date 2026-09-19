@@ -50,6 +50,11 @@ const frame=document.getElementById('app');
     const ks=await caches.keys();
     await Promise.all(ks.map(k=>caches.delete(k)));
   }catch(e){}
+  /* The app persists its preferences, and this browser carries whatever was
+     last switched on by hand. Cleared before the iframe loads so the suite
+     tests a fresh install: the ring mode, the orbs and the chosen partner have
+     each already made a run behave differently from a real first launch. */
+  try{ ['astrarium_ring','astrarium_orbs','astrarium_partner'].forEach(k=>localStorage.removeItem(k)); }catch(e){}
   /* Read once here, because the runner below is synchronous. */
   try{ SW_SRC=await (await fetch('./sw.js?notacache='+Date.now())).text(); }catch(e){}
   /* The city atlas is fetched after first paint, so the run waits for it -
@@ -1296,9 +1301,9 @@ function run(){
     return (r.scrub&&r.list&&r.outerGlyphs===0&&r.natalGlyphs===14&&r.drawn)
       ||JSON.stringify(r);
   });
-  t('список режимов начинается с пустого и держит все четыре',()=>{
+  t('список режимов начинается с пустого и держит все пять',()=>{
     const r=ev(`[...document.getElementById('ringSel').options].map(o=>o.value).join(',')`);
-    return r==='none,transit,progressed,directed'||`получилось ${r}`;
+    return r==='none,transit,progressed,directed,synastry'||`получилось ${r}`;
   });
   t('прогрессии без построенной карты не выбираются',()=>{
     /* Они отсчитываются от момента рождения, которого ещё нет. Раньше кнопка
@@ -1315,6 +1320,99 @@ function run(){
       return {said, before, after, mode};})()`);
     return (r.said&&r.after===r.before&&r.mode!=='progressed')
       ||JSON.stringify(r);
+  });
+
+  /* ---------- синастрия ---------- */
+  group('Синастрия');
+  const SYN=`(()=>{const keepR=RING_MODE, keepP=PARTNER?JSON.parse(JSON.stringify(PARTNER)):null;
+      const e=CHART_LIBRARY.find(x=>x.id==='wamozart')||CHART_LIBRARY[0];
+      PARTNER={src:'lib',id:e.id}; RING_MODE='synastry';
+      renderRingSwitch(); renderTransits(CURRENT);
+      const out={
+        partner:partnerName(partnerEntry()),
+        outerGlyphs:document.querySelectorAll('#wheel .trp').length,
+        hits:TR_HITS.length,
+        applying:TR_HITS.filter(h=>h.applying!=null).length,
+        maxOrb:Math.max(0,...TR_HITS.map(h=>h.maxo)),
+        scrubHidden:document.querySelector('.scrub').hidden,
+        pickerShown:!document.getElementById('synaPick').hidden,
+        meta:document.getElementById('chartMeta').innerText,
+        movers:TR_HITS.map(h=>h.tp), receivers:TR_HITS.map(h=>h.np)
+      };
+      PARTNER=keepP; RING_MODE=keepR; renderRingSwitch(); renderTransits(CURRENT);
+      return out;})()`;
+  t('синастрия заполняет внешнее кольцо картой другого человека',()=>{
+    const r=ev(SYN);
+    /* Wrapped: an && chain returns its last operand, so this reported the
+       partner's name as a failure message while everything actually worked. */
+    return !!(r.outerGlyphs===10&&r.hits>0&&r.partner)
+      ||`глифов ${r.outerGlyphs}, попаданий ${r.hits}, партнёр "${r.partner}"`;
+  });
+  t('в синастрии нет сходящихся и расходящихся аспектов',()=>{
+    /* Ни одна из двух карт никуда не движется. Метка "расходится" здесь была
+       бы не приблизительной, а бессмысленной. */
+    const r=ev(SYN);
+    return r.applying===0||`${r.applying} попаданий помечены сходимостью`;
+  });
+  t('орбис в синастрии берётся из настройки, а не сжимается до градуса',()=>{
+    /* Сжатие до градуса существует для прогрессий и дирекций, которые идут по
+       градусу в год. В синастрии оно бы выкинуло почти всё. */
+    const r=ev(SYN);
+    return r.maxOrb>1.5||`самый широкий орбис ${r.maxOrb}`;
+  });
+  t('ползунок убран, выбор человека показан',()=>{
+    const r=ev(SYN);
+    return (r.scrubHidden&&r.pickerShown)||`ползунок скрыт ${r.scrubHidden}, выбор виден ${r.pickerShown}`;
+  });
+  t('шапка называет обоих людей',()=>{
+    const r=ev(SYN);
+    return r.meta.includes(r.partner)||`в шапке нет "${r.partner}": ${r.meta.split('\n')[0]}`;
+  });
+  t('аспекты идут от планет партнёра к телам внутренней карты',()=>{
+    /* Направление читается именно так: внешнее кольцо к внутреннему. Если
+       перепутать, синастрия будет считаться сама с собой. */
+    const r=ev(SYN);
+    const bad=r.movers.filter(m=>!['Sun','Moon','Mercury','Venus','Mars','Jupiter','Saturn','Uranus','Neptune','Pluto'].includes(m));
+    const recv=new Set(r.receivers);
+    return (bad.length===0&&r.receivers.length>0)||`не планеты в движителях: ${bad.join(',')}`;
+  });
+  t('партнёр хранится ссылкой и переживает перезагрузку',()=>{
+    /* Копия карты застыла бы: правка в библиотеке до неё не дошла бы. */
+    const r=ev(`(()=>{const keep=localStorage.getItem('astrarium_partner');
+      const e=CHART_LIBRARY[0];
+      PARTNER={src:'lib',id:e.id};
+      localStorage.setItem('astrarium_partner',JSON.stringify(PARTNER));
+      const raw=localStorage.getItem('astrarium_partner');
+      const back=JSON.parse(raw);
+      if(keep==null) localStorage.removeItem('astrarium_partner');
+      else localStorage.setItem('astrarium_partner',keep);
+      return {raw, keys:Object.keys(back).sort().join(','), sameId:back.id===e.id};})()`);
+    return (r.keys==='id,src'&&r.sameId&&r.raw.length<60)
+      ||`в хранилище ${r.raw}`;
+  });
+  t('исчезнувший партнёр не ломает карту, а возвращает пустое кольцо',()=>{
+    /* Сохранённую карту можно удалить, а ссылка на неё останется. */
+    const r=ev(`(()=>{const keepR=RING_MODE, keepP=PARTNER;
+      PARTNER={src:'own',id:'no-such-chart-12345'}; RING_MODE='synastry';
+      let err=null, glyphs=-1;
+      try{ renderRingSwitch(); renderTransits(CURRENT);
+        glyphs=document.querySelectorAll('#wheel .trp').length; }
+      catch(ex){ err=ex.message; }
+      PARTNER=keepP; RING_MODE=keepR; renderRingSwitch(); renderTransits(CURRENT);
+      return {err, glyphs, natal:document.querySelectorAll('#wheel .pl').length};})()`);
+    return (r.err===null&&r.glyphs===0)||`ошибка ${r.err}, глифов ${r.glyphs}`;
+  });
+  t('синастрия есть во всех восьми языках',()=>{
+    const miss=ev(`(()=>{const out=[];
+      for(const c of LANG_CODES){ const k=LANG, o=[];
+        LANG=c;
+        ['ring_synastry','note_synastry','synaFind','synaNone'].forEach(key=>{
+          const v=t(key); if(!v||v===key) o.push(c+'.'+key);
+        });
+        LANG=k; out.push(...o);
+      }
+      return out;})()`);
+    return miss.length===0||`нет: ${miss.join(', ')}`;
   });
 
   /* ---------- где тело стоит на самом деле ---------- */
