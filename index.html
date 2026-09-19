@@ -212,6 +212,28 @@ button.ico{width:44px;height:44px;padding:0;display:inline-flex;align-items:cent
 button.ico svg{width:18px;height:18px;flex:none}
 button.ico:disabled{opacity:.4;cursor:default}
 .steplab{display:inline;margin:0 0 0 2px;flex:none}
+/* ---- aspect grid ---- */
+/* Scrolls sideways rather than shrinking below legibility: thirteen columns at
+   24px is 312, which fits a 375px phone, but a longer aspect set or a wider
+   body list must be allowed to overflow instead of squeezing the marks. */
+.gridwrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -2px}
+#aspGrid{display:grid;grid-template-columns:repeat(var(--gcols,13),24px);gap:1px;width:max-content}
+.gc{width:24px;height:24px;display:flex;align-items:center;justify-content:center;
+  font-size:13px;border-radius:4px;background:var(--paper3)}
+.gc.blank,.gc.corner{background:transparent}
+.gc.hd{background:transparent;color:var(--ink2);font-size:15px}
+.gc.self{background:var(--paper2)}
+.gc.empty{background:var(--paper3);opacity:.45}
+/* A cell with an aspect is a target, and 24px is under the 44px floor. It is
+   allowed here because the grid is a reference table, not a primary control:
+   every aspect in it is also a row in the transit list and a chord on the
+   wheel, and the cell only reveals a label. Tapping the wrong neighbour costs
+   a second tap, nothing more. */
+.gc.on{cursor:pointer;background:var(--paper2)}
+.gc.on:hover,.gc.on:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.gc.hot{background:var(--accentBtn)}
+#gridPick{min-height:18px;margin-top:8px}
+#gridPick:empty{display:none}
 /* ---- aspects and orbs ---- */
 .orbrow{display:flex;align-items:center;gap:10px;min-height:44px;
   border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
@@ -526,6 +548,15 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
       <div class="tiny" style="margin-top:8px" data-i="posnote"></div>
     </details>
 
+    <!-- The aspect grid. Triangular for a chart on its own, rectangular when
+         the outer ring is filled, which is what a synastry grid is. -->
+    <details class="card fold" id="gridCard">
+      <summary><h2 data-i="grid"></h2><span class="tiny" id="gridBrief"></span></summary>
+      <div class="gridwrap"><div id="aspGrid"></div></div>
+      <div class="tiny" id="gridPick"></div>
+      <div class="tiny" style="margin-top:8px" data-i="gridNote"></div>
+    </details>
+
     <!-- Which aspects count, and how wide. Collapsed, because the defaults are
          the five majors and most people never open it; but the orb is the thing
          astrologers actually disagree about, so it has to be reachable. -->
@@ -592,7 +623,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
 /* Bump together with CACHE in sw.js: the two are the same release, and the
    number on screen is how you tell from a phone which one you are looking at. */
-const APP_VERSION='2.7.0';
+const APP_VERSION='2.8.0';
 document.getElementById('ver').textContent=APP_VERSION;
 
 /* ---------- feature flags ----------
@@ -710,6 +741,11 @@ const STR = {
   playbtn:{ru:'Пуск',en:'Play'}, pausebtn:{ru:'Стоп',en:'Pause'},
   stepback:{ru:'Шаг назад',en:'Step back'}, stepfwd:{ru:'Шаг вперёд',en:'Step forward'},
   /* balance */
+  grid:{ru:'Аспектная таблица',en:'Aspect grid'},
+  gridInner:{ru:'вниз',en:'down'},
+  gridOuter:{ru:'внешнее кольцо',en:'outer ring'},
+  gridOuterSyn:{ru:'партнёр',en:'partner'},
+  gridNote:{ru:'Десять планет плюс Асцендент и MC. Знак в клетке - аспект, коснитесь клетки, чтобы увидеть пару и орбис. Без внешнего кольца таблица треугольная: верхняя половина повторяла бы нижнюю. С внешним кольцом строки - его тела, столбцы - ваши.',en:'Ten planets plus the Ascendant and Midheaven. The mark in a cell is the aspect; tap a cell for the pair and the orb. Without an outer ring the grid is triangular, since the upper half would repeat the lower. With one, the rows are its bodies and the columns are yours.'},
   aspects:{ru:'Аспекты и орбисы',en:'Aspects and orbs'},
   orbReset:{ru:'Вернуть по умолчанию',en:'Reset to defaults'},
   orbNote:{ru:'Орбис в градусах. Минорные выключены по умолчанию: со всеми включёнными аспектов в карте становится примерно в полтора раза больше - на 60 картах библиотеки 11.6 против 16.4. Настройка действует и на натал, и на внешнее кольцо, где орбис дополнительно ограничен скоростью тела.',en:'Orbs in degrees. The minors are off by default: with all of them on a chart carries about half as many aspects again - 11.6 against 16.4, measured across 60 charts from the library. The setting applies to the natal chart and to the outer ring, where the orb is additionally capped by the speed of the body.'},
@@ -753,6 +789,7 @@ const STR = {
    standard terms of each tradition; the prose is mine. */
 const I18N={
   es:{
+    grid:"Tabla de aspectos", gridInner:"abajo", gridOuter:"anillo exterior", gridOuterSyn:"pareja",
     ring_synastry:"Sinastría", note_synastry:"La carta de otra persona sobre la tuya. La rueda interior y las casas siguen siendo tuyas.", synaFind:"¿Con quién comparamos? Nombre, ciudad o año", synaNone:"Nadie elegido todavía.",
     orbNote:"Orbes en grados. Los menores están desactivados por defecto: con todos activados una carta lleva cerca de la mitad más de aspectos (11,6 frente a 16,4 en 60 cartas de la biblioteca). Se aplica a la carta natal y al anillo exterior.",
     aspects:"Aspectos y orbes", orbReset:"Restablecer", orbOn:"encendido",
@@ -799,6 +836,7 @@ const I18N={
     foot:"Las posiciones están cotejadas con JPL Horizons en todas las cartas de la biblioteca: la diferencia es menor de cuatro segundos de arco, y menor de medio en el siglo XX. Atlas de ciudades de GeoNames, CC BY 4.0. Tras la primera carga nada de aquí sale a la red.",
   },
   fr:{
+    grid:"Tableau des aspects", gridInner:"vers le bas", gridOuter:"anneau extérieur", gridOuterSyn:"partenaire",
     ring_synastry:"Synastrie", note_synastry:"Le thème d’une autre personne sur le vôtre. La roue intérieure et les maisons restent les vôtres.", synaFind:"Comparer avec qui ? Nom, ville ou année", synaNone:"Personne de choisi pour l’instant.",
     orbNote:"Orbes en degrés. Les mineurs sont désactivés par défaut : tous activés, un thème porte environ moitié plus d’aspects (11,6 contre 16,4 sur 60 thèmes de la bibliothèque). Vaut pour le thème natal comme pour l’anneau extérieur.",
     aspects:"Aspects et orbes", orbReset:"Réinitialiser", orbOn:"activé",
@@ -846,6 +884,7 @@ const I18N={
     foot:"Les positions sont vérifiées avec JPL Horizons sur toutes les cartes de la bibliothèque : l’écart est inférieur à quatre secondes d’arc, et à une demi-seconde pour le vingtième siècle. Atlas des villes : GeoNames, CC BY 4.0. Après le premier chargement, rien ici ne contacte le réseau.",
   },
   de:{
+    grid:"Aspekttabelle", gridInner:"nach unten", gridOuter:"äußerer Ring", gridOuterSyn:"Partner",
     ring_synastry:"Synastrie", note_synastry:"Das Chart einer anderen Person über Ihrem. Das innere Rad und die Häuser bleiben Ihre.", synaFind:"Mit wem vergleichen? Name, Ort oder Jahr", synaNone:"Noch niemand gewählt.",
     orbNote:"Orben in Grad. Die kleinen Aspekte sind standardmäßig aus: alle zusammen bringen etwa die Hälfte mehr Aspekte (11,6 gegen 16,4, gemessen an 60 Charts der Bibliothek). Gilt für das Radix und für den äußeren Ring.",
     aspects:"Aspekte und Orben", orbReset:"Zurücksetzen", orbOn:"an",
@@ -890,6 +929,7 @@ const I18N={
     foot:"Die Positionen sind bei jedem Chart der Bibliothek gegen JPL Horizons geprüft: die Abweichung bleibt unter vier Bogensekunden, im zwanzigsten Jahrhundert unter einer halben. Städte-Atlas von GeoNames, CC BY 4.0. Nach dem ersten Laden geht von hier nichts mehr ins Netz.",
   },
   it:{
+    grid:"Tabella degli aspetti", gridInner:"in giù", gridOuter:"anello esterno", gridOuterSyn:"partner",
     ring_synastry:"Sinastria", note_synastry:"La carta di un’altra persona sopra la tua. La ruota interna e le case restano le tue.", synaFind:"Con chi confrontiamo? Nome, città o anno", synaNone:"Ancora nessuno scelto.",
     orbNote:"Orbi in gradi. I minori sono disattivati per impostazione predefinita: con tutti attivi una carta porta circa metà aspetti in più (11,6 contro 16,4 su 60 carte della biblioteca). Vale per la carta natale e per l’anello esterno.",
     aspects:"Aspetti e orbi", orbReset:"Ripristina", orbOn:"attivo",
@@ -934,6 +974,7 @@ const I18N={
     foot:"Le posizioni sono confrontate con JPL Horizons su ogni carta della biblioteca: lo scarto resta sotto i quattro secondi d’arco, e sotto il mezzo secondo per il Novecento. Atlante delle città da GeoNames, CC BY 4.0. Dopo il primo caricamento nulla di qui va in rete.",
   },
   uk:{
+    grid:"Аспектна таблиця", gridInner:"вниз", gridOuter:"зовнішнє кільце", gridOuterSyn:"партнер",
     ring_synastry:"Синастрія", note_synastry:"Карта іншої людини поверх вашої. Внутрішнє колесо й доми лишаються вашими.", synaFind:"Кого порівнюємо? Ім’я, місто або рік", synaNone:"Нікого не вибрано.",
     orbNote:"Орбіс у градусах. Мінорні вимкнені типово: з усіма увімкненими аспектів у карті стає приблизно в півтора раза більше - на 60 картах бібліотеки 11.6 проти 16.4. Діє і на натал, і на зовнішнє кільце.",
     aspects:"Аспекти й орбіси", orbReset:"Повернути типові", orbOn:"увімк",
@@ -978,6 +1019,7 @@ const I18N={
     foot:"Положення звірені з JPL Horizons на всіх картах бібліотеки: розбіжність менша за чотири секунди дуги, для XX століття менша за половину. Атлас міст - GeoNames, CC BY 4.0. Після першого завантаження ніщо звідси не виходить у мережу.",
   },
   ka:{
+    grid:"ასპექტების ცხრილი", gridInner:"ქვემოთ", gridOuter:"გარე რგოლი", gridOuterSyn:"პარტნიორი",
     ring_synastry:"სინასტრია", note_synastry:"სხვა ადამიანის რუკა თქვენსაზე. შიდა ბორბალი და სახლები თქვენი რჩება.", synaFind:"ვისთან შევადაროთ? სახელი, ქალაქი ან წელი", synaNone:"ჯერ არავინ არის არჩეული.",
     orbNote:"ორბისი გრადუსებში. მინორული ასპექტები ნაგულისხმევად გამორთულია: ყველას ჩართვისას რუკაში ასპექტები დაახლოებით ნახევრად მეტი ხდება - ბიბლიოთეკის 60 რუკაზე 11.6 და 16.4. მოქმედებს ნატალურ რუკაზეც და გარე რგოლზეც.",
     aspects:"ასპექტები და ორბისები", orbReset:"ნაგულისხმევის დაბრუნება", orbOn:"ჩართ",
@@ -2990,6 +3032,17 @@ function fmtPos(lon){
   const secPart=SHOW_SECONDS?`${String(Math.round((mmF-mm)*60)).padStart(2,'0')}″`:'';
   return {sign:s,html:`${dd}°${String(mm).padStart(2,'0')}′${secPart} <span class="af">${SIGN_GLYPH[s]}</span>`};
 }
+/* The single place that answers "do these two degrees aspect, and by how
+   much". findAspects and the grid both go through it, so a change to the
+   active set or an orb cannot reach one and miss the other. */
+function aspectBetween(l1,l2){
+  let diff=Math.abs(rev(l1-l2)); if(diff>180) diff=360-diff;
+  for(const asp of ASPECTS){
+    const orb=Math.abs(diff-asp.angle);
+    if(orb<=asp.orb) return {asp,orb};
+  }
+  return null;
+}
 function findAspects(pos){
   const out=[];
   for(let a=0;a<BODIES.length;a++)for(let b=a+1;b<BODIES.length;b++){
@@ -4646,7 +4699,7 @@ function renderTransits(ch){
   const o=learn();
   const tr=outerChart(ch,TR_MS);
   TR_CHART=tr;
-  if(!tr){ TR_HITS=[]; drawWheel(ch,null); renderLearned(); return; }
+  if(!tr){ TR_HITS=[]; drawWheel(ch,null); renderGrid(ch,null); renderLearned(); return; }
   const syn=RING_MODE==='synastry';
   if(!syn) renderMoment();
   /* Outer-planet-to-outer-planet hits are dropped for transits because they
@@ -4661,6 +4714,7 @@ function renderTransits(ch){
   if(!syn) markApplying(ch,tr.pos,outerChart(ch,TR_MS+PROBE_MS[RING_MODE]).pos,hits);
   TR_HITS=hits;
   drawWheel(ch,tr);
+  renderGrid(ch,tr);
   /* Ranked by receiver rank times exactness. With the interpretation flag on,
      the private model multiplies that in; with it off the order is that rule
      and nothing else, which is why the personal-weight column disappears too. */
@@ -4871,6 +4925,59 @@ function renderOrbs(){
 function redrawAspects(){
   renderOrbs();
   if(CURRENT){ renderTransits(CURRENT); if(ISO) showDetail(ISO,CURRENT); }
+}
+/* ---------- the aspect grid ----------
+   Ten planets plus the Ascendant and Midheaven. The nodes, Lilith and Selena
+   are left out on purpose: fourteen rows do not fit the width of a phone, and
+   the four dropped are the four a grid is least often read for.
+
+   Cells carry the mark alone. A mark plus an orb in a 24 px cell is two
+   illegible things instead of one legible one, so the orb appears under the
+   grid when a cell is tapped - which also gives the pair a name, since a grid
+   is exactly the place where people lose track of which row they are on. */
+const GRID_BODIES=BODIES.concat(['ASC','MC']);
+function gridLon(ch,n){ return n==='ASC'?ch.asc:n==='MC'?ch.mc:(ch.pos[n]?ch.pos[n].lon:null); }
+function renderGrid(ch,tr){
+  const box=document.getElementById('aspGrid'); if(!box) return;
+  const cols=GRID_BODIES.filter(n=>gridLon(ch,n)!=null);
+  const rows=tr ? BODIES.filter(n=>tr.pos[n]) : cols;
+  const cell=(content,cls,data)=>`<div class="gc ${cls||''}"${data||''}>${content}</div>`;
+  let html='', n=0;
+  /* Header row of column glyphs, and a corner that names which chart the
+     columns belong to when there are two. */
+  html+=cell(tr?'<span class="tiny">'+t('gridInner')+'</span>':'','corner');
+  cols.forEach(c=>html+=cell(`<span class="af">${GLYPH[c]}</span>`,'hd'));
+  rows.forEach((r,ri)=>{
+    html+=cell(`<span class="af">${GLYPH[r]}</span>`,'hd rw');
+    cols.forEach((c,ci)=>{
+      /* Without an outer ring the grid is a triangle: the upper half would
+         repeat the lower half and the diagonal is a body against itself. */
+      if(!tr&&ci>=ri){ html+=cell('', ci===ri?'self':'blank'); return; }
+      const a=gridLon(tr||ch,r), b=gridLon(ch,c);
+      if(a==null||b==null){ html+=cell('','blank'); return; }
+      const hit=aspectBetween(a,b);
+      if(!hit){ html+=cell('','empty'); return; }
+      n++;
+      html+=cell(`<span class="af" style="color:${hit.asp.color}">${ASPECT_GLYPH[hit.asp.name]}</span>`,
+        'on', ` data-r="${r}" data-c="${c}" data-a="${hit.asp.name}" data-o="${hit.orb.toFixed(2)}" role="button" tabindex="0"`);
+    });
+  });
+  box.style.setProperty('--gcols',cols.length+1);
+  box.innerHTML=html;
+  const pick=document.getElementById('gridPick');
+  pick.textContent='';
+  const say=el=>{
+    const who=tr?`${PN(el.dataset.r)} (${t(RING_MODE==='synastry'?'gridOuterSyn':'gridOuter')}) - ${PN(el.dataset.c)}`
+      :`${PN(el.dataset.r)} - ${PN(el.dataset.c)}`;
+    pick.textContent=`${who} · ${LX(ASPECT_NAME)[el.dataset.a]} · ${t('orb')} ${fmtOrb(+el.dataset.o)}`;
+    box.querySelectorAll('.gc.hot').forEach(x=>x.classList.remove('hot'));
+    el.classList.add('hot');
+  };
+  box.querySelectorAll('.gc.on').forEach(el=>{
+    el.addEventListener('click',()=>say(el));
+    el.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); say(el); } });
+  });
+  document.getElementById('gridBrief').textContent=`${n} ${pluralOf(n,PLURAL_ASPECT)}`;
 }
 function renderCityList(items){
   const box=document.getElementById('citylist');
@@ -5275,13 +5382,21 @@ const PLURAL={
   ru:['карта','карты','карт'], de:['Chart','Charts'], it:['carta','carte'],
   uk:['карта','карти','карт'], ka:['რუკა']
 };
-function plural(n){
-  const f=PLURAL[LANG]||PLURAL.en;
+const PLURAL_ASPECT={
+  en:['aspect','aspects'], es:['aspecto','aspectos'], fr:['aspect','aspects'],
+  ru:['аспект','аспекта','аспектов'], de:['Aspekt','Aspekte'], it:['aspetto','aspetti'],
+  uk:['аспект','аспекти','аспектів'], ka:['ასპექტი']
+};
+/* The rule is the language's, so the table is the argument: Russian and
+   Ukrainian take three forms, the Romance and Germanic two, Georgian one. */
+function pluralOf(n,table){
+  const f=table[LANG]||table.en;
   if(f.length===1) return f[0];
   if(f.length===2) return f[n===1?0:1];
   const a=n%10, b=n%100;
   return a===1&&b!==11 ? f[0] : (a>=2&&a<=4&&(b<12||b>14) ? f[1] : f[2]);
 }
+function plural(n){ return pluralOf(n,PLURAL); }
 function libCountText(n,total){
   /* "5 / 1019 charts" rather than "5 of 1019": the preposition would need a
      case rule in half these languages and carries nothing the slash does not. */

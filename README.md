@@ -74,6 +74,30 @@ day it swamps a transit list, while the progressed Moon at a degree a month is
 the most used point in the technique. Orbs are capped at one degree for both, or
 an aspect would stay "active" for six years and the list would never change.
 
+### The aspect grid
+
+Ten planets plus the Ascendant and Midheaven. Triangular on its own, because
+the upper half would repeat the lower and the diagonal is a body against
+itself; rectangular the moment the outer ring is filled, rows being its bodies
+and columns yours, which is what a synastry grid is.
+
+Cells carry the mark alone and the orb appears underneath when one is tapped. A
+mark plus an orb inside a 24 px cell is two illegible things instead of one
+legible one, and the tap also names the pair, which is what a reader loses
+track of in a grid.
+
+The grid and the wheel ask the same function whether two degrees aspect, and a
+test compares the two lists. A grid that did its own arithmetic would drift
+from the wheel eventually and nobody would know which was right.
+
+A grid cell is 24 px, under the 44 px floor, and that is a considered
+exception: the grid is a reference table rather than a primary control, every
+aspect in it is also a chord on the wheel and a row in the list, and tapping
+the wrong neighbour costs one more tap and nothing else.
+
+The nodes, Lilith and Selena are left out. Fourteen rows do not fit a phone,
+and those four are what a grid is least often read for.
+
 ### Synastry
 
 The fifth entry in the same list, which is the point of having made the outer
@@ -333,7 +357,7 @@ mattered: before it did, a deliberately broken app passed every check. The runne
 for the city atlas to finish loading, or the atlas tests would silently check the inline
 seed instead.
 
-**183 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
+**190 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
 library, robustness over 1550-2250 and at polar latitudes, house systems (angles land
 on the cusps, cusps run round the circle without crossing, quadrant systems coincide at
 the equator, zero-latitude bodies get the same house from both methods), library data

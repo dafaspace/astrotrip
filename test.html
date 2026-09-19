@@ -1322,6 +1322,93 @@ function run(){
       ||JSON.stringify(r);
   });
 
+  /* ---------- аспектная таблица ---------- */
+  group('Аспектная таблица');
+  t('без внешнего кольца таблица треугольная и без диагонали',()=>{
+    /* Верхняя половина повторяла бы нижнюю, а диагональ это тело против себя. */
+    const r=ev(`(()=>{const keep=RING_MODE; RING_MODE='none';
+      renderRingSwitch(); renderTransits(CURRENT);
+      const g=document.getElementById('aspGrid');
+      const cells=[...g.children];
+      const cols=+getComputedStyle(g).gridTemplateColumns.split(' ').length;
+      const upper=cells.filter(c=>c.classList.contains('on')).length;
+      const self=cells.filter(c=>c.classList.contains('self')).length;
+      const blank=cells.filter(c=>c.classList.contains('blank')).length;
+      RING_MODE=keep; renderRingSwitch(); renderTransits(CURRENT);
+      return {cols, cells:cells.length, on:upper, self, blank};})()`);
+    return (r.self===12&&r.blank>0&&r.cols===13)
+      ||`столбцов ${r.cols}, диагональных ${r.self}, пустых ${r.blank}`;
+  });
+  t('таблица находит ровно те же аспекты, что и колесо',()=>{
+    /* Обе стороны обязаны спрашивать одну функцию. Если таблица считает сама,
+       она рано или поздно разойдётся с колесом, и никто не поймёт какая права. */
+    const r=ev(`(()=>{const keep=RING_MODE; RING_MODE='none';
+      renderRingSwitch(); renderTransits(CURRENT);
+      const g=document.getElementById('aspGrid');
+      const inGrid=[...g.querySelectorAll('.gc.on')]
+        .map(c=>[c.dataset.r,c.dataset.c].sort().join('|')+'|'+c.dataset.a).sort();
+      const onWheel=findAspects(CURRENT.pos)
+        .map(a=>[a.p1,a.p2].sort().join('|')+'|'+a.asp.name).sort();
+      RING_MODE=keep; renderRingSwitch(); renderTransits(CURRENT);
+      const miss=onWheel.filter(x=>!inGrid.includes(x));
+      return {grid:inGrid.length, wheel:onWheel.length, miss};})()`);
+    return r.miss.length===0
+      ||`колесо знает, а таблица нет: ${r.miss.slice(0,3).join(', ')}`;
+  });
+  t('орбис из таблицы совпадает с орбисом в клетке',()=>{
+    const r=ev(`(()=>{const g=document.getElementById('aspGrid');
+      const c=g.querySelector('.gc.on'); if(!c) return null;
+      const a=gridLon(TR_CHART||CURRENT,c.dataset.r), b=gridLon(CURRENT,c.dataset.c);
+      const hit=aspectBetween(a,b);
+      return {cell:+c.dataset.o, real:+hit.orb.toFixed(2), name:hit.asp.name, said:c.dataset.a};})()`);
+    if(!r) return 'в таблице нет ни одного аспекта';
+    return (Math.abs(r.cell-r.real)<0.01&&r.name===r.said)
+      ||`в клетке ${r.cell} (${r.said}), на самом деле ${r.real} (${r.name})`;
+  });
+  t('с внешним кольцом таблица становится прямоугольной',()=>{
+    const r=ev(`(()=>{const keep=RING_MODE; RING_MODE='transit';
+      renderRingSwitch(); renderTransits(CURRENT);
+      const g=document.getElementById('aspGrid');
+      const cells=[...g.children];
+      const out={cols:getComputedStyle(g).gridTemplateColumns.split(' ').length,
+        cells:cells.length,
+        self:cells.filter(c=>c.classList.contains('self')).length};
+      RING_MODE=keep; renderRingSwitch(); renderTransits(CURRENT);
+      return out;})()`);
+    /* 10 строк внешних тел плюс шапка, 12 столбцов внутренних плюс угол. */
+    return (r.cols===13&&r.cells===143&&r.self===0)
+      ||`столбцов ${r.cols}, клеток ${r.cells}, диагональных ${r.self}`;
+  });
+  t('включение минорных добавляет клетки в таблицу',()=>{
+    const r=ev(`(()=>{const keepR=RING_MODE, keepO=JSON.parse(JSON.stringify(ORBS));
+      RING_MODE='none'; renderRingSwitch();
+      ASPECT_DEFS.forEach(a=>ORBS[a.name].on=!a.minor); rebuildAspects(); renderTransits(CURRENT);
+      const maj=document.querySelectorAll('#aspGrid .gc.on').length;
+      ASPECT_DEFS.forEach(a=>ORBS[a.name].on=true); rebuildAspects(); renderTransits(CURRENT);
+      const all=document.querySelectorAll('#aspGrid .gc.on').length;
+      Object.keys(keepO).forEach(k=>{ORBS[k].on=keepO[k].on;ORBS[k].orb=keepO[k].orb;});
+      rebuildAspects(); RING_MODE=keepR; renderRingSwitch(); renderTransits(CURRENT);
+      return {maj,all};})()`);
+    return r.all>r.maj||`мажорные ${r.maj}, все ${r.all}`;
+  });
+  t('счётчик аспектов склоняется по правилам языка',()=>{
+    const r=ev(`(()=>{const k=LANG, out={};
+      for(const [c,n] of [['ru',1],['ru',3],['ru',33],['uk',2],['en',1],['en',5],['ka',7]]){
+        LANG=c; out[c+':'+n]=pluralOf(n,PLURAL_ASPECT);
+      }
+      LANG=k; return out;})()`);
+    return (r['ru:1']==='аспект'&&r['ru:3']==='аспекта'&&r['ru:33']==='аспекта'
+      &&r['uk:2']==='аспекти'&&r['en:1']==='aspect'&&r['en:5']==='aspects'&&r['ka:7']==='ასპექტი')
+      ||JSON.stringify(r);
+  });
+  t('клетка называет пару и орбис по нажатию',()=>{
+    const r=ev(`(()=>{const c=document.querySelector('#aspGrid .gc.on');
+      if(!c) return null; c.click();
+      return document.getElementById('gridPick').textContent;})()`);
+    if(!r) return 'в таблице нет аспектов';
+    return (/·/.test(r)&&r.length>12)||`подпись "${r}"`;
+  });
+
   /* ---------- синастрия ---------- */
   group('Синастрия');
   const SYN=`(()=>{const keepR=RING_MODE, keepP=PARTNER?JSON.parse(JSON.stringify(PARTNER)):null;
