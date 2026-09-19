@@ -111,6 +111,12 @@ const frame=document.getElementById('app');
        recorded here, before anything touches it, and the ring is then filled so
        the rest of the checks have two rings to measure. */
     try{ DEFAULT_RING=await W.eval('RING_MODE'); }catch(e){}
+    /* The app persists the orb settings, and this browser may carry whatever
+       was last switched on by hand. The suite tests the shipped default, so it
+       is set explicitly here; the aspect tests flip things themselves and put
+       them back. Found the hard way: the whole run behaved differently because
+       the minors had been left on in this profile an hour earlier. */
+    try{ await W.eval(`ASPECT_DEFS.forEach(a=>{ORBS[a.name].on=!a.minor;ORBS[a.name].orb=a.orb;});rebuildAspects();renderOrbs();`); }catch(e){}
     try{ await W.eval(`(async()=>{
       RING_MODE='transit'; renderRingSwitch(); if(CURRENT) renderTransits(CURRENT);
     })()`); }catch(e){}
@@ -353,7 +359,12 @@ function run(){
     return !bad.length||bad.join('; ');
   });
   t('парные разборы покрывают все возможные сочетания',()=>{
-    const PT=ev('PAIR_TEXT'), ASP=ev('ASPECTS').map(a=>a.name);
+    /* The corpus covers the five majors and deliberately not the six minors:
+       there is no prose for a biquintile and inventing some would be worse
+       than leaving it out. Checked against the majors, therefore, and
+       composePortrait picks the tightest aspect it can speak about rather
+       than the tightest aspect. */
+    const PT=ev('PAIR_TEXT'), ASP=ev('ASPECT_DEFS.filter(a=>!a.minor).map(a=>a.name)');
     const P=order.slice(0,10);
     // невозможны астрономически: Меркурий и Венера не отходят от Солнца далеко,
     // Нептун с Плутоном не дают соединения и оппозиции в 1900-2100
@@ -1149,6 +1160,122 @@ function run(){
       ||`ретроградных ${r.retro}, на колесе ${r.onWheel}, в таблице ${r.inTable}`;
   });
 
+  /* ---------- аспекты и орбисы ---------- */
+  group('Аспекты и орбисы');
+  t('одиннадцать аспектов, пять мажорных включены, шесть минорных нет',()=>{
+    const r=ev(`(()=>{const d={}; ASPECT_DEFS.forEach(a=>d[a.name]=a.minor);
+      return {n:ASPECT_DEFS.length, minors:Object.values(d).filter(Boolean).length,
+        angles:ASPECT_DEFS.map(a=>a.angle).join(',')};})()`);
+    return (r.n===11&&r.minors===6&&r.angles==='0,30,45,60,72,90,120,135,144,150,180')
+      ||JSON.stringify(r);
+  });
+  t('минорные выключены по умолчанию, даже если в хранилище мусор',()=>{
+    /* Проверяется правило построения умолчаний, а не текущее состояние: набор
+       сам их включает, чтобы проверить рисование. */
+    const r=ev(`(()=>{const d={}; ASPECT_DEFS.forEach(a=>d[a.name]={on:!a.minor,orb:a.orb});
+      return ASPECT_DEFS.filter(a=>a.minor&&d[a.name].on).length;})()`);
+    return r===0||`включённых минорных по умолчанию: ${r}`;
+  });
+  t('ни один знак аспекта не рисуется пустым квадратом',()=>{
+    /* Шрифта Astro в проекте нет, глифы берёт система. Сравнение идёт с
+       заведомо отсутствующим символом из области частного использования, и
+       сравниваются растры целиком, а не число закрашенных точек: два разных
+       рисунка могут случайно иметь одинаковую площадь. */
+    const bad=ev(`(()=>{const cv=document.createElement('canvas'); cv.width=cv.height=40;
+      const g=cv.getContext('2d');
+      const draw=ch=>{g.clearRect(0,0,40,40);
+        g.font='24px "Astro","Segoe UI Symbol","Apple Symbols",serif';
+        g.fillStyle='#000'; g.textBaseline='middle'; g.fillText(ch,4,20);
+        return [...g.getImageData(0,0,40,40).data].join(',');};
+      const notdef=draw('\uE123'), blank=draw(' ');
+      const out=[];
+      for(const k in ASPECT_GLYPH){
+        const px=draw(ASPECT_GLYPH[k]);
+        if(px===notdef||px===blank) out.push(k);
+      }
+      return out;})()`);
+    return bad.length===0||`пустыми рисуются: ${bad.join(', ')}`;
+  });
+  t('включение минорных меняет число найденных аспектов',()=>{
+    const r=ev(`(()=>{const keep=JSON.parse(JSON.stringify(ORBS));
+      ASPECT_DEFS.forEach(a=>ORBS[a.name].on=!a.minor); rebuildAspects();
+      const maj=findAspects(CURRENT.pos).length, majN=ASPECTS.length;
+      ASPECT_DEFS.forEach(a=>ORBS[a.name].on=true); rebuildAspects();
+      const all=findAspects(CURRENT.pos).length, allN=ASPECTS.length;
+      ORBS=keep; rebuildAspects();
+      return {maj,all,majN,allN};})()`);
+    return (r.majN===5&&r.allN===11&&r.all>r.maj)||JSON.stringify(r);
+  });
+  t('орбис из настройки действительно применяется',()=>{
+    /* Иначе поле можно крутить сколько угодно, а карта не изменится. */
+    const r=ev(`(()=>{const keep=JSON.parse(JSON.stringify(ORBS));
+      ORBS.trine.orb=0.2; rebuildAspects();
+      const tight=findAspects(CURRENT.pos).filter(a=>a.asp.name==='trine').length;
+      ORBS.trine.orb=10; rebuildAspects();
+      const wide=findAspects(CURRENT.pos).filter(a=>a.asp.name==='trine').length;
+      ORBS=keep; rebuildAspects();
+      return {tight,wide};})()`);
+    return r.wide>r.tight||`узкий орбис ${r.tight}, широкий ${r.wide}`;
+  });
+  t('нелепый орбис из хранилища отбрасывается',()=>{
+    /* Аспект с орбисом 90 совпадает со всем подряд. Значение из localStorage
+       не данные приложения, а текст, который мог отредактировать кто угодно. */
+    const r=ev(`(()=>{const clamp=v=>{const o=+v; return (isFinite(o)&&o>0&&o<=15);};
+      return [90,-1,0,'abc',null,15,0.1].map(clamp);})()`);
+    return JSON.stringify(r)==='[false,false,false,false,false,true,true]'||JSON.stringify(r);
+  });
+  t('цвет минорных аспектов проходит 3:1 в обеих темах',()=>{
+    const out=[];
+    ['light','dark'].forEach(th=>{ setTheme(th);
+      const v=cr(css('--minor'),css('--wheelbg'));
+      if(v<3) out.push(`${th} ${v.toFixed(2)}`);
+    });
+    return out.length===0||out.join(', ');
+  });
+  t('минорные отличимы от каждого из прежних цветов',()=>{
+    /* Пятый цвет в карте, где уже четыре, легко совпадает с одним из них. */
+    const out=[];
+    ['light','dark'].forEach(th=>{ setTheme(th);
+      ['harm','hard','conj','axis','mc'].forEach(k=>{
+        if(css('--minor')===css('--'+k)) out.push(`${th}: minor = ${k}`);
+      });
+    });
+    return out.length===0||out.join(', ');
+  });
+  t('портрет не пустеет, когда ближайший аспект минорный',()=>{
+    /* Настоящая поломка, которую нашёл этот же набор: composePortrait брал
+       самый точный аспект в карте, а корпус написан только под мажорные. С
+       включёнными минорными ближайшим часто оказывался квиконс, текста для
+       него нет, и портрет возвращался с пустым телом. Без исключения, молча. */
+    const r=ev(`(()=>{const keep=JSON.parse(JSON.stringify(ORBS));
+      const ent=CHART_LIBRARY.find(x=>x.id==='leodelibes')||CHART_LIBRARY[0];
+      const ch=computeChart(ent.y,ent.mo,ent.d,ent.t==null?12:ent.t,libTz(ent),ent.lat,ent.lon);
+      ASPECT_DEFS.forEach(a=>ORBS[a.name].on=true); rebuildAspects();
+      const withMinors=composePortrait(ch);
+      Object.keys(keep).forEach(k=>{ORBS[k].on=keep[k].on;ORBS[k].orb=keep[k].orb;});
+      rebuildAspects();
+      return {ok:!!(withMinors&&withMinors.detail&&withMinors.detail.length>40)};})()`);
+    return r.ok||'портрет пуст при включённых минорных';
+  });
+  t('в списке орбисов ничего не обрезано и строки не ниже 44 px',()=>{
+    const r=ev(`(()=>{document.getElementById('orbCard').open=true;
+      const rows=[...document.querySelectorAll('.orbrow')];
+      return {rows:rows.length,
+        clipped:[...document.querySelectorAll('.orbrow .nm')]
+          .filter(e=>e.scrollWidth>e.clientWidth+1).map(e=>e.textContent),
+        short:rows.filter(r=>r.getBoundingClientRect().height<44).length};})()`);
+    if(r.rows!==11) return `строк ${r.rows}`;
+    if(r.clipped.length) return `обрезано: ${r.clipped.join(', ')}`;
+    return r.short===0||`${r.short} строк ниже 44 px`;
+  });
+  t('у каждого аспекта есть имя во всех восьми языках',()=>{
+    const miss=ev(`(()=>{const out=[];
+      for(const c of LANG_CODES) for(const a of ASPECT_DEFS)
+        if(!ASPECT_NAME[c]||!ASPECT_NAME[c][a.name]) out.push(c+'.'+a.name);
+      return out;})()`);
+    return miss.length===0||`нет: ${miss.slice(0,6).join(', ')}`;
+  });
+
   /* ---------- внешнее кольцо как слот ---------- */
   group('Внешнее кольцо');
   t('по умолчанию кольцо пустое, показан только натал',()=>{
@@ -1609,7 +1736,7 @@ function run(){
       for(const c of LANG_CODES){
         if(!PLANET_NAME[c]||Object.keys(PLANET_NAME[c]).length<16) out.push(c+': планеты');
         if(!SIGN_NAME[c]||SIGN_NAME[c].length!==12) out.push(c+': знаки');
-        if(!ASPECT_NAME[c]||Object.keys(ASPECT_NAME[c]).length!==5) out.push(c+': аспекты');
+        if(!ASPECT_NAME[c]||Object.keys(ASPECT_NAME[c]).length!==ASPECT_DEFS.length) out.push(c+': аспекты');
         if(!PLANET_FN[c]||Object.keys(PLANET_FN[c]).length!==10) out.push(c+': функции планет');
         for(const h of Object.keys(HOUSE_SYSTEMS)) if(!HOUSE_SYSTEMS[h][c]) out.push(c+': дом '+h);
         for(const sk of Object.keys(LIB_SORTS)) if(!LIB_SORTS[sk][c]) out.push(c+': сортировка '+sk);

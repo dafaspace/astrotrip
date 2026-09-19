@@ -48,6 +48,12 @@
      before, so the MC axis and harmonious aspects were the same colour. */
   --axis:#ce5692; --mc:#976bd4;
   --harm:#4683c9; --hard:#cb614c; --conj:#2a9256;
+  /* Minor aspects read as subordinate, so the colour is neutral rather than a
+     fifth family hue. Measured: 4.13:1 on the light wheel and 6.09:1 on the
+     dark one, and being hueless it cannot be mistaken for harm, hard, conj,
+     the axis or the MC - the plum that scored higher on contrast sat between
+     the axis magenta and the MC violet. */
+  --minor:#6b7684;
   --wheelbg:#f4f2ee;
   --fire:#e3bdaa; --earth:#8cd685; --air:#d4c57d; --water:#9cccde;
   --radius:16px;
@@ -62,7 +68,7 @@
     --accent:#bc773a; --accentBtn:#bc773a; --accentInk:#12101e;
     --wheelbg:#0f0d19;
     --axis:#b13e78; --mc:#7f50c2; --harm:#3a6ba4;
-    --hard:#a94e3b; --conj:#2a774a;
+    --hard:#a94e3b; --conj:#2a774a; --minor:#8792a0;
     --fire:#583321; --earth:#1d4519; --air:#433c19; --water:#1d414e;
     --glass:rgba(16,15,23,.72);
 }
@@ -206,6 +212,35 @@ button.ico{width:44px;height:44px;padding:0;display:inline-flex;align-items:cent
 button.ico svg{width:18px;height:18px;flex:none}
 button.ico:disabled{opacity:.4;cursor:default}
 .steplab{display:inline;margin:0 0 0 2px;flex:none}
+/* ---- aspects and orbs ---- */
+.orbrow{display:flex;align-items:center;gap:10px;min-height:44px;
+  border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+.orbrow:last-child{border-bottom:none}
+.orbrow .g{font-size:17px;width:24px;text-align:center}
+/* Wrapping, not an ellipsis. "полутораквадрат" and "sesquiquadrate" do not fit
+   the column on a 375px phone next to a switch, an angle and a number box, and
+   a truncated aspect name is the one thing in this list nobody can guess. The
+   row simply gets taller. */
+.orbrow .nm{flex:1;font-size:14px;min-width:0;white-space:normal;line-height:1.25;padding:6px 0;
+  /* One word can still be wider than the column: полутораквадрат is fifteen
+     characters with nowhere to break. */
+  overflow-wrap:anywhere}
+.orbrow .ang{color:var(--ink3);font-size:12px;width:34px;text-align:right;flex:none}
+.orbrow .orb{width:62px;flex:none;padding:7px 6px;text-align:right}
+/* A minor aspect is drawn subordinate here too, so the list reads the way the
+   wheel does rather than presenting eleven equals. */
+.orbrow.minor .nm{color:var(--ink2)}
+/* The switch: a 44px label wrapping a real checkbox, so the whole row height is
+   the target and the control stays a checkbox for assistive technology. */
+.sw{display:inline-flex;align-items:center;flex:none;cursor:pointer;margin:0;padding:0 2px}
+.sw input{position:absolute;opacity:0;width:0;height:0}
+.sw span{display:block;width:38px;height:22px;border-radius:11px;background:var(--paper3);
+  border:1px solid var(--line);position:relative;transition:background .15s}
+.sw span::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;
+  border-radius:50%;background:var(--ink3);transition:transform .15s,background .15s}
+.sw input:checked+span{background:var(--accentBtn);border-color:var(--accentBtn)}
+.sw input:checked+span::after{transform:translateX(16px);background:var(--accentInk)}
+.sw input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
 /* ---- balance ---- */
 .balrow{display:flex;align-items:center;gap:8px;padding:4px 0;font-variant-numeric:tabular-nums}
 .balrow .nm{width:112px;color:var(--ink2);font-size:13px}
@@ -482,6 +517,18 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
       <div class="tiny" style="margin-top:8px" data-i="posnote"></div>
     </details>
 
+    <!-- Which aspects count, and how wide. Collapsed, because the defaults are
+         the five majors and most people never open it; but the orb is the thing
+         astrologers actually disagree about, so it has to be reachable. -->
+    <details class="card fold" id="orbCard">
+      <summary><h2 data-i="aspects"></h2><span class="tiny" id="orbBrief"></span></summary>
+      <div id="orbList"></div>
+      <div class="row" style="margin-top:10px">
+        <button id="orbReset" data-i="orbReset"></button>
+      </div>
+      <div class="tiny" style="margin-top:8px" data-i="orbNote"></div>
+    </details>
+
     <!-- Element, modality and hemisphere tallies. Counts only, no verdict:
          the number is checkable, "you lack earth" is not. -->
     <details class="card fold" id="balCard">
@@ -536,7 +583,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
 /* Bump together with CACHE in sw.js: the two are the same release, and the
    number on screen is how you tell from a phone which one you are looking at. */
-const APP_VERSION='2.5.0';
+const APP_VERSION='2.6.0';
 document.getElementById('ver').textContent=APP_VERSION;
 
 /* ---------- feature flags ----------
@@ -650,6 +697,10 @@ const STR = {
   playbtn:{ru:'Пуск',en:'Play'}, pausebtn:{ru:'Стоп',en:'Pause'},
   stepback:{ru:'Шаг назад',en:'Step back'}, stepfwd:{ru:'Шаг вперёд',en:'Step forward'},
   /* balance */
+  aspects:{ru:'Аспекты и орбисы',en:'Aspects and orbs'},
+  orbReset:{ru:'Вернуть по умолчанию',en:'Reset to defaults'},
+  orbNote:{ru:'Орбис в градусах. Минорные выключены по умолчанию: со всеми включёнными аспектов в карте становится примерно в полтора раза больше - на 60 картах библиотеки 11.6 против 16.4. Настройка действует и на натал, и на внешнее кольцо, где орбис дополнительно ограничен скоростью тела.',en:'Orbs in degrees. The minors are off by default: with all of them on a chart carries about half as many aspects again - 11.6 against 16.4, measured across 60 charts from the library. The setting applies to the natal chart and to the outer ring, where the orb is additionally capped by the speed of the body.'},
+  orbOn:{ru:'вкл',en:'on'},
   balance:{ru:'Баланс карты',en:'Chart balance'},
   el_fire:{ru:'Огонь',en:'Fire'}, el_earth:{ru:'Земля',en:'Earth'},
   el_air:{ru:'Воздух',en:'Air'}, el_water:{ru:'Вода',en:'Water'},
@@ -689,6 +740,8 @@ const STR = {
    standard terms of each tradition; the prose is mine. */
 const I18N={
   es:{
+    orbNote:"Orbes en grados. Los menores están desactivados por defecto: con todos activados una carta lleva cerca de la mitad más de aspectos (11,6 frente a 16,4 en 60 cartas de la biblioteca). Se aplica a la carta natal y al anillo exterior.",
+    aspects:"Aspectos y orbes", orbReset:"Restablecer", orbOn:"encendido",
     ringLabel:"Anillo exterior", ring_none:"Vacío", note_none:"La carta natal por sí sola.",
     m_mean:"media", m_true:"verdadera",
     atlasLoading:"Descargando el atlas de ciudades", atlasOnce:"{n} lugares, 4 MB. Solo una vez, luego sin conexión.", atlasFail:"El atlas no se descargó. Por ahora solo están las ciudades grandes.", atlasRetry:"Reintentar",
@@ -732,6 +785,8 @@ const I18N={
     foot:"Las posiciones están cotejadas con JPL Horizons en todas las cartas de la biblioteca: la diferencia es menor de cuatro segundos de arco, y menor de medio en el siglo XX. Atlas de ciudades de GeoNames, CC BY 4.0. Tras la primera carga nada de aquí sale a la red.",
   },
   fr:{
+    orbNote:"Orbes en degrés. Les mineurs sont désactivés par défaut : tous activés, un thème porte environ moitié plus d’aspects (11,6 contre 16,4 sur 60 thèmes de la bibliothèque). Vaut pour le thème natal comme pour l’anneau extérieur.",
+    aspects:"Aspects et orbes", orbReset:"Réinitialiser", orbOn:"activé",
     ringLabel:"Anneau extérieur", ring_none:"Vide", note_none:"Le thème natal seul.",
     m_mean:"moyenne", m_true:"vraie",
     atlasLoading:"Téléchargement de l’atlas des villes", atlasOnce:"{n} lieux, 4 Mo. Une seule fois, ensuite hors ligne.", atlasFail:"L’atlas ne s’est pas téléchargé. Seules les grandes villes sont disponibles pour l’instant.", atlasRetry:"Réessayer",
@@ -776,6 +831,8 @@ const I18N={
     foot:"Les positions sont vérifiées avec JPL Horizons sur toutes les cartes de la bibliothèque : l’écart est inférieur à quatre secondes d’arc, et à une demi-seconde pour le vingtième siècle. Atlas des villes : GeoNames, CC BY 4.0. Après le premier chargement, rien ici ne contacte le réseau.",
   },
   de:{
+    orbNote:"Orben in Grad. Die kleinen Aspekte sind standardmäßig aus: alle zusammen bringen etwa die Hälfte mehr Aspekte (11,6 gegen 16,4, gemessen an 60 Charts der Bibliothek). Gilt für das Radix und für den äußeren Ring.",
+    aspects:"Aspekte und Orben", orbReset:"Zurücksetzen", orbOn:"an",
     ringLabel:"Äußerer Ring", ring_none:"Leer", note_none:"Das Radix für sich allein.",
     m_mean:"mittlere", m_true:"wahre",
     atlasLoading:"Städte-Atlas wird geladen", atlasOnce:"{n} Orte, 4 MB. Nur einmal, danach offline.", atlasFail:"Der Atlas wurde nicht geladen. Vorerst gibt es nur die großen Städte.", atlasRetry:"Erneut versuchen",
@@ -817,6 +874,8 @@ const I18N={
     foot:"Die Positionen sind bei jedem Chart der Bibliothek gegen JPL Horizons geprüft: die Abweichung bleibt unter vier Bogensekunden, im zwanzigsten Jahrhundert unter einer halben. Städte-Atlas von GeoNames, CC BY 4.0. Nach dem ersten Laden geht von hier nichts mehr ins Netz.",
   },
   it:{
+    orbNote:"Orbi in gradi. I minori sono disattivati per impostazione predefinita: con tutti attivi una carta porta circa metà aspetti in più (11,6 contro 16,4 su 60 carte della biblioteca). Vale per la carta natale e per l’anello esterno.",
+    aspects:"Aspetti e orbi", orbReset:"Ripristina", orbOn:"attivo",
     ringLabel:"Anello esterno", ring_none:"Vuoto", note_none:"La carta natale da sola.",
     m_mean:"media", m_true:"vera",
     atlasLoading:"Scaricamento dell’atlante delle città", atlasOnce:"{n} luoghi, 4 MB. Una volta sola, poi offline.", atlasFail:"L’atlante non si è scaricato. Per ora ci sono solo le città grandi.", atlasRetry:"Riprova",
@@ -858,6 +917,8 @@ const I18N={
     foot:"Le posizioni sono confrontate con JPL Horizons su ogni carta della biblioteca: lo scarto resta sotto i quattro secondi d’arco, e sotto il mezzo secondo per il Novecento. Atlante delle città da GeoNames, CC BY 4.0. Dopo il primo caricamento nulla di qui va in rete.",
   },
   uk:{
+    orbNote:"Орбіс у градусах. Мінорні вимкнені типово: з усіма увімкненими аспектів у карті стає приблизно в півтора раза більше - на 60 картах бібліотеки 11.6 проти 16.4. Діє і на натал, і на зовнішнє кільце.",
+    aspects:"Аспекти й орбіси", orbReset:"Повернути типові", orbOn:"увімк",
     ringLabel:"Зовнішнє кільце", ring_none:"Порожньо", note_none:"Натальна карта сама по собі.",
     m_mean:"середній", m_true:"істинний",
     atlasLoading:"Завантажується атлас міст", atlasOnce:"{n} місць, 4 МБ. Лише один раз, далі офлайн.", atlasFail:"Атлас не завантажився. Поки доступні лише великі міста.", atlasRetry:"Повторити",
@@ -899,6 +960,8 @@ const I18N={
     foot:"Положення звірені з JPL Horizons на всіх картах бібліотеки: розбіжність менша за чотири секунди дуги, для XX століття менша за половину. Атлас міст - GeoNames, CC BY 4.0. Після першого завантаження ніщо звідси не виходить у мережу.",
   },
   ka:{
+    orbNote:"ორბისი გრადუსებში. მინორული ასპექტები ნაგულისხმევად გამორთულია: ყველას ჩართვისას რუკაში ასპექტები დაახლოებით ნახევრად მეტი ხდება - ბიბლიოთეკის 60 რუკაზე 11.6 და 16.4. მოქმედებს ნატალურ რუკაზეც და გარე რგოლზეც.",
+    aspects:"ასპექტები და ორბისები", orbReset:"ნაგულისხმევის დაბრუნება", orbOn:"ჩართ",
     ringLabel:"გარე რგოლი", ring_none:"ცარიელი", note_none:"ნატალური რუკა თავისთავად.",
     m_mean:"საშუალო", m_true:"ჭეშმარიტი",
     atlasLoading:"ქალაქების ატლასი იტვირთება", atlasOnce:"{n} ადგილი, 4 მბ. მხოლოდ ერთხელ, შემდეგ ოფლაინში.", atlasFail:"ატლასი ვერ ჩამოიტვირთა. ჯერჯერობით მხოლოდ დიდი ქალაქებია.", atlasRetry:"ხელახლა",
@@ -1259,7 +1322,9 @@ const POINTS=['NNode','SNode','Lilith','Selena'];
 const GLYPH={Sun:'☉',Moon:'☽',Mercury:'☿',Venus:'♀',Mars:'♂',Jupiter:'♃',Saturn:'♄',Uranus:'♅',Neptune:'♆',Pluto:'♇',
   NNode:'☊',SNode:'☋',Lilith:'⚸',Selena:'⯝',ASC:'Asc',MC:'MC'};
 const SIGN_GLYPH=['♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓'];
-const ASPECT_GLYPH={conjunction:'☌',sextile:'⚹',square:'□',trine:'△',opposition:'☍'};
+const ASPECT_GLYPH={conjunction:'☌',semisextile:'⚺',semisquare:'∠',sextile:'⚹',
+  quintile:'Q',square:'□',trine:'△',sesquiquadrate:'⚼',biquintile:'bQ',
+  quincunx:'⚻',opposition:'☍'};
 
 const PLANET_NAME={
   ru:{Sun:'Солнце',Moon:'Луна',Mercury:'Меркурий',Venus:'Венера',Mars:'Марс',Jupiter:'Юпитер',Saturn:'Сатурн',Uranus:'Уран',Neptune:'Нептун',Pluto:'Плутон',
@@ -1283,21 +1348,74 @@ const PLANET_FN={
   en:{Sun:'core identity',Moon:'emotional life',Mercury:'thinking and speech',Venus:'love and values',Mars:'drive and assertion',Jupiter:'growth and belief',Saturn:'structure and limits',Uranus:'disruption',Neptune:'imagination',Pluto:'depth and power'}
 };
 const ASPECT_NAME={
-  ru:{conjunction:'соединение',sextile:'секстиль',square:'квадрат',trine:'трин',opposition:'оппозиция'},
-  en:{conjunction:'conjunction',sextile:'sextile',square:'square',trine:'trine',opposition:'opposition'}
+  ru:{conjunction:'соединение',semisextile:'полусекстиль',semisquare:'полуквадрат',
+      sextile:'секстиль',quintile:'квинтиль',square:'квадрат',trine:'трин',
+      sesquiquadrate:'полутораквадрат',biquintile:'биквинтиль',quincunx:'квиконс',
+      opposition:'оппозиция'},
+  en:{conjunction:'conjunction',semisextile:'semisextile',semisquare:'semisquare',
+      sextile:'sextile',quintile:'quintile',square:'square',trine:'trine',
+      sesquiquadrate:'sesquiquadrate',biquintile:'biquintile',quincunx:'quincunx',
+      opposition:'opposition'}
 };
 const AREA_KEYS=['career','love','energy','mind','home'];
 const AREA_NAME={ru:{career:'карьера',love:'любовь',energy:'энергия',mind:'ум',home:'дом'},en:{career:'career',love:'love',energy:'energy',mind:'mind',home:'home'}};
 
 const RECEIVER_RANK={ASC:1.5,MC:1.5,Sun:1.3,Moon:1.3,Mercury:1.0,Venus:1.0,Mars:1.0,Jupiter:0.8,Saturn:0.8,Uranus:0.5,Neptune:0.5,Pluto:0.5,NNode:1.1,SNode:0.9,Lilith:0.9,Selena:0.9};
 const SPEED_ORB={Sun:2,Moon:6,Mercury:2,Venus:2,Mars:2,Jupiter:1.5,Saturn:1.5,Uranus:1,Neptune:1,Pluto:1};
-const ASPECTS=[
-  {name:'conjunction',angle:0,orb:8,kind:'conj',color:'var(--conj)'},
-  {name:'sextile',angle:60,orb:4,kind:'harm',color:'var(--harm)'},
-  {name:'square',angle:90,orb:6,kind:'hard',color:'var(--hard)'},
-  {name:'trine',angle:120,orb:6,kind:'harm',color:'var(--harm)'},
-  {name:'opposition',angle:180,orb:7,kind:'hard',color:'var(--hard)'}
+/* Every aspect the app knows, with the orb it ships with. The five majors are
+   on by default and the six minors are off. Measured across sixty charts from
+   the library, switching every minor on takes a chart from 11.6 aspects to
+   16.4, worst case 28 - about half as many again on a 300 px wheel. Not a
+   catastrophe, which is why it is offered, and not free either, which is why
+   it is not the default.
+
+   Quintile and biquintile are written Q and bQ because no symbol for them
+   exists in Unicode and none exists on paper either - ZET and Solar Fire both
+   print letters. That keeps one mechanism for all eleven marks: they are all
+   text characters, and none is an image pretending to be a character. */
+const ASPECT_DEFS=[
+  {name:'conjunction',    angle:0,   orb:8,   kind:'conj',  minor:false},
+  {name:'semisextile',    angle:30,  orb:1.5, kind:'minor', minor:true},
+  {name:'semisquare',     angle:45,  orb:2,   kind:'minor', minor:true},
+  {name:'sextile',        angle:60,  orb:4,   kind:'harm',  minor:false},
+  {name:'quintile',       angle:72,  orb:1.5, kind:'minor', minor:true},
+  {name:'square',         angle:90,  orb:6,   kind:'hard',  minor:false},
+  {name:'trine',          angle:120, orb:6,   kind:'harm',  minor:false},
+  {name:'sesquiquadrate', angle:135, orb:2,   kind:'minor', minor:true},
+  {name:'biquintile',     angle:144, orb:1.5, kind:'minor', minor:true},
+  {name:'quincunx',       angle:150, orb:2,   kind:'minor', minor:true},
+  {name:'opposition',     angle:180, orb:7,   kind:'hard',  minor:false}
 ];
+const ASPECT_COLOR={conj:'var(--conj)',harm:'var(--harm)',hard:'var(--hard)',minor:'var(--minor)'};
+/* Which are on and at what orb. Stored per aspect rather than as a single
+   "minors on" switch, because an astrologer who wants the quincunx does not
+   necessarily want the biquintile, and the orb is the part they argue about. */
+const ORB_KEY='astrarium_orbs';
+let ORBS=(function(){
+  const d={}; ASPECT_DEFS.forEach(a=>d[a.name]={on:!a.minor,orb:a.orb});
+  try{
+    const saved=JSON.parse(localStorage.getItem(ORB_KEY)||'{}');
+    ASPECT_DEFS.forEach(a=>{
+      const v=saved[a.name]; if(!v) return;
+      if(typeof v.on==='boolean') d[a.name].on=v.on;
+      /* Clamped, not trusted: a hand-edited store or a stale build could carry
+         an orb of 90, and an aspect with a 90 degree orb matches everything. */
+      const o=+v.orb;
+      if(isFinite(o)&&o>0&&o<=15) d[a.name].orb=o;
+    });
+  }catch(e){}
+  return d;
+})();
+function saveOrbs(){ try{ localStorage.setItem(ORB_KEY,JSON.stringify(ORBS)); }catch(e){} }
+/* The live set every aspect search uses. Rebuilt on change rather than
+   recomputed per call: findAspects runs on every frame of a scrub. */
+let ASPECTS=[];
+function rebuildAspects(){
+  ASPECTS=ASPECT_DEFS.filter(a=>ORBS[a.name].on)
+    .map(a=>({name:a.name,angle:a.angle,orb:ORBS[a.name].orb,kind:a.kind,
+      minor:a.minor,color:ASPECT_COLOR[a.kind]}));
+}
+rebuildAspects();
 
 /* ---------- offline city atlas ----------
    Two tiers, because "every city on Earth" and "works on the very first offline
@@ -3723,15 +3841,14 @@ function composePortrait(ch){
   addSc(sun.score,1.1); addSc(moon.score,1.1); addSc(asc.score,0.9); addSc(nodeRead&&nodeRead.score,0.8);
   const short=Object.entries(score).sort((a,b)=>b[1]-a[1]).slice(0,6).map(e=>e[0]).join(', ');
   const parts=[];
+  /* The tightest aspect the corpus can actually speak about, not the tightest
+     aspect. The prose was written for the five majors; once the minor aspects
+     could be switched on, the closest aspect in a chart was often a quincunx
+     or a semisextile, PAIR_NOTE had nothing for it, and the portrait came back
+     with an empty body. Silent, because nothing threw. */
   const all=findAspects(ch.pos).sort((a,b)=>a.orb-b.orb);
-  if(all.length){
-    const a=all[0];
-    /* Written per aspect kind instead of the generic corpus .plain, which
-       stated a property ("способность есть") rather than what this specific
-       pairing does - the same label-not-claim defect cleaned out of the nodes. */
-    const note=PAIR_NOTE[a.asp.name];
-    if(note) parts.push(`Самое заметное в характере: ${nounOf(a.p1)[0]} и ${nounOf(a.p2)[0]}. ${note}`);
-  }
+  const a=all.find(x=>PAIR_NOTE[x.asp.name]);
+  if(a) parts.push(`Самое заметное в характере: ${nounOf(a.p1)[0]} и ${nounOf(a.p2)[0]}. ${PAIR_NOTE[a.asp.name]}`);
   const nodeText=composeNodeAxis(ch);
   if(nodeText) parts.push(nodeText);
   return {label:'Портрет',short,detail:parts.join(' ')};
@@ -4617,6 +4734,39 @@ function renderBalance(ch){
    gets the place's own name, which is what GeoNames column 1 holds and what a
    Spanish or Georgian reader is most likely to recognise on a map. */
 const cityLabel=c=>(LANG==='ru'&&c.r)?c.r:c.e;
+/* One row per aspect: the mark, the name, its angle, a switch and an orb box.
+   The angle is shown because "quincunx" and "150" are the same fact to two
+   different readers, and the one who knows it by number should not have to
+   look it up. */
+function renderOrbs(){
+  const box=document.getElementById('orbList'); if(!box) return;
+  box.innerHTML=ASPECT_DEFS.map(a=>{
+    const cfg=ORBS[a.name];
+    return `<div class="orbrow${a.minor?' minor':''}">
+      <label class="sw"><input type="checkbox" data-orb-on="${a.name}"${cfg.on?' checked':''}><span></span></label>
+      <span class="g af" style="color:${ASPECT_COLOR[a.kind]}">${ASPECT_GLYPH[a.name]}</span>
+      <span class="nm">${LX(ASPECT_NAME)[a.name]||a.name}</span>
+      <span class="ang">${a.angle}°</span>
+      <input class="orb" type="number" min="0.1" max="15" step="0.1" value="${cfg.orb}" data-orb="${a.name}" aria-label="${LX(ASPECT_NAME)[a.name]}">
+    </div>`;
+  }).join('');
+  box.querySelectorAll('input[data-orb-on]').forEach(el=>el.addEventListener('change',()=>{
+    ORBS[el.dataset.orbOn].on=el.checked; saveOrbs(); rebuildAspects(); redrawAspects();
+  }));
+  box.querySelectorAll('input[data-orb]').forEach(el=>el.addEventListener('change',()=>{
+    const v=parseFloat(el.value);
+    /* Refused rather than clamped silently: a typed 40 is a mistake, and
+       snapping it to 15 without saying so hides the mistake. */
+    if(!isFinite(v)||v<=0||v>15){ el.value=ORBS[el.dataset.orb].orb; return; }
+    ORBS[el.dataset.orb].orb=v; saveOrbs(); rebuildAspects(); redrawAspects();
+  }));
+  const on=ASPECT_DEFS.filter(a=>ORBS[a.name].on).length;
+  document.getElementById('orbBrief').textContent=`${on} / ${ASPECT_DEFS.length} ${t('orbOn')}`;
+}
+function redrawAspects(){
+  renderOrbs();
+  if(CURRENT){ renderTransits(CURRENT); if(ISO) showDetail(ISO,CURRENT); }
+}
 function renderCityList(items){
   const box=document.getElementById('citylist');
   if(!items.length){box.style.display='none';box.innerHTML='';return;}
@@ -4788,7 +4938,7 @@ function fillLangSel(){
 document.getElementById('langSel').addEventListener('change',e=>{
   LANG=e.target.value; localStorage.setItem('astrarium_lang',LANG);
   document.documentElement.lang=LANG;
-  applyStatic(); fillHsys(); fillLil(); fillScrubUnit(); renderRingSwitch();
+  applyStatic(); fillHsys(); fillLil(); renderOrbs(); fillScrubUnit(); renderRingSwitch();
   setPlaying(PLAYING); fillNamePh(); fillLibSort(); renderLibrary(); if(CURRENT)run();
 });
 fillLangSel();
@@ -4826,6 +4976,7 @@ document.getElementById('lilmode').addEventListener('change',e=>{
 });
 fillLil();
 fillHsys();
+renderOrbs();
 fillScrubUnit();
 renderRingSwitch();
 setPlaying(false);
@@ -4912,12 +5063,12 @@ SIGN_NAME.de=["Widder", "Stier", "Zwillinge", "Krebs", "Löwe", "Jungfrau", "Waa
 SIGN_NAME.it=["Ariete", "Toro", "Gemelli", "Cancro", "Leone", "Vergine", "Bilancia", "Scorpione", "Sagittario", "Capricorno", "Acquario", "Pesci"];
 SIGN_NAME.uk=["Овен", "Телець", "Близнюки", "Рак", "Лев", "Діва", "Терези", "Скорпіон", "Стрілець", "Козеріг", "Водолій", "Риби"];
 SIGN_NAME.ka=["ვერძი", "კურო", "ტყუპები", "კირჩხიბი", "ლომი", "ქალწული", "სასწორი", "მორიელი", "მშვილდოსანი", "თხის რქა", "მერწყული", "თევზები"];
-ASPECT_NAME.es={conjunction:"conjunción",sextile:"sextil",square:"cuadratura",trine:"trígono",opposition:"oposición"};
-ASPECT_NAME.fr={conjunction:"conjonction",sextile:"sextile",square:"carré",trine:"trigone",opposition:"opposition"};
-ASPECT_NAME.de={conjunction:"Konjunktion",sextile:"Sextil",square:"Quadrat",trine:"Trigon",opposition:"Opposition"};
-ASPECT_NAME.it={conjunction:"congiunzione",sextile:"sestile",square:"quadrato",trine:"trigono",opposition:"opposizione"};
-ASPECT_NAME.uk={conjunction:"з’єднання",sextile:"секстиль",square:"квадрат",trine:"тригон",opposition:"опозиція"};
-ASPECT_NAME.ka={conjunction:"შეერთება",sextile:"სექსტილი",square:"კვადრატი",trine:"ტრიგონი",opposition:"ოპოზიცია"};
+ASPECT_NAME.es={conjunction:"conjunción",semisextile:"semisextil",semisquare:"semicuadratura",sextile:"sextil",quintile:"quintil",square:"cuadratura",trine:"trígono",sesquiquadrate:"sesquicuadratura",biquintile:"biquintil",quincunx:"quincuncio",opposition:"oposición"};
+ASPECT_NAME.fr={conjunction:"conjonction",semisextile:"semi-sextile",semisquare:"semi-carré",sextile:"sextile",quintile:"quintile",square:"carré",trine:"trigone",sesquiquadrate:"sesqui-carré",biquintile:"biquintile",quincunx:"quinconce",opposition:"opposition"};
+ASPECT_NAME.de={conjunction:"Konjunktion",semisextile:"Halbsextil",semisquare:"Halbquadrat",sextile:"Sextil",quintile:"Quintil",square:"Quadrat",trine:"Trigon",sesquiquadrate:"Anderthalbquadrat",biquintile:"Biquintil",quincunx:"Quincunx",opposition:"Opposition"};
+ASPECT_NAME.it={conjunction:"congiunzione",semisextile:"semisestile",semisquare:"semiquadrato",sextile:"sestile",quintile:"quintile",square:"quadrato",trine:"trigono",sesquiquadrate:"sesquiquadrato",biquintile:"biquintile",quincunx:"quinconce",opposition:"opposizione"};
+ASPECT_NAME.uk={conjunction:"з’єднання",semisextile:"напівсекстиль",semisquare:"напівквадрат",sextile:"секстиль",quintile:"квінтиль",square:"квадрат",trine:"тригон",sesquiquadrate:"півторакватрат",biquintile:"біквінтиль",quincunx:"квіконс",opposition:"опозиція"};
+ASPECT_NAME.ka={conjunction:"შეერთება",semisextile:"ნახევარსექსტილი",semisquare:"ნახევარკვადრატი",sextile:"სექსტილი",quintile:"კვინტილი",square:"კვადრატი",trine:"ტრიგონი",sesquiquadrate:"ერთნახევარკვადრატი",biquintile:"ბიკვინტილი",quincunx:"კვინკუნქსი",opposition:"ოპოზიცია"};
 PLANET_FN.es={Sun:"núcleo de la identidad",Moon:"vida emocional",Mercury:"pensamiento y palabra",Venus:"amor y valores",Mars:"empuje y afirmación",Jupiter:"crecimiento y fe",Saturn:"estructura y límites",Uranus:"ruptura de lo habitual",Neptune:"imaginación",Pluto:"profundidad y poder"};
 PLANET_FN.fr={Sun:"noyau de l’identité",Moon:"vie émotionnelle",Mercury:"pensée et parole",Venus:"amour et valeurs",Mars:"élan et affirmation",Jupiter:"croissance et foi",Saturn:"structure et limites",Uranus:"rupture de l’habitude",Neptune:"imagination",Pluto:"profondeur et pouvoir"};
 PLANET_FN.de={Sun:"Kern der Persönlichkeit",Moon:"Gefühlsleben",Mercury:"Denken und Sprechen",Venus:"Liebe und Werte",Mars:"Antrieb und Durchsetzung",Jupiter:"Wachstum und Glaube",Saturn:"Struktur und Grenzen",Uranus:"Umbruch des Gewohnten",Neptune:"Vorstellungskraft",Pluto:"Tiefe und Macht"};
@@ -5187,6 +5338,10 @@ document.getElementById('expCsv').addEventListener('click',()=>{
   a.download=`astrotrip-charts-${todayStr()}.csv`;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+});
+document.getElementById('orbReset').addEventListener('click',()=>{
+  ASPECT_DEFS.forEach(a=>ORBS[a.name]={on:!a.minor,orb:a.orb});
+  saveOrbs(); rebuildAspects(); redrawAspects();
 });
 document.getElementById('atlasRetry').addEventListener('click',()=>{
   document.getElementById('atlasRetry').hidden=true;

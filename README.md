@@ -185,6 +185,41 @@ confirm our own formulas.
 Still missing against ZET, in the order they matter: minor aspects and
 configurable orbs, an aspect grid, aspect-pattern figures, Chiron, and printing.
 
+### Aspects and orbs
+
+Eleven aspects: the five majors plus semisextile, semisquare, quintile,
+sesquiquadrate, biquintile and quincunx. Each one has a switch and its own orb,
+stored per aspect rather than behind a single "minors on" toggle, because an
+astrologer who wants the quincunx does not necessarily want the biquintile and
+the orb is the part they argue about.
+
+**The minors ship off.** Measured across sixty charts from the library,
+switching all six on takes a chart from 11.6 aspects to 16.4, worst case 28.
+Not a catastrophe, which is why it is offered; not free either, which is why it
+is not the default. Minor chords are drawn in a neutral slate rather than a
+fifth family hue, measured at 4.13:1 on the light wheel and 6.09:1 on the dark
+one - a plum scored higher on contrast and sat between the axis magenta and the
+MC violet, so it lost.
+
+Quintile and biquintile are written `Q` and `bQ` because no symbol for them
+exists in Unicode and none exists on paper either; ZET and Solar Fire both
+print letters. That keeps one mechanism for all eleven marks - they are all
+text characters, none is an image pretending to be one - and a test renders
+each against a private-use codepoint to catch any that comes out as a blank
+box, since the app has no bundled symbol font and takes these from the system.
+
+An orb typed outside 0.1 to 15 is refused and the field reverts, rather than
+being clamped silently: a typed 40 is a mistake and snapping it to 15 hides the
+mistake. A value arriving from `localStorage` is clamped, because that is text
+someone could have edited and an aspect with a 90 degree orb matches everything.
+
+Switching the minors on found a real bug behind the interpretation flag. The
+portrait paragraph took the tightest aspect in the chart and looked its prose
+up; the corpus was written for the five majors, so the tightest aspect was
+often a quincunx, the lookup returned nothing, and the portrait came back with
+an empty body without throwing. It now takes the tightest aspect it can
+actually speak about.
+
 ### The city atlas
 
 The whole of GeoNames `cities500`: **235,779 places** down to population 500, with
@@ -269,7 +304,7 @@ mattered: before it did, a deliberately broken app passed every check. The runne
 for the city atlas to finish loading, or the atlas tests would silently check the inline
 seed instead.
 
-**163 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
+**174 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
 library, robustness over 1550-2250 and at polar latitudes, house systems (angles land
 on the cusps, cusps run round the circle without crossing, quadrant systems coincide at
 the equator, zero-latitude bodies get the same house from both methods), library data
