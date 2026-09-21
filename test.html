@@ -294,6 +294,162 @@ function run(){
     return ok||'транзиты к натальному Хирону не считаются';
   });
 
+  /* ---------- структурные факты ---------- */
+  /* Слой ChartFacts считает то, что выводится правилом и не обсуждается:
+     диспозиторы, управительство домами, рецепции, секта, угловость,
+     солнечное состояние. Проверять его надо до того, как поверх появится
+     хоть одна строка текста: трактовка, построенная на неверном факте, хуже
+     отсутствия трактовки, потому что она этот факт маскирует. */
+  group('Структурные факты');
+  const FCH='computeChart(1985,3,20,6.5,3,55.7558,37.6173)';
+  t('цепочка диспозиторов совпадает с ручным разбором',()=>{
+    /* Считается на бумаге: Луна в Рыбах -> Юпитер, Юпитер в Водолее ->
+       Сатурн, Сатурн в Скорпионе -> Марс, Марс в Тельце -> Венера, Венера в
+       Овне -> обратно Марс. Конечного диспозитора нет, есть замкнутая пара. */
+    const r=ev(`(()=>{const F=chartFacts(${FCH});
+      return {chain:['Moon',...F.planets.Moon.dispositorChain].join('>'),
+        loop:(F.planets.Moon.loop||[]).join('+'),
+        terminal:F.planets.Moon.terminal};})()`);
+    if(r.chain!=='Moon>Jupiter>Saturn>Mars>Venus') return 'цепочка '+r.chain;
+    if(r.loop!=='Mars+Venus') return 'петля '+r.loop;
+    return r.terminal===null||'конечный диспозитор '+r.terminal+', хотя цепочка замкнута';
+  });
+  t('обе взаимные рецепции найдены и обе проверяются вручную',()=>{
+    /* Марс в Тельце и Венера в Овне обмениваются обителями. Солнце в Рыбах и
+       Венера в Овне обмениваются экзальтациями. Оба факта считаются по
+       таблицам, без единого суждения. */
+    const r=ev(`(()=>{const F=chartFacts(${FCH});
+      return F.mutualReceptions.map(m=>[m.a,m.b].sort().join('+')+':'
+        +m.aReceivesB.join('/')+'|'+m.bReceivesA.join('/'));})()`);
+    const want=['Mars+Venus:domicile|domicile','Sun+Venus:exaltation|exaltation'];
+    const got=r.slice().sort();
+    return JSON.stringify(got)===JSON.stringify(want.slice().sort())||got.join(', ');
+  });
+  t('взаимная рецепция хранит оба направления отдельно',()=>{
+    /* Один общий список типов терял ответ, как только направления
+       расходились: "A принимает B по обители, B принимает A по экзальтации"
+       это не та же конфигурация, что зеркальная. */
+    const r=ev(`(()=>{const F=chartFacts(${FCH});
+      return F.mutualReceptions.every(m=>Array.isArray(m.aReceivesB)&&Array.isArray(m.bReceivesA)
+        &&m.aReceivesB.length&&m.bReceivesA.length);})()`);
+    return r===true||'направления не разделены';
+  });
+  /* Инварианты, а не снимки: они обязаны держаться на любой карте, поэтому
+     проверяются на выборке из библиотеки, а не на одной удобной. */
+  const FSAMPLE=80;
+  t('на '+FSAMPLE+' картах библиотеки каждая цепочка заканчивается',()=>{
+    const bad=ev(`(()=>{const out=[];
+      for(let i=0;i<CHART_LIBRARY.length;i+=Math.ceil(CHART_LIBRARY.length/${FSAMPLE})){
+        const e=CHART_LIBRARY[i], hh=e.t==null?12:e.t;
+        const F=chartFacts(computeChart(e.y,e.mo,e.d,hh,libTz(e),e.lat,e.lon));
+        for(const [p,f] of Object.entries(F.planets)){
+          if(!f.terminal&&!f.loop) out.push(e.id+'/'+p+': ни конца, ни петли');
+          if(f.dispositorChain.length>7) out.push(e.id+'/'+p+': цепочка '+f.dispositorChain.length);
+        }
+      }
+      return out.slice(0,5);})()`);
+    return bad.length===0||bad.join('; ');
+  });
+  t('внешние планеты и Хирон никогда не диспозиторы',()=>{
+    /* Ради этого цепочки идут по классическим управителям. С современными
+       Плутон управляет Скорпионом, но сам никуда не передаёт, и половина
+       цепочек упирается в планету, которая не может их продолжить. */
+    const bad=ev(`(()=>{const out=[], outer=['Uranus','Neptune','Pluto','Chiron'];
+      for(let i=0;i<CHART_LIBRARY.length;i+=Math.ceil(CHART_LIBRARY.length/${FSAMPLE})){
+        const e=CHART_LIBRARY[i], hh=e.t==null?12:e.t;
+        const F=chartFacts(computeChart(e.y,e.mo,e.d,hh,libTz(e),e.lat,e.lon));
+        for(const [p,f] of Object.entries(F.planets)){
+          if(outer.includes(f.dispositor)) out.push(e.id+'/'+p+': диспозитор '+f.dispositor);
+          f.dispositorChain.forEach(x=>{if(outer.includes(x)) out.push(e.id+'/'+p+': в цепочке '+x);});
+        }
+        F.houses.forEach(h=>{if(outer.includes(h.ruler)) out.push(e.id+'/дом '+h.house);});
+      }
+      return out.slice(0,5);})()`);
+    return bad.length===0||bad.join('; ');
+  });
+  t('перехваченные знаки всегда идут противоположными парами',()=>{
+    /* Математический инвариант, а не соглашение: противоположные куспиды
+       отстоят на 180 градусов, поэтому знак может выпасть с куспидов только
+       вместе со своим противоположным. Если тест падает, ошибка в куспидах,
+       а не в перехвате. */
+    const bad=ev(`(()=>{const out=[];
+      for(let i=0;i<CHART_LIBRARY.length;i+=Math.ceil(CHART_LIBRARY.length/${FSAMPLE})){
+        const e=CHART_LIBRARY[i], hh=e.t==null?12:e.t;
+        const F=chartFacts(computeChart(e.y,e.mo,e.d,hh,libTz(e),e.lat,e.lon));
+        const set=new Set(F.intercepted);
+        F.intercepted.forEach(x=>{if(!set.has((x+6)%12)) out.push(e.id+': знак '+x+' без пары');});
+      }
+      return out.slice(0,5);})()`);
+    return bad.length===0||bad.join('; ');
+  });
+  t('каждый из 12 куспидов получает ровно одного управителя',()=>{
+    const r=ev(`(()=>{const F=chartFacts(${FCH});
+      const ruled=[]; Object.values(F.planets).forEach(f=>ruled.push(...f.rulesHouses));
+      return {houses:F.houses.length, ruled:ruled.length,
+        unique:new Set(ruled).size, noRuler:F.houses.filter(h=>!h.ruler).length};})()`);
+    if(r.houses!==12) return 'домов '+r.houses;
+    if(r.noRuler) return r.noRuler+' домов без управителя';
+    return (r.ruled===12&&r.unique===12)||`управлений ${r.ruled}, различных ${r.unique}`;
+  });
+  t('перенос темы не указывает на дом, в котором планета и так стоит',()=>{
+    const bad=ev(`(()=>{const out=[];
+      for(let i=0;i<CHART_LIBRARY.length;i+=Math.ceil(CHART_LIBRARY.length/${FSAMPLE})){
+        const e=CHART_LIBRARY[i], hh=e.t==null?12:e.t;
+        const F=chartFacts(computeChart(e.y,e.mo,e.d,hh,libTz(e),e.lat,e.lon));
+        for(const [p,f] of Object.entries(F.planets))
+          f.carries.forEach(c=>{if(c.into!==f.house||c.from===f.house)
+            out.push(e.id+'/'+p+': '+c.from+'->'+c.into);});
+      }
+      return out.slice(0,5);})()`);
+    return bad.length===0||bad.join('; ');
+  });
+  t('секта и солнечное состояние согласованы с положениями',()=>{
+    const bad=ev(`(()=>{const out=[];
+      for(let i=0;i<CHART_LIBRARY.length;i+=Math.ceil(CHART_LIBRARY.length/${FSAMPLE})){
+        const e=CHART_LIBRARY[i], hh=e.t==null?12:e.t;
+        const F=chartFacts(computeChart(e.y,e.mo,e.d,hh,libTz(e),e.lat,e.lon));
+        if((F.sect.chart==='day')!==(F.sect.sunHouse>=7)) out.push(e.id+': секта против дома Солнца');
+        if(F.planets.Sun.solar.condition!==null) out.push(e.id+': у Солнца есть солнечное состояние');
+        for(const [p,f] of Object.entries(F.planets)){
+          const el=f.solar.elongation; if(el==null) continue;
+          const want=el<=17/60?'cazimi':el<=8.5?'combust':el<=15?'underBeams':'free';
+          if(f.solar.condition!==want) out.push(e.id+'/'+p+': '+f.solar.condition+' при '+el.toFixed(2));
+        }
+      }
+      return out.slice(0,5);})()`);
+    return bad.length===0||bad.join('; ');
+  });
+  t('слой фактов не содержит ни одной оценки',()=>{
+    /* Сторож на решение, а не на реализацию. Как только здесь появится
+       strength или score, следующий слой начнёт спрашивать слова
+       "поражена" и "слабая", и весь регистр поедет. */
+    const hits=ev(`(()=>{const F=chartFacts(${FCH}), bad=[];
+      (function walk(o,path){
+        if(o===null||typeof o!=='object') return;
+        Object.keys(o).forEach(k=>{
+          if(/score|strength|weak|strong|good|bad|malefic|benefic/i.test(k)) bad.push(path+'.'+k);
+          walk(o[k],path+'.'+k);
+        });
+      })(F,'facts');
+      return bad;})()`);
+    return hits.length===0||'оценочные поля: '+hits.join(', ');
+  });
+  t('производные факты помнят, из чего выведены',()=>{
+    /* Без этого «Луна в Козероге» и «диспозитор Сатурн» пойдут дальше как два
+       независимых свидетельства, хотя это одно утверждение, записанное
+       дважды. Счётчик будет ошибаться систематически и всегда в сторону
+       более уверенного вывода. */
+    const r=ev(`(()=>{const F=chartFacts(${FCH});
+      const pl=Object.values(F.planets).every(f=>f.derivedFrom&&f.derivedFrom.dispositor);
+      const hs=F.houses.every(h=>Array.isArray(h.derivedFrom)&&h.derivedFrom.length);
+      const rc=F.receptions.every(r=>Array.isArray(r.derivedFrom)&&r.derivedFrom.length);
+      const mr=F.mutualReceptions.every(m=>m.derivedFrom&&m.derivedFrom.length===
+        m.aReceivesB.length+m.bReceivesA.length);
+      return {pl,hs,rc,mr};})()`);
+    const miss=Object.entries(r).filter(([k,v])=>!v).map(([k])=>k);
+    return miss.length===0||'без происхождения: '+miss.join(', ');
+  });
+
   /* ---------- устойчивость ---------- */
   group('Устойчивость');
   const EDGE=[[1850,55.75,37.62,'1850 Москва'],[2200,55.75,37.62,'2200 Москва'],

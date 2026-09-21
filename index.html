@@ -3257,6 +3257,215 @@ function bodyHouse(ch,name){
   }
   return houseOf(b.lon,ch.houses.cusps);
 }
+
+/* ---------- ChartFacts: the structural layer ----------
+   Everything about a chart that follows from a rule and that nobody argues
+   about: dispositors and their chains, house rulerships and where each ruler
+   lands, receptions, sect, angularity, solar condition. No interpretation, no
+   scores, no "strong" and no "weak" - those are judgements, and they belong on
+   top of this layer rather than inside it. A reading built on facts that are
+   themselves wrong is worse than no reading, so this comes first and is tested
+   on its own.
+
+   Three deliberate limits, each so that this is days of work and not months:
+
+   1. Dispositors, house rulers and receptions walk the CLASSICAL rulers. A
+      chain only works if every sign leads to a planet that itself has a sign,
+      and the modern set breaks that: Pluto rules Scorpio, but Pluto disposits
+      nothing back into the seven, so chains end on a planet that cannot pass
+      them on. The modern ruler is reported beside the classical one wherever
+      they differ, so nothing is hidden - but the walk is classical.
+   2. Receptions are by domicile and exaltation only. Triplicity, term and face
+      each have two or three competing tables (Dorothean against Ptolemaic,
+      Egyptian bounds against Ptolemaic), and quietly picking one would be a
+      decision dressed up as a calculation. Listed in `gaps` instead.
+   3. House rulership is taken from the sign on the cusp. An intercepted sign
+      has no cusp and therefore no house here, which is the common convention
+      and not the only one. Also in `gaps`.
+
+   Derived facts carry `derivedFrom`: the ids of the facts they were computed
+   out of. The name is deliberately not `from`, which already means the giver
+   in a reception and the origin house in a carry; the first version of this
+   used `from` for both and the provenance array silently overwrote the
+   receiver, so every reception read "Sun receives Sun".
+   That is not decoration. "Moon in Capricorn" and "the Moon's dispositor is
+   Saturn" are one fact stated twice, and anything downstream that weighs
+   evidence has to be able to see it, or it will over-count every time and
+   always in the direction of a more confident reading. */
+const CLASSICAL_RULERS={0:'Mars',1:'Venus',2:'Mercury',3:'Moon',4:'Sun',5:'Mercury',
+  6:'Venus',7:'Mars',8:'Jupiter',9:'Saturn',10:'Saturn',11:'Jupiter'};
+/* Only these seven appear as values above, so only they can hold a chain: the
+   outers and Chiron take a dispositor like any other body but are never one,
+   which is also what guarantees every walk ends. */
+const SECT_OF={Sun:'diurnal',Jupiter:'diurnal',Saturn:'diurnal',
+  Moon:'nocturnal',Venus:'nocturnal',Mars:'nocturnal'};
+/* Cazimi 17', combust 8°30', under the beams 15°: Lilly's figures, still the
+   ones most traditional practice uses. Kept as one table so that changing a
+   threshold is one edit and not a hunt. */
+const SOLAR_LIMITS={cazimi:17/60, combust:8.5, underBeams:15};
+
+/* Peregrine is a state with a name, not an absence. dignity() answers null
+   because the interpretation corpus wants that; here the distinction between
+   "no essential dignity" and "not computed" has to survive. */
+const dignityOf=(p,s)=>dignity(p,s)||'peregrine';
+const signOfLon=lon=>Math.floor(rev(lon)/30);
+/* Shortest separation between two longitudes, 0 to 180. */
+const arcBetween=(a,b)=>{const d=Math.abs(rev(a-b));return d>180?360-d:d;};
+
+function chartFacts(ch){
+  const bodies=WHEEL_BODIES.filter(p=>ch.pos[p]);
+  const sign={}, house={};
+  bodies.forEach(p=>{ sign[p]=signOfLon(ch.pos[p].lon); house[p]=bodyHouse(ch,p); });
+
+  /* ---- sect ----
+     The primitives are stored beside the verdict on purpose. Hayz and the
+     fuller traditional schemes need "above the horizon" and "diurnal by
+     nature" separately, and recovering them from the verdict later is not
+     possible. */
+  const sunAbove=house.Sun>=7;
+  const chartSect=sunAbove?'day':'night';
+  /* Mercury takes the sect of the half of the sky it rises in: ahead of the
+     Sun in zodiacal order it rises after, behind it rises before. */
+  const mercOriental=ch.pos.Mercury?rev(ch.pos.Mercury.lon-ch.pos.Sun.lon)>180:null;
+
+  const F={
+    sect:{chart:chartSect, sunAboveHorizon:sunAbove, sunHouse:house.Sun},
+    planets:{}, houses:[], receptions:[], mutualReceptions:[],
+    terminals:[], loops:[],
+    intercepted:[],
+    gaps:['receptions by triplicity, term and face',
+          'antiscia and other mirror positions']
+  };
+  /* Which signs fall on no cusp at all. They have no house ruler under the
+     cusp-sign convention used here, and in this very chart there are two of
+     them, so reporting the gap in the abstract would have been useless. */
+  {
+    const onCusp=new Set(ch.houses.cusps.map(signOfLon));
+    for(let i=0;i<12;i++) if(!onCusp.has(i)) F.intercepted.push(i);
+  }
+
+  /* ---- houses: the sign on each cusp, its ruler, and where that ruler sits ---- */
+  for(let h=1;h<=12;h++){
+    const cusp=ch.houses.cusps[h-1], s=signOfLon(cusp);
+    const ruler=CLASSICAL_RULERS[s], modern=RULERS[s];
+    F.houses.push({
+      house:h, cuspSign:s, cuspLon:cusp,
+      ruler, modernRuler:modern===ruler?null:modern,
+      rulerSign:sign[ruler]!=null?sign[ruler]:null,
+      rulerHouse:house[ruler]!=null?house[ruler]:null,
+      rulerDignity:sign[ruler]!=null?dignityOf(ruler,sign[ruler]):null,
+      derivedFrom:['cusp_'+h]
+    });
+  }
+
+  const angles={ASC:ch.asc, IC:rev(ch.mc+180), DSC:rev(ch.asc+180), MC:ch.mc};
+
+  /* ---- one pass per body ---- */
+  bodies.forEach(p=>{
+    const s=sign[p], hs=house[p], lon=ch.pos[p].lon;
+
+    /* Dispositor, then the walk. It stops on a planet standing in its own
+       sign (the chain's end) or on a planet already seen in this walk (a
+       closed loop). Both are real answers; forcing one of them into the
+       other is how software quietly simplifies a chart. */
+    const disp=CLASSICAL_RULERS[s];
+    const chain=[]; let cur=p, loop=null, terminal=null;
+    const seen=new Set();
+    while(true){
+      if(seen.has(cur)){ loop=chain.slice(chain.indexOf(cur)); break; }
+      seen.add(cur);
+      const cs=sign[cur];
+      if(cs==null) break;                       // body not in this chart
+      const next=CLASSICAL_RULERS[cs];
+      if(next===cur){ terminal=cur; break; }    // stands in its own sign
+      chain.push(cur); cur=next;
+    }
+
+    /* Which houses this body rules, and the theme it therefore carries into
+       the house it occupies. This is the part no mobile app does, and it is
+       the cheapest of all of them: the cusp signs are already computed. */
+    const rules=F.houses.filter(x=>x.ruler===p).map(x=>x.house);
+    const carries=hs!=null?rules.filter(r=>r!==hs).map(r=>({from:r,into:hs})):[];
+
+    /* Angularity as the category AND the distance, because the category is a
+       convention and the distance is a measurement. Later work can use either
+       without this having to be recomputed. */
+    let nearest=null, dist=999;
+    Object.entries(angles).forEach(([k,v])=>{
+      const d=arcBetween(lon,v); if(d<dist){dist=d;nearest=k;}
+    });
+    const angularity=hs==null?null
+      :[1,4,7,10].includes(hs)?'angular'
+      :[2,5,8,11].includes(hs)?'succedent':'cadent';
+
+    /* Solar condition. The Sun has none by definition, and the categories are
+       exclusive, so this is one value rather than three flags. */
+    const elong=p==='Sun'?null:arcBetween(lon,ch.pos.Sun.lon);
+    const solar=elong==null?null
+      :elong<=SOLAR_LIMITS.cazimi?'cazimi'
+      :elong<=SOLAR_LIMITS.combust?'combust'
+      :elong<=SOLAR_LIMITS.underBeams?'underBeams':'free';
+
+    const natal=SECT_OF[p]||(p==='Mercury'?(mercOriental?'diurnal':'nocturnal'):null);
+    F.planets[p]={
+      sign:s, house:hs, lon,
+      dignity:dignityOf(p,s),
+      dispositor:disp===p?null:disp,
+      dispositorChain:chain.slice(1),           // without the body itself
+      terminal, loop,
+      rulesHouses:rules, carries,
+      angularity, nearestAngle:nearest, distanceToAngle:dist,
+      sect:{planet:natal, aboveHorizon:hs==null?null:hs>=7,
+            status:natal==null?'neutral':natal===(sunAbove?'diurnal':'nocturnal')
+              ?'inSect':'contraryToSect'},
+      solar:{condition:solar, elongation:elong},
+      derivedFrom:{dispositor:['sign_'+p], rulesHouses:rules.map(r=>'cusp_'+r)}
+    };
+  });
+
+  /* Every distinct end a chain reaches, and every closed loop, once. */
+  const seenT=new Set(), seenL=new Set();
+  bodies.forEach(p=>{
+    const f=F.planets[p];
+    if(f.terminal&&!seenT.has(f.terminal)){ seenT.add(f.terminal); F.terminals.push(f.terminal); }
+    if(f.loop){ const k=[...f.loop].sort().join('-');
+      if(!seenL.has(k)){ seenL.add(k); F.loops.push(f.loop); } }
+  });
+
+  /* ---- receptions ----
+     Directed: the receiver is the planet whose sign the other one stands in.
+     A mutual reception is not a fact of its own, it is the name for two
+     directed ones pointing back at each other, and it is stored that way so
+     that nothing downstream counts the pair three times. */
+  const recKey=r=>`${r.from}>${r.to}:${r.type}`;
+  bodies.forEach(guest=>{
+    const s=sign[guest];
+    const byDom=CLASSICAL_RULERS[s];
+    if(byDom&&byDom!==guest&&sign[byDom]!=null)
+      F.receptions.push({from:byDom,to:guest,type:'domicile',derivedFrom:['sign_'+guest]});
+    Object.entries(EXALT).forEach(([host,es])=>{
+      if(es===s&&host!==guest&&sign[host]!=null)
+        F.receptions.push({from:host,to:guest,type:'exaltation',derivedFrom:['sign_'+guest]});
+    });
+  });
+  const pairSeen=new Set();
+  F.receptions.forEach(r=>{
+    const back=F.receptions.filter(x=>x.from===r.to&&x.to===r.from);
+    if(!back.length) return;
+    const k=[r.from,r.to].sort().join('-');
+    if(pairSeen.has(k)) return;
+    pairSeen.add(k);
+    const fwd=F.receptions.filter(x=>x.from===r.from&&x.to===r.to);
+    /* The two directions are kept apart. A single `types` list was enough
+       while both happened to be domicile, and lost the answer the moment they
+       differed: "A receives B by domicile, B receives A by exaltation" is not
+       the same arrangement as the reverse, and the pair is the whole point. */
+    F.mutualReceptions.push({a:r.from, b:r.to,
+      aReceivesB:fwd.map(x=>x.type), bReceivesA:back.map(x=>x.type),
+      derivedFrom:[...fwd.map(recKey),...back.map(recKey)]});
+  });
+  return F;
+}
 let SHOW_SECONDS=localStorage.getItem('astrarium_seconds')==='1';
 function fmtPos(lon){
   const s=Math.floor(rev(lon)/30),deg=rev(lon)-s*30,dd=Math.floor(deg);
