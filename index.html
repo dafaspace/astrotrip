@@ -724,7 +724,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
 /* Bump together with CACHE in sw.js: the two are the same release, and the
    number on screen is how you tell from a phone which one you are looking at. */
-const APP_VERSION='3.1.0';
+const APP_VERSION='3.2.0';
 document.getElementById('ver').textContent=APP_VERSION;
 
 /* ---------- feature flags ----------
@@ -805,7 +805,7 @@ const STR = {
   era4:{ru:'Рождённые с 1950',en:'Born from 1950'},
   tapdetail:{ru:'Коснитесь планеты для детали.',en:'Tap a planet for detail.'},
   positions:{ru:'Позиции',en:'Positions'},
-  posnote:{ru:'Движок: VSOP87D, ELP82B и чебышёвская подгонка Плутона, целиком офлайн. Узлы средние. Чёрная Луна - средняя или истинная, на выбор; Селена считается по определению Swiss Ephemeris. Плутон надёжен на 1550-2250, дальше экстраполируется. Хирона пока нет.',en:'Engine: VSOP87D, ELP82B and a Chebyshev fit for Pluto, fully offline. Nodes are mean. The Black Moon is mean or true, your choice; Selena follows the Swiss Ephemeris definition. Pluto is reliable over 1550-2250 and extrapolated beyond. Chiron is not here yet.'},
+  posnote:{ru:'Движок: VSOP87D, ELP82B и чебышёвская подгонка Плутона, целиком офлайн. Узлы средние. Чёрная Луна - средняя или истинная, на выбор; Селена считается по определению Swiss Ephemeris. Плутон надёжен на 1550-2250, дальше экстраполируется. Хирон - такая же подгонка, на 1600-2250: раньше решения JPL для него нет, и вне этого отрезка приложение его не показывает.',en:'Engine: VSOP87D, ELP82B and a Chebyshev fit for Pluto, fully offline. Nodes are mean. The Black Moon is mean or true, your choice; Selena follows the Swiss Ephemeris definition. Pluto is reliable over 1550-2250 and extrapolated beyond. Chiron is the same kind of fit, over 1600-2250: JPL has no solution for it earlier, and outside that span the app leaves it out.'},
   reading:{ru:'Разбор карты',en:'Reading'},
   corpusnote:{ru:'Тексты - структурная заготовка: кратко + подробнее по касанию. Настоящий корпус интерпретаций подключается отдельно.',en:'Texts are a structural stub: short + detail on tap. The real interpretation corpus plugs in separately.'},
   ringLabel:{ru:'Тип карты',en:'Chart type'},
@@ -866,7 +866,7 @@ const STR = {
   gridInner:{ru:'вниз',en:'down'},
   gridOuter:{ru:'внешнее кольцо',en:'outer ring'},
   gridOuterSyn:{ru:'партнёр',en:'partner'},
-  gridNote:{ru:'Десять планет плюс Асцендент и MC. Знак в клетке - аспект, коснитесь клетки, чтобы увидеть пару и орбис. Без внешнего кольца таблица треугольная: верхняя половина повторяла бы нижнюю. С внешним кольцом строки - его тела, столбцы - ваши.',en:'Ten planets plus the Ascendant and Midheaven. The mark in a cell is the aspect; tap a cell for the pair and the orb. Without an outer ring the grid is triangular, since the upper half would repeat the lower. With one, the rows are its bodies and the columns are yours.'},
+  gridNote:{ru:'Десять планет, Хирон, Асцендент и MC. Знак в клетке - аспект, коснитесь клетки, чтобы увидеть пару и орбис. Без внешнего кольца таблица треугольная: верхняя половина повторяла бы нижнюю. С внешним кольцом строки - его тела, столбцы - ваши.',en:'The ten planets, Chiron, the Ascendant and the Midheaven. The mark in a cell is the aspect; tap a cell for the pair and the orb. Without an outer ring the grid is triangular, since the upper half would repeat the lower. With one, the rows are its bodies and the columns are yours.'},
   aspects:{ru:'Аспекты и орбисы',en:'Aspects and orbs'},
   orbReset:{ru:'Вернуть по умолчанию',en:'Reset to defaults'},
   orbNote:{ru:'Орбис в градусах. Минорные выключены по умолчанию: со всеми включёнными аспектов в карте становится примерно в полтора раза больше - на 60 картах библиотеки 11.6 против 16.4. Настройка действует и на натал, и на внешнее кольцо, где орбис дополнительно ограничен скоростью тела.',en:'Orbs in degrees. The minors are off by default: with all of them on a chart carries about half as many aspects again - 11.6 against 16.4, measured across 60 charts from the library. The setting applies to the natal chart and to the outer ring, where the orb is additionally capped by the speed of the body.'},
@@ -880,7 +880,7 @@ const STR = {
   hemi:{ru:'Полушария',en:'Hemispheres'},
   hemi_e:{ru:'Восток',en:'East'}, hemi_w:{ru:'Запад',en:'West'},
   hemi_n:{ru:'Низ',en:'North'}, hemi_s:{ru:'Верх',en:'South'},
-  balnote:{ru:'Считаются десять планет плюс Асцендент и MC, каждое тело весит одинаково. Полушария - по домам: восток это дома 10-3, верх это дома 7-12.',en:'Ten planets plus the Ascendant and MC, each body weighted the same. Hemispheres are by house: east is houses 10-3, south is houses 7-12.'},
+  balnote:{ru:'Считаются десять планет плюс Асцендент и MC, каждое тело весит одинаково. Хирон сюда не входит: это счёт, который совпадает с учебниками. Полушария - по домам: восток это дома 10-3, верх это дома 7-12.',en:'Ten planets plus the Ascendant and MC, each body weighted the same. Chiron is not counted here, so the tally matches the books. Hemispheres are by house: east is houses 10-3, south is houses 7-12.'},
   /* library exchange */
   exportCsv:{ru:'Выгрузить CSV',en:'Export CSV'},
   importCsv:{ru:'Загрузить CSV',en:'Import CSV'},
@@ -937,7 +937,7 @@ const I18N={
     empty:"Introduce los datos de nacimiento y levanta la carta.", natal:"Carta natal",
     era1:"Antes del cine", era2:"Nacidos 1880-1919 · la era de los estudios", era3:"Nacidos 1920-1949",
     era4:"Nacidos desde 1950", tapdetail:"Toca un planeta para ver el detalle.", positions:"Posiciones",
-    posnote:"Motor: VSOP87D, ELP82B y un ajuste de Chebyshev para Plutón, todo sin conexión. Los nodos son medios. La Luna Negra es media o verdadera, a tu elección; Selena sigue la definición de Swiss Ephemeris. Plutón es fiable entre 1550 y 2250 y se extrapola fuera de ese rango. Quirón todavía no está.",
+    posnote:"Motor: VSOP87D, ELP82B y un ajuste de Chebyshev para Plutón, todo sin conexión. Los nodos son medios. La Luna Negra es media o verdadera, a tu elección; Selena sigue la definición de Swiss Ephemeris. Plutón es fiable entre 1550 y 2250 y se extrapola fuera de ese rango. Quirón es el mismo tipo de ajuste, de 1600 a 2250: JPL no tiene solución anterior, y fuera de ese rango la app no lo muestra.",
     reading:"Interpretación", transitdate:"Fecha del tránsito",
     scrubintro:"Arrastra el control y el anillo exterior se redibuja al instante. El paso indica cuánto tiempo vale una muesca, desde un segundo hasta un siglo.",
     stepLabel:"PASO", u_sec:"segundo", u_min:"minuto", u_hour:"hora", u_day:"día", u_week:"semana",
@@ -990,7 +990,7 @@ const I18N={
     empty:"Saisissez les données de naissance et dressez la carte.", natal:"Carte natale",
     era1:"Avant le cinéma", era2:"Nés en 1880-1919 · l’ère des studios", era3:"Nés en 1920-1949",
     era4:"Nés à partir de 1950", tapdetail:"Touchez une planète pour le détail.", positions:"Positions",
-    posnote:"Moteur : VSOP87D, ELP82B et un ajustement de Tchebychev pour Pluton, entièrement hors ligne. Les nœuds sont moyens. La Lune Noire est moyenne ou vraie, au choix ; Séléné suit la définition de Swiss Ephemeris. Pluton est fiable de 1550 à 2250 et extrapolé au-delà. Chiron n’est pas encore là.",
+    posnote:"Moteur : VSOP87D, ELP82B et un ajustement de Tchebychev pour Pluton, entièrement hors ligne. Les nœuds sont moyens. La Lune Noire est moyenne ou vraie, au choix ; Séléné suit la définition de Swiss Ephemeris. Pluton est fiable de 1550 à 2250 et extrapolé au-delà. Chiron suit le même ajustement, de 1600 à 2250 : JPL n’a pas de solution avant, et hors de cette plage l’app ne l’affiche pas.",
     reading:"Interprétation", transitdate:"Date du transit",
     scrubintro:"Faites glisser le curseur : l’anneau extérieur se redessine en direct. Le pas indique ce que vaut un cran, de la seconde au siècle.",
     stepLabel:"PAS", u_sec:"seconde", u_min:"minute", u_hour:"heure", u_day:"jour", u_week:"semaine",
@@ -1039,7 +1039,7 @@ const I18N={
     empty:"Geburtsdaten eingeben und das Chart berechnen.", natal:"Radix", era1:"Vor dem Kino",
     era2:"Geboren 1880-1919 · die Studio-Ära", era3:"Geboren 1920-1949", era4:"Geboren ab 1950",
     tapdetail:"Für Details einen Planeten antippen.", positions:"Positionen",
-    posnote:"Rechenkern: VSOP87D, ELP82B und eine Tschebyschow-Anpassung für Pluto, vollständig offline. Die Mondknoten sind mittlere. Der Schwarze Mond ist wahlweise mittlere oder wahre Apogäum; Selena folgt der Definition der Swiss Ephemeris. Pluto ist von 1550 bis 2250 verlässlich und wird darüber hinaus extrapoliert. Chiron fehlt noch.",
+    posnote:"Rechenkern: VSOP87D, ELP82B und eine Tschebyschow-Anpassung für Pluto, vollständig offline. Die Mondknoten sind mittlere. Der Schwarze Mond ist wahlweise mittlere oder wahre Apogäum; Selena folgt der Definition der Swiss Ephemeris. Pluto ist von 1550 bis 2250 verlässlich und wird darüber hinaus extrapoliert. Chiron folgt derselben Anpassung, von 1600 bis 2250: davor gibt es bei JPL keine Lösung, außerhalb zeigt die App ihn nicht.",
     reading:"Deutung", transitdate:"Transitdatum",
     scrubintro:"Zieh den Regler, und der äußere Ring zeichnet sich live neu. Der Schritt sagt, wie viel Zeit eine Raste wert ist, von der Sekunde bis zum Jahrhundert.",
     stepLabel:"SCHRITT", u_sec:"Sekunde", u_min:"Minute", u_hour:"Stunde", u_day:"Tag", u_week:"Woche",
@@ -1088,7 +1088,7 @@ const I18N={
     empty:"Inserisci i dati di nascita e calcola la carta.", natal:"Carta natale", era1:"Prima del cinema",
     era2:"Nati nel 1880-1919 · l’era degli studios", era3:"Nati nel 1920-1949", era4:"Nati dal 1950",
     tapdetail:"Tocca un pianeta per il dettaglio.", positions:"Posizioni",
-    posnote:"Motore: VSOP87D, ELP82B e un adattamento di Chebyshev per Plutone, tutto offline. I nodi sono medi. La Luna Nera è media o vera, a scelta; Selena segue la definizione di Swiss Ephemeris. Plutone è affidabile fra il 1550 e il 2250 e oltre viene estrapolato. Chirone non c’è ancora.",
+    posnote:"Motore: VSOP87D, ELP82B e un adattamento di Chebyshev per Plutone, tutto offline. I nodi sono medi. La Luna Nera è media o vera, a scelta; Selena segue la definizione di Swiss Ephemeris. Plutone è affidabile fra il 1550 e il 2250 e oltre viene estrapolato. Chirone segue lo stesso adattamento, dal 1600 al 2250: prima JPL non ha una soluzione, e fuori da quell’intervallo l’app non lo mostra.",
     reading:"Lettura", transitdate:"Data del transito",
     scrubintro:"Trascina il cursore e l’anello esterno si ridisegna in diretta. Il passo dice quanto tempo vale una tacca, dal secondo al secolo.",
     stepLabel:"PASSO", u_sec:"secondo", u_min:"minuto", u_hour:"ora", u_day:"giorno", u_week:"settimana",
@@ -1137,7 +1137,7 @@ const I18N={
     empty:"Введіть дані народження і побудуйте карту.", natal:"Натальна карта", era1:"До кінематографа",
     era2:"Народжені 1880-1919 · доба студій", era3:"Народжені 1920-1949", era4:"Народжені від 1950",
     tapdetail:"Торкніться планети, щоб побачити деталі.", positions:"Позиції",
-    posnote:"Рушій: VSOP87D, ELP82B і чебишовська підгонка Плутона, цілком офлайн. Вузли середні. Чорний Місяць - середній або істинний, на вибір; Селена рахується за визначенням Swiss Ephemeris. Плутон надійний на 1550-2250, далі екстраполюється. Хірона поки немає.",
+    posnote:"Рушій: VSOP87D, ELP82B і чебишовська підгонка Плутона, цілком офлайн. Вузли середні. Чорний Місяць - середній або істинний, на вибір; Селена рахується за визначенням Swiss Ephemeris. Плутон надійний на 1550-2250, далі екстраполюється. Хірон - така сама підгонка, на 1600-2250: раніше розв’язку JPL для нього немає, і поза цим відрізком застосунок його не показує.",
     reading:"Розбір карти", transitdate:"Дата транзиту",
     scrubintro:"Тягніть повзунок - зовнішнє кільце перемальовується на льоту. Крок задає, скільки часу в одній поділці: від секунди до століття.",
     stepLabel:"КРОК", u_sec:"секунда", u_min:"хвилина", u_hour:"година", u_day:"доба", u_week:"тиждень",
@@ -1186,7 +1186,7 @@ const I18N={
     empty:"შეიყვანე დაბადების მონაცემები და ააგე რუკა.", natal:"ნატალური რუკა", era1:"კინომდე",
     era2:"დაბადებულები 1880-1919 · სტუდიების ეპოქა", era3:"დაბადებულები 1920-1949",
     era4:"დაბადებულები 1950-იდან", tapdetail:"დეტალისთვის შეეხე პლანეტას.", positions:"პოზიციები",
-    posnote:"ძრავი: VSOP87D, ELP82B და პლუტონისთვის ჩებიშევის მიახლოება, სრულად ოფლაინში. კვანძები საშუალოა. შავი მთვარე საშუალოა ან ჭეშმარიტი, არჩევანით; სელენა Swiss Ephemeris-ის განსაზღვრებას მიჰყვება. პლუტონი საიმედოა 1550-2250 შუალედში, მის გარეთ ექსტრაპოლირდება. ქირონი ჯერ არ არის.",
+    posnote:"ძრავი: VSOP87D, ELP82B და პლუტონისთვის ჩებიშევის მიახლოება, სრულად ოფლაინში. კვანძები საშუალოა. შავი მთვარე საშუალოა ან ჭეშმარიტი, არჩევანით; სელენა Swiss Ephemeris-ის განსაზღვრებას მიჰყვება. პლუტონი საიმედოა 1550-2250 შუალედში, მის გარეთ ექსტრაპოლირდება. ქირონი იმავე მიახლოებით, 1600-2250 შუალედში: ამაზე ადრე JPL-ს მისთვის ამონახსნი არ აქვს, და ამ შუალედს გარეთ აპლიკაცია მას არ აჩვენებს.",
     reading:"განმარტება", transitdate:"ტრანზიტის თარიღი",
     scrubintro:"გადაატარე სლაიდერი და გარე რგოლი მაშინვე გადაიხატება. ნაბიჯი განსაზღვრავს, რამდენ დროს უდრის ერთი დანაყოფი: წამიდან საუკუნემდე.",
     stepLabel:"ნაბიჯი", u_sec:"წამი", u_min:"წუთი", u_hour:"საათი", u_day:"დღე", u_week:"კვირა",
@@ -1279,7 +1279,9 @@ function deltaTsec(y,mo){
 }
 
 /* VSOP87D series evaluation. VS/VF come from vsop87d.js. */
-const VKEY={Sun:'ea',Pluto:'pl',Mercury:'me',Venus:'ve',Mars:'ma',Jupiter:'ju',Saturn:'sa',Uranus:'ur',Neptune:'ne'};
+/* 'pl' and 'ch' are not VSOP series names - there are none. They are markers
+   that send the body to its own Chebyshev fit instead. */
+const VKEY={Sun:'ea',Pluto:'pl',Chiron:'ch',Mercury:'me',Venus:'ve',Mars:'ma',Jupiter:'ju',Saturn:'sa',Uranus:'ur',Neptune:'ne'};
 function vsSum(a,t){
   let s=0;
   for(let i=0;i<a.length;i+=3){ const f=a[i+2]; s+=a[i]*Math.cos(a[i+1]+(f<0?0:VF[f]*t)); }
@@ -1343,7 +1345,10 @@ function apparent(name,t,dpsi,E,V){
     const k=VKEY[name];
     let tau=0;
     for(let i=0;i<3;i++){
-      const P=k==='pl'?plutoXYZ(t-tau/MIL):helioXYZ(k,t-tau/MIL);
+      const P=k==='pl'?plutoXYZ(t-tau/MIL)
+             :k==='ch'?chironXYZ(t-tau/MIL)
+             :helioXYZ(k,t-tau/MIL);
+      if(!P) return null;                         // Chiron outside its fit
       v=[P[0]-E[0],P[1]-E[1],P[2]-E[2]];
       tau=Math.hypot(v[0],v[1],v[2])/C_AUD;
     }
@@ -1470,6 +1475,26 @@ function plutoXYZ(tm){
   return [chebEval(PLC[s][0],u),chebEval(PLC[s][1],u),chebEval(PLC[s][2],u)];
 }
 
+/* ---------- Chiron ---------- */
+/* Same construction, one difference that matters: this one returns null off
+   the ends instead of clamping. Pluto is one of the ten and a chart without it
+   is broken, so a frozen Pluto is the lesser evil; Chiron is an addition, and
+   JPL's own solution stops at 1599-12-11, so outside the fitted span the
+   honest answer is to leave it out. A glyph standing still at 1550 would be a
+   confident wrong answer, which is worse than no answer. */
+/* The bounds are read inside the function, not hoisted into a pair of consts
+   beside it: ephemeris.js loads after this script, so anything that touches
+   CHJD0 at parse time throws before the app has started. That is also why
+   plutoXYZ reads PLJD0 from inside its body and not from a local above it. */
+function chironXYZ(tm){
+  const jd=2451545.0+tm*365250;
+  if(jd<CHJD0||jd>CHJD0+CHSEG*CHNSEG) return null;
+  let s=Math.floor((jd-CHJD0)/CHSEG);
+  s=Math.max(0,Math.min(CHNSEG-1,s));
+  const u=Math.max(-1,Math.min(1,2*(jd-(CHJD0+s*CHSEG))/CHSEG-1));
+  return [chebEval(CHC[s][0],u),chebEval(CHC[s][1],u),chebEval(CHC[s][2],u)];
+}
+
 /* Mean Black Moon Lilith = mean lunar apogee (Meeus 45.7: perigee 83.3532465° @J2000,
    rate 4069.0137287°/cy; apogee = perigee+180). Our day-number epoch is JD 2451543.5
    = J2000 - 1.5d, hence the shifted constant. */
@@ -1524,18 +1549,37 @@ function selenaLon(d){ return SELENA.lon0==null?null:rev(SELENA.lon0+SELENA.rate
 
 /* ---------- symbols (embedded OFL font 'Astro') ---------- */
 const BODIES=['Sun','Moon','Mercury','Venus','Mars','Jupiter','Saturn','Uranus','Neptune','Pluto'];
-const POINTS=['NNode','SNode','Lilith','Selena'];
+/* Chiron sits here and not in BODIES for two separate reasons, and both are
+   load-bearing. It can be missing, and everything downstream already filters
+   POINTS by presence. And the element and modality tally counts the ten
+   planets plus the two angles, which is the one weighting no school argues
+   with; a thirteenth body in that count would quietly change every chart's
+   balance to a figure no book matches. */
+const POINTS=['Chiron','NNode','SNode','Lilith','Selena'];
+/* The ten planets and Chiron: everything the app treats as a body rather than
+   as a point. One list, because these are one set and were briefly three -
+   Chiron reached the aspect grid while findAspects still looped over BODIES,
+   so a Chiron square had a cell in the table, no chord on the wheel and no
+   line in the detail panel. Used for the outer ring's glyphs, the grid's
+   columns, and which pairs aspect each other.
+
+   Not RING_MOVERS, which says which aspects get reported: the transit list
+   leaves the Moon out because it would swamp a reading, and the Moon is still
+   drawn. Not CARD_ORDER either, which is the interpretation corpus and stops
+   at the ten. Filtered by presence at each use, so Chiron drops out before
+   1600 and the rest carries on. */
+const WHEEL_BODIES=[...BODIES,'Chiron'];
 const GLYPH={Sun:'☉',Moon:'☽',Mercury:'☿',Venus:'♀',Mars:'♂',Jupiter:'♃',Saturn:'♄',Uranus:'♅',Neptune:'♆',Pluto:'♇',
-  NNode:'☊',SNode:'☋',Lilith:'⚸',Selena:'⯝',ASC:'Asc',MC:'MC'};
+  Chiron:'⚷',NNode:'☊',SNode:'☋',Lilith:'⚸',Selena:'⯝',ASC:'Asc',MC:'MC'};
 const SIGN_GLYPH=['♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓'];
 const ASPECT_GLYPH={conjunction:'☌',semisextile:'⚺',semisquare:'∠',sextile:'⚹',
   quintile:'Q',square:'□',trine:'△',sesquiquadrate:'⚼',biquintile:'bQ',
   quincunx:'⚻',opposition:'☍'};
 
 const PLANET_NAME={
-  ru:{Sun:'Солнце',Moon:'Луна',Mercury:'Меркурий',Venus:'Венера',Mars:'Марс',Jupiter:'Юпитер',Saturn:'Сатурн',Uranus:'Уран',Neptune:'Нептун',Pluto:'Плутон',
+  ru:{Sun:'Солнце',Moon:'Луна',Mercury:'Меркурий',Venus:'Венера',Mars:'Марс',Jupiter:'Юпитер',Saturn:'Сатурн',Uranus:'Уран',Neptune:'Нептун',Pluto:'Плутон',Chiron:'Хирон',
       NNode:'Северный узел',SNode:'Южный узел',Lilith:'Лилит (Чёрная Луна)',Selena:'Селена (Белая Луна)',ASC:'Асцендент',MC:'MC'},
-  en:{Sun:'Sun',Moon:'Moon',Mercury:'Mercury',Venus:'Venus',Mars:'Mars',Jupiter:'Jupiter',Saturn:'Saturn',Uranus:'Uranus',Neptune:'Neptune',Pluto:'Pluto',
+  en:{Sun:'Sun',Moon:'Moon',Mercury:'Mercury',Venus:'Venus',Mars:'Mars',Jupiter:'Jupiter',Saturn:'Saturn',Uranus:'Uranus',Neptune:'Neptune',Pluto:'Pluto',Chiron:'Chiron',
       NNode:'North Node',SNode:'South Node',Lilith:'Lilith (Black Moon)',Selena:'Selena (White Moon)',ASC:'Ascendant',MC:'MC'}
 };
 const PN=n=>LX(PLANET_NAME)[n]||n;
@@ -1566,8 +1610,14 @@ const ASPECT_NAME={
 const AREA_KEYS=['career','love','energy','mind','home'];
 const AREA_NAME={ru:{career:'карьера',love:'любовь',energy:'энергия',mind:'ум',home:'дом'},en:{career:'career',love:'love',energy:'energy',mind:'mind',home:'home'}};
 
-const RECEIVER_RANK={ASC:1.5,MC:1.5,Sun:1.3,Moon:1.3,Mercury:1.0,Venus:1.0,Mars:1.0,Jupiter:0.8,Saturn:0.8,Uranus:0.5,Neptune:0.5,Pluto:0.5,NNode:1.1,SNode:0.9,Lilith:0.9,Selena:0.9};
-const SPEED_ORB={Sun:2,Moon:6,Mercury:2,Venus:2,Mars:2,Jupiter:1.5,Saturn:1.5,Uranus:1,Neptune:1,Pluto:1};
+const RECEIVER_RANK={ASC:1.5,MC:1.5,Sun:1.3,Moon:1.3,Mercury:1.0,Venus:1.0,Mars:1.0,Jupiter:0.8,Saturn:0.8,Uranus:0.5,Neptune:0.5,Pluto:0.5,Chiron:0.6,NNode:1.1,SNode:0.9,Lilith:0.9,Selena:0.9};
+/* Chiron at 1.5, the same cap as Saturn, because its mean motion of 7 degrees
+   a year sits between Saturn's 12 and Uranus's 4 and this cap decides how long
+   a transit stays listed: at 1.5 a Chiron aspect runs about a year, which is
+   the same length Saturn's and Uranus's run. Written out rather than left to
+   the lookup, because an absent entry here makes SPEED_ORB[T]+2 a NaN and a
+   NaN cap silently drops every transiting Chiron aspect. */
+const SPEED_ORB={Sun:2,Moon:6,Mercury:2,Venus:2,Mars:2,Jupiter:1.5,Saturn:1.5,Uranus:1,Neptune:1,Pluto:1,Chiron:1.5};
 /* Every aspect the app knows, with the orb it ships with. The five majors are
    on by default and the six minors are off. Measured across sixty charts from
    the library, switching every minor on takes a chart from 11.6 aspects to
@@ -1957,6 +2007,11 @@ function computeChart(y,mo,day,localH,tzOff,lat,lng,withSpeed){
   const E=helioXYZ('ea',tm), V=earthVel(tm);
   ['Sun','Mercury','Venus','Mars','Jupiter','Saturn','Uranus','Neptune','Pluto']
     .forEach(n=>pos[n]=apparent(n,tm,dpsi,E,V));
+  /* Chiron is the one body that can be absent: its fit runs 1600-2250 and
+     apparent() answers null outside that. Assigning only when it lands keeps
+     `ch.pos.Chiron` falsy, which is exactly what every drawing and listing
+     already tests for. */
+  const chi=apparent('Chiron',tm,dpsi,E,V); if(chi) pos.Chiron=chi;
   pos.Moon=moonApparent(Tc,dpsi);
   const nd=meanNode(Tc);
   pos.NNode={lon:nd}; pos.SNode={lon:rev(nd+180)};
@@ -3221,24 +3276,36 @@ function aspectBetween(l1,l2){
   return null;
 }
 function findAspects(pos){
-  const out=[];
-  for(let a=0;a<BODIES.length;a++)for(let b=a+1;b<BODIES.length;b++){
-    let diff=Math.abs(rev(pos[BODIES[a]].lon-pos[BODIES[b]].lon)); if(diff>180)diff=360-diff;
-    for(const asp of ASPECTS){const orb=Math.abs(diff-asp.angle);if(orb<=asp.orb){out.push({p1:BODIES[a],p2:BODIES[b],asp,orb});break;}}
+  const out=[], B=WHEEL_BODIES;
+  for(let a=0;a<B.length;a++)for(let b=a+1;b<B.length;b++){
+    /* Chiron is the one entry that can be missing, before 1600 and after 2250.
+       Skipping the pair is all that is needed; every other body is always
+       there, so this never fires for them. */
+    if(!pos[B[a]]||!pos[B[b]]) continue;
+    let diff=Math.abs(rev(pos[B[a]].lon-pos[B[b]].lon)); if(diff>180)diff=360-diff;
+    for(const asp of ASPECTS){const orb=Math.abs(diff-asp.angle);if(orb<=asp.orb){out.push({p1:B[a],p2:B[b],asp,orb});break;}}
   }
   return out;
 }
 /* Aspects to/from ANY point (planet, node, Lilith, Selena) against the 10
    classical planets plus the other present points - findAspects() above only
-   pairs the 10 classical BODIES with each other, so it silently never finds
-   aspects to the karmic points. This is what the node/Lilith/Selena readings
-   (and their aspect-configuration checks) need instead. */
+   pairs bodies with each other, so it silently never finds aspects to the
+   karmic points. This is what the node/Lilith/Selena readings (and their
+   aspect-configuration checks) need instead.
+
+   This one feeds the interpretation corpus, and so it stops at the ten planets
+   and the four karmic points - the set the corpus was written for. Chiron is
+   excluded on purpose: there is no corpus entry for it, and letting it in put
+   an extra "Сюда же," sentence into Saturn's card on two library charts, which
+   is what half a system looks like from the reader's side. Chiron aspects are
+   drawn, listed and tabulated everywhere else. */
+const CORPUS_POINTS=['NNode','SNode','Lilith','Selena'];
 function aspectsInvolving(ch,key){
   const lon=ch.pos[key].lon;
   // the nodes are always exactly opposite each other by definition - not a
   // meaningful, informative aspect, so that pairing is never reported
   const skip=(key==='NNode'&&'SNode')||(key==='SNode'&&'NNode');
-  const others=BODIES.concat(POINTS.filter(k=>ch.pos[k])).filter(k=>k!==key&&k!==skip);
+  const others=BODIES.concat(CORPUS_POINTS.filter(k=>ch.pos[k])).filter(k=>k!==key&&k!==skip);
   const out=[];
   others.forEach(o=>{
     let diff=Math.abs(rev(ch.pos[o].lon-lon)); if(diff>180)diff=360-diff;
@@ -3584,6 +3651,12 @@ const ASPECT_PLANET_FRAME={
    printed only in the card that comes first here; the later card keeps just
    the connecting line. Without this a planet aspecting three points printed
    the identical diagnosis+advice paragraph three times in one reading. */
+/* The interpretation corpus, and the order it reads in. Chiron is not in it
+   and is not an oversight: the corpus says what a body means, and nothing here
+   has been written for Chiron. Putting it in the list would mean inventing that
+   text, which is the one thing this corpus is not allowed to do. It is carried
+   as an ephemeris body - drawn, listed, aspected, tabulated - and stays out of
+   the reading until there is a reading worth standing behind. */
 const CARD_ORDER=['Sun','Moon','Mercury','Venus','Mars','Jupiter','Saturn','Uranus','Neptune','Pluto','NNode','SNode','Lilith','Selena'];
 /* Pair-specific readings: what THESE TWO principles do together under this
    aspect, not what the partner planet does in general. Keyed by CARD_ORDER so
@@ -4309,7 +4382,7 @@ function drawWheel(ch,tr){
     const dimT=CONF_ISO?!CONF_ISO.includes(n):(ISO&&ISO!==n);
     s+=`<g opacity="${dimT?0.2:1}">${exactTick(ch.pos[n].lon,'var(--ink)',rNatScale,-8)}</g>`;
   });
-  if(tr) BODIES.forEach(n=>{ if(tr.pos[n]) s+=exactTick(tr.pos[n].lon,'var(--accent)',rZodIn,8); });
+  if(tr) WHEEL_BODIES.forEach(n=>{ if(tr.pos[n]) s+=exactTick(tr.pos[n].lon,'var(--accent)',rZodIn,8); });
   /* The inner ring's own degree scale, when there is an outer ring taking the
      zodiac one. Same construction as the outer scale, one tick a degree and a
      taller one every five, so both rings are read the same way. */
@@ -4391,7 +4464,7 @@ function drawWheel(ch,tr){
       const [x1,y1]=polar(tr.pos[h.tp].lon,rTr-11), [x2,y2]=polar(nlon,rPl+12);
       s+=`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${h.asp.color}" stroke-width="1" stroke-dasharray="3 3" opacity="0.55"/>`;
     });
-    const trShown=BODIES.filter(n=>tr.pos[n]);
+    const trShown=WHEEL_BODIES.filter(n=>tr.pos[n]);
     const trFan=fanOut(trShown.map(n=>tr.pos[n].lon),sepTr);
     trShown.forEach((n,ti)=>{
       const disp=trFan[ti];
@@ -4562,12 +4635,12 @@ function outerChart(ch,ms){
   return {...ch, pos, mc, asc:a.asc, ramc:a.ramc, houses:a.houses, arc};
 }
 const RING_MOVERS={
-  transit:['Jupiter','Saturn','Uranus','Neptune','Pluto','Mars','Sun','Venus','Mercury'],
-  progressed:['Moon','Sun','Mercury','Venus','Mars','Jupiter','Saturn','Uranus','Neptune','Pluto'],
-  directed:['Moon','Sun','Mercury','Venus','Mars','Jupiter','Saturn','Uranus','Neptune','Pluto'],
-  /* All ten, Moon included: in synastry the Moon is half the reading, and
+  transit:['Jupiter','Saturn','Uranus','Neptune','Pluto','Chiron','Mars','Sun','Venus','Mercury'],
+  progressed:['Moon','Sun','Mercury','Venus','Mars','Jupiter','Saturn','Uranus','Neptune','Pluto','Chiron'],
+  directed:['Moon','Sun','Mercury','Venus','Mars','Jupiter','Saturn','Uranus','Neptune','Pluto','Chiron'],
+  /* Everything, Moon included: in synastry the Moon is half the reading, and
      nothing here is moving fast enough to swamp a list. */
-  synastry:['Moon','Sun','Mercury','Venus','Mars','Jupiter','Saturn','Uranus','Neptune','Pluto']
+  synastry:['Moon','Sun','Mercury','Venus','Mars','Jupiter','Saturn','Uranus','Neptune','Pluto','Chiron']
 };
 
 /* ---------- the second person ----------
@@ -4602,7 +4675,10 @@ function partnerChart(ch){
 }
 function aspectOrbs(ch,tp){
   const hits=[];
-  const receivers=BODIES.concat(['ASC','MC','NNode','Lilith']);
+  /* Natal Chiron receives, which is the whole point of carrying it: the Chiron
+     return near fifty is transiting Chiron reaching its own natal degree, and
+     without it in this list that event would never be reported. */
+  const receivers=BODIES.concat(['ASC','MC','Chiron','NNode','Lilith']);
   RING_MOVERS[RING_MODE].forEach(T=>{
     if(!tp[T]) return;
     receivers.forEach(np=>{
@@ -5236,20 +5312,23 @@ function findConfigurations(pos){
 }
 
 /* ---------- the aspect grid ----------
-   Ten planets plus the Ascendant and Midheaven. The nodes, Lilith and Selena
-   are left out on purpose: fourteen rows do not fit the width of a phone, and
-   the four dropped are the four a grid is least often read for.
+   Ten planets, Chiron, and the Ascendant and Midheaven. The nodes, Lilith and
+   Selena are left out on purpose, and the limit is measured rather than
+   guessed: on a 375 px phone the grid gets 349 px and a cell is 24 px, so
+   fourteen columns (the corner plus thirteen bodies) come to 336 px and a
+   fifteenth would overflow. Chiron takes the last free column; the four
+   dropped are the four a grid is least often read for.
 
    Cells carry the mark alone. A mark plus an orb in a 24 px cell is two
    illegible things instead of one legible one, so the orb appears under the
    grid when a cell is tapped - which also gives the pair a name, since a grid
    is exactly the place where people lose track of which row they are on. */
-const GRID_BODIES=BODIES.concat(['ASC','MC']);
+const GRID_BODIES=WHEEL_BODIES.concat(['ASC','MC']);
 function gridLon(ch,n){ return n==='ASC'?ch.asc:n==='MC'?ch.mc:(ch.pos[n]?ch.pos[n].lon:null); }
 function renderGrid(ch,tr){
   const box=document.getElementById('aspGrid'); if(!box) return;
   const cols=GRID_BODIES.filter(n=>gridLon(ch,n)!=null);
-  const rows=tr ? BODIES.filter(n=>tr.pos[n]) : cols;
+  const rows=tr ? WHEEL_BODIES.filter(n=>tr.pos[n]) : cols;
   const cell=(content,cls,data)=>`<div class="gc ${cls||''}"${data||''}>${content}</div>`;
   let html='', n=0;
   /* Header row of column glyphs, and a corner that names which chart the
@@ -5762,12 +5841,12 @@ const LIB_SORTS={
 /* Names for the added languages, attached to the tables the app already had.
    Assigned rather than merged into the literals above so those stay short and
    the two original languages stay easy to read next to each other. */
-PLANET_NAME.es={Sun:"Sol",Moon:"Luna",Mercury:"Mercurio",Venus:"Venus",Mars:"Marte",Jupiter:"Júpiter",Saturn:"Saturno",Uranus:"Urano",Neptune:"Neptuno",Pluto:"Plutón",NNode:"Nodo Norte",SNode:"Nodo Sur",Lilith:"Lilith (Luna Negra)",Selena:"Selena (Luna Blanca)",ASC:"Ascendente",MC:"MC"};
-PLANET_NAME.fr={Sun:"Soleil",Moon:"Lune",Mercury:"Mercure",Venus:"Vénus",Mars:"Mars",Jupiter:"Jupiter",Saturn:"Saturne",Uranus:"Uranus",Neptune:"Neptune",Pluto:"Pluton",NNode:"Nœud Nord",SNode:"Nœud Sud",Lilith:"Lilith (Lune Noire)",Selena:"Séléné (Lune Blanche)",ASC:"Ascendant",MC:"MC"};
-PLANET_NAME.de={Sun:"Sonne",Moon:"Mond",Mercury:"Merkur",Venus:"Venus",Mars:"Mars",Jupiter:"Jupiter",Saturn:"Saturn",Uranus:"Uranus",Neptune:"Neptun",Pluto:"Pluto",NNode:"Aufsteigender Knoten",SNode:"Absteigender Knoten",Lilith:"Lilith (Schwarzer Mond)",Selena:"Selena (Weißer Mond)",ASC:"Aszendent",MC:"MC"};
-PLANET_NAME.it={Sun:"Sole",Moon:"Luna",Mercury:"Mercurio",Venus:"Venere",Mars:"Marte",Jupiter:"Giove",Saturn:"Saturno",Uranus:"Urano",Neptune:"Nettuno",Pluto:"Plutone",NNode:"Nodo Nord",SNode:"Nodo Sud",Lilith:"Lilith (Luna Nera)",Selena:"Selena (Luna Bianca)",ASC:"Ascendente",MC:"MC"};
-PLANET_NAME.uk={Sun:"Сонце",Moon:"Місяць",Mercury:"Меркурій",Venus:"Венера",Mars:"Марс",Jupiter:"Юпітер",Saturn:"Сатурн",Uranus:"Уран",Neptune:"Нептун",Pluto:"Плутон",NNode:"Північний вузол",SNode:"Південний вузол",Lilith:"Ліліт (Чорний Місяць)",Selena:"Селена (Білий Місяць)",ASC:"Асцендент",MC:"MC"};
-PLANET_NAME.ka={Sun:"მზე",Moon:"მთვარე",Mercury:"მერკური",Venus:"ვენერა",Mars:"მარსი",Jupiter:"იუპიტერი",Saturn:"სატურნი",Uranus:"ურანი",Neptune:"ნეპტუნი",Pluto:"პლუტონი",NNode:"ჩრდილოეთის კვანძი",SNode:"სამხრეთის კვანძი",Lilith:"ლილიტი (შავი მთვარე)",Selena:"სელენა (თეთრი მთვარე)",ASC:"ასცენდენტი",MC:"MC"};
+PLANET_NAME.es={Sun:"Sol",Moon:"Luna",Mercury:"Mercurio",Venus:"Venus",Mars:"Marte",Jupiter:"Júpiter",Saturn:"Saturno",Uranus:"Urano",Neptune:"Neptuno",Pluto:"Plutón",Chiron:"Quirón",NNode:"Nodo Norte",SNode:"Nodo Sur",Lilith:"Lilith (Luna Negra)",Selena:"Selena (Luna Blanca)",ASC:"Ascendente",MC:"MC"};
+PLANET_NAME.fr={Sun:"Soleil",Moon:"Lune",Mercury:"Mercure",Venus:"Vénus",Mars:"Mars",Jupiter:"Jupiter",Saturn:"Saturne",Uranus:"Uranus",Neptune:"Neptune",Pluto:"Pluton",Chiron:"Chiron",NNode:"Nœud Nord",SNode:"Nœud Sud",Lilith:"Lilith (Lune Noire)",Selena:"Séléné (Lune Blanche)",ASC:"Ascendant",MC:"MC"};
+PLANET_NAME.de={Sun:"Sonne",Moon:"Mond",Mercury:"Merkur",Venus:"Venus",Mars:"Mars",Jupiter:"Jupiter",Saturn:"Saturn",Uranus:"Uranus",Neptune:"Neptun",Pluto:"Pluto",Chiron:"Chiron",NNode:"Aufsteigender Knoten",SNode:"Absteigender Knoten",Lilith:"Lilith (Schwarzer Mond)",Selena:"Selena (Weißer Mond)",ASC:"Aszendent",MC:"MC"};
+PLANET_NAME.it={Sun:"Sole",Moon:"Luna",Mercury:"Mercurio",Venus:"Venere",Mars:"Marte",Jupiter:"Giove",Saturn:"Saturno",Uranus:"Urano",Neptune:"Nettuno",Pluto:"Plutone",Chiron:"Chirone",NNode:"Nodo Nord",SNode:"Nodo Sud",Lilith:"Lilith (Luna Nera)",Selena:"Selena (Luna Bianca)",ASC:"Ascendente",MC:"MC"};
+PLANET_NAME.uk={Sun:"Сонце",Moon:"Місяць",Mercury:"Меркурій",Venus:"Венера",Mars:"Марс",Jupiter:"Юпітер",Saturn:"Сатурн",Uranus:"Уран",Neptune:"Нептун",Pluto:"Плутон",Chiron:"Хірон",NNode:"Північний вузол",SNode:"Південний вузол",Lilith:"Ліліт (Чорний Місяць)",Selena:"Селена (Білий Місяць)",ASC:"Асцендент",MC:"MC"};
+PLANET_NAME.ka={Sun:"მზე",Moon:"მთვარე",Mercury:"მერკური",Venus:"ვენერა",Mars:"მარსი",Jupiter:"იუპიტერი",Saturn:"სატურნი",Uranus:"ურანი",Neptune:"ნეპტუნი",Pluto:"პლუტონი",Chiron:"ქირონი",NNode:"ჩრდილოეთის კვანძი",SNode:"სამხრეთის კვანძი",Lilith:"ლილიტი (შავი მთვარე)",Selena:"სელენა (თეთრი მთვარე)",ASC:"ასცენდენტი",MC:"MC"};
 SIGN_NAME.es=["Aries", "Tauro", "Géminis", "Cáncer", "Leo", "Virgo", "Libra", "Escorpio", "Sagitario", "Capricornio", "Acuario", "Piscis"];
 SIGN_NAME.fr=["Bélier", "Taureau", "Gémeaux", "Cancer", "Lion", "Vierge", "Balance", "Scorpion", "Sagittaire", "Capricorne", "Verseau", "Poissons"];
 SIGN_NAME.de=["Widder", "Stier", "Zwillinge", "Krebs", "Löwe", "Jungfrau", "Waage", "Skorpion", "Schütze", "Steinbock", "Wassermann", "Fische"];

@@ -164,11 +164,11 @@ function run(){
     '1985-11-03 13:37 СПб':['computeChart(1985,11,3,13+37/60,3,59.9343,30.3351)',
       {Sun:220.9525481,Mercury:243.4017088,Venus:202.2638516,Mars:184.2654749,
        Jupiter:308.6764555,Saturn:238.3979717,Uranus:256.0500345,Neptune:271.5696007,
-       Moon:103.2036436,Pluto:214.9345982}],
+       Moon:103.2036436,Pluto:214.9345982,Chiron:73.6160485}],
     '2000-01-01 00:00 UTC':['computeChart(2000,1,1,0,0,0,0)',
       {Sun:279.8592049,Mercury:271.1117994,Venus:240.9614017,Mars:327.5754592,
        Jupiter:25.2331157,Saturn:40.4058500,Uranus:314.7840584,Neptune:303.1752420,
-       Moon:217.2933209,Pluto:251.4371500}]};
+       Moon:217.2933209,Pluto:251.4371500,Chiron:251.5603761}]};
   const arcsec=(a,b)=>Math.abs(((a-b+540)%360)-180)*3600;
   Object.entries(JPL).forEach(([nm,[expr,tight]])=>{
     t('совпадает с JPL Horizons до 2″: '+nm,()=>{
@@ -190,6 +190,108 @@ function run(){
     /* вне подогнанного отрезка Плутон обязан оставаться конечным */
     const far=ev('computeChart(2400,1,1,12,0,55.75,37.62)');
     return isFinite(far.pos.Pluto.lon)||'за краем подгонки Плутон уходит в бесконечность';
+  });
+
+  /* Хирон - единственное тело, которое приложению разрешено не показывать.
+     Ряд JPL для него начинается 11 декабря 1599 года и кончается в 2501-м,
+     наша подгонка занимает 1600-2250, и вне этого отрезка правильный ответ -
+     не рисовать ничего. Замороженный глиф был бы уверенным неверным ответом,
+     а Плутон в той же ситуации замирает, потому что карта без Плутона сломана,
+     а карта без Хирона - нет. Тест держит оба поведения сразу, чтобы одно не
+     переползло на другое. */
+  t('Хирон есть внутри 1600-2250 и отсутствует за краями',()=>{
+    /* Верхний край - JD 2542855.5, то есть 1 января 2250 года, 00:00 TT.
+       Полдень того же дня уже за ним, поэтому последняя дата, на которой
+       Хирон обязан быть, это конец 2249-го. */
+    const r=ev(`[[1599,1,1],[1600,6,1],[2000,1,1],[2249,12,1],[2251,1,1]]
+      .map(([y,m,d])=>{const c=computeChart(y,m,d,12,0,55.75,37.62);
+        return c.pos.Chiron?+c.pos.Chiron.lon.toFixed(4):null;})`);
+    const want=[false,true,true,true,false];
+    const bad=r.map((v,i)=>(v!==null)===want[i]?null
+      :`${['1599','1600','2000','2249','2251'][i]}: ${v===null?'нет':'есть '+v}`)
+      .filter(Boolean);
+    if(bad.length) return bad.join(', ');
+    return r.slice(1,4).every(v=>isFinite(v))||'внутри отрезка Хирон не число';
+  });
+  t('отсутствие Хирона не ломает ни колесо, ни таблицу, ни баланс',()=>{
+    const r=ev(`(()=>{const c=computeChart(1550,6,1,12,0,55.75,37.62);
+      const b=chartBalance(c);
+      return {chiron:!!c.pos.Chiron, total:b.total,
+        el:b.el.reduce((a,x)=>a+x,0), pluto:isFinite(c.pos.Pluto.lon)};})()`);
+    if(r.chiron) return 'в 1550 году Хирон всё-таки посчитался';
+    if(!r.pluto) return 'Плутон в 1550 не число';
+    return (r.total===12&&r.el===12)||`баланс считает ${r.total} тел, стихии ${r.el}, ждём 12`;
+  });
+  /* Баланс карты - десять планет плюс Асцендент и MC. Хирон в него не входит
+     намеренно: тринадцатое тело тихо сдвинуло бы каждую карту относительно
+     любого учебника. */
+  t('Хирон не попадает в баланс стихий',()=>{
+    const r=ev(`(()=>{const c=computeChart(1985,3,20,6.5,3,55.7558,37.6173);
+      const b=chartBalance(c);
+      return {hasChiron:!!c.pos.Chiron, total:b.total,
+        sum:b.el.reduce((a,x)=>a+x,0), hemi:b.hemi.e+b.hemi.w};})()`);
+    if(!r.hasChiron) return 'Хирона нет в карте 1985 года';
+    if(r.total!==12||r.sum!==12) return `тел ${r.total}, стихий ${r.sum}, ждём 12`;
+    return r.hemi===10||`полушария считают ${r.hemi} планет, ждём 10`;
+  });
+  /* Пропущенная строка в SPEED_ORB делает предел орбиса NaN, а NaN молча
+     выбрасывает каждый аспект транзитного тела: ошибка без сообщения. */
+  t('у каждого движущегося тела есть предел орбиса',()=>{
+    const miss=ev(`(()=>{const out=[];
+      for(const m of Object.keys(RING_MOVERS))
+        for(const p of RING_MOVERS[m])
+          if(!isFinite(SPEED_ORB[p])) out.push(m+':'+p);
+      return out;})()`);
+    return miss.length===0||'нет предела: '+miss.join(', ');
+  });
+  /* Один список на три места. Пока их было три, Хирон получал клетку в
+     таблице, но ни хорды на колесе, ни строки в панели: таблица перебирала
+     GRID_BODIES, а findAspects - только BODIES.
+
+     Тест намеренно ничего не перерисовывает. Первая его версия переключала
+     RING_MODE, падала на середине и не возвращала состояние назад - шесть
+     следующих тестов провалились не по своей вине. Читать дешевле, чем
+     перестраивать. */
+  t('аспекты Хирона видны и в таблице, и на колесе, и в панели',()=>{
+    const r=ev(`(()=>{
+      const c=computeChart(1972,7,14,9,2,48.8566,2.3522);
+      const eng=findAspects(c.pos).filter(a=>a.p1==='Chiron'||a.p2==='Chiron');
+      /* Своя карта, не CURRENT: группа «Эфемериды» идёт раньше, чем в
+         приложении появляется построенная карта. */
+      const cur=eng;
+      const el=document.getElementById('detail');
+      const keepHtml=el.innerHTML, keepCls=el.className;
+      showDetail('Chiron',c);
+      const panel=el.innerText;
+      el.innerHTML=keepHtml; el.className=keepCls;
+      const partner=a=>a.p1==='Chiron'?a.p2:a.p1;
+      return {eng:eng.length, cur:cur.length,
+        inGrid:GRID_BODIES.includes('Chiron'),
+        inWheelBodies:WHEEL_BODIES.includes('Chiron'),
+        panelLines:cur.filter(a=>panel.includes(PN(partner(a)))).length};})()`);
+    if(!r.eng) return 'движок не находит ни одного аспекта Хирона ни на одной карте';
+    if(!r.inGrid) return 'Хирона нет среди столбцов таблицы';
+    if(!r.inWheelBodies) return 'Хирона нет среди тел колеса';
+    return r.cur===r.panelLines||`в панели ${r.panelLines} аспектов из ${r.cur}`;
+  });
+  /* Интерпретации написаны для десяти планет и четырёх точек. Хирон в них не
+     входит, и это решение, а не пропуск: выдуманный текст хуже отсутствующего. */
+  t('Хирон не попадает в корпус интерпретаций',()=>{
+    const r=ev(`(()=>{const c=computeChart(1985,3,20,6.5,3,55.7558,37.6173);
+      return {inOrder:CARD_ORDER.includes('Chiron'),
+        inCorpusAspects:aspectsInvolving(c,'Saturn').some(a=>a.p2==='Chiron'),
+        card:!!composePlacement(c,'Chiron')};})()`);
+    if(r.inOrder) return 'Хирон в CARD_ORDER';
+    if(r.inCorpusAspects) return 'Хирон попадает в аспекты корпуса';
+    return !r.card||'у Хирона собралась карточка разбора';
+  });
+  t('натальный Хирон принимает транзиты - иначе возвращение Хирона не увидеть',()=>{
+    const ok=ev(`(()=>{const c=computeChart(1985,3,20,6.5,3,55.7558,37.6173);
+      const t2=computeChart(2035,4,1,12,0,55.7558,37.6173);
+      const old=RING_MODE; RING_MODE='transit';
+      const hits=aspectOrbs(c,t2.pos); RING_MODE=old;
+      return hits.some(h=>h.np==='Chiron');})()`);
+    return ok||'транзиты к натальному Хирону не считаются';
   });
 
   /* ---------- устойчивость ---------- */
@@ -492,11 +594,14 @@ function run(){
      среднее время или база tz поедут, ошибка выйдет минутами и градусами,
      а не секундами дуги. Порядок записей не важен, ищем по id. */
   const LIBREF={
-    bach:{Sun:11.3529086,Mercury:349.5194988,Venus:347.9614241,Mars:251.0585966,Jupiter:198.4690757,Saturn:161.7711134,Uranus:34.8617800,Neptune:333.1049124},
-    tchaikov:{Sun:46.8037580,Mercury:20.5651463,Venus:25.6556136,Mars:46.1418948,Jupiter:223.5397952,Saturn:260.6658416,Uranus:349.4462950,Neptune:314.8112282},
-    stravinsky:{Sun:86.0524315,Mercury:101.2149842,Venus:115.4610747,Mars:142.1723633,Jupiter:72.9761627,Saturn:50.8546907,Uranus:164.7197808,Neptune:47.7308430},
-    zimmer:{Sun:169.4056069,Mercury:164.4025091,Venus:207.8717566,Mars:172.4397902,Jupiter:187.1657179,Saturn:248.4726522,Uranus:129.8291451,Neptune:210.8222211},
-    goransson:{Sun:159.1377138,Mercury:152.2534260,Venus:180.2503355,Mars:248.1867592,Jupiter:273.1358031,Saturn:221.6649239,Uranus:249.6194046,Neptune:268.6738879}};
+    bach:{Sun:11.3529086,Mercury:349.5194988,Venus:347.9614241,Mars:251.0585966,Jupiter:198.4690757,Saturn:161.7711134,Uranus:34.8617800,Neptune:333.1049124,Chiron:36.0067633},
+    tchaikov:{Sun:46.8037580,Mercury:20.5651463,Venus:25.6556136,Mars:46.1418948,Jupiter:223.5397952,Saturn:260.6658416,Uranus:349.4462950,Neptune:314.8112282,Chiron:96.2399300},
+    stravinsky:{Sun:86.0524315,Mercury:101.2149842,Venus:115.4610747,Mars:142.1723633,Jupiter:72.9761627,Saturn:50.8546907,Uranus:164.7197808,Neptune:47.7308430,Chiron:55.0995240},
+    zimmer:{Sun:169.4056069,Mercury:164.4025091,Venus:207.8717566,Mars:172.4397902,Jupiter:187.1657179,Saturn:248.4726522,Uranus:129.8291451,Neptune:210.8222211,Chiron:313.0715306},
+    goransson:{Sun:159.1377138,Mercury:152.2534260,Venus:180.2503355,Mars:248.1867592,Jupiter:273.1358031,Saturn:221.6649239,Uranus:249.6194046,Neptune:268.6738879,Chiron:68.4606796}};
+  /* Хирон здесь же, а не отдельной проверкой: сноска приложения обещает
+     сверку на всех картах библиотеки, и обещание должно покрывать всё, что
+     на карте нарисовано. Измерено 0,03-0,25″ на этих пяти. */
   t('карты библиотеки совпадают с JPL Horizons до 4″',()=>{
     const bad=[];
     Object.entries(LIBREF).forEach(([id,ref])=>{
@@ -1301,7 +1406,8 @@ function run(){
         drawn:!!document.querySelector('#wheel svg')};
       RING_MODE=keep; renderRingSwitch(); renderTransits(CURRENT);
       return bare;})()`);
-    return (r.scrub&&r.list&&r.outerGlyphs===0&&r.natalGlyphs===14&&r.drawn)
+    /* 15 = десять планет, Хирон и четыре точки. */
+    return (r.scrub&&r.list&&r.outerGlyphs===0&&r.natalGlyphs===15&&r.drawn)
       ||JSON.stringify(r);
   });
   t('список режимов начинается с пустого и держит все пять',()=>{
@@ -1760,7 +1866,8 @@ function run(){
       const blank=cells.filter(c=>c.classList.contains('blank')).length;
       RING_MODE=keep; renderRingSwitch(); renderTransits(CURRENT);
       return {cols, cells:cells.length, on:upper, self, blank};})()`);
-    return (r.self===12&&r.blank>0&&r.cols===13)
+    /* 14 столбцов: угол, десять планет, Хирон, Asc и MC. */
+    return (r.self===13&&r.blank>0&&r.cols===14)
       ||`столбцов ${r.cols}, диагональных ${r.self}, пустых ${r.blank}`;
   });
   t('таблица находит ровно те же аспекты, что и колесо',()=>{
@@ -1799,8 +1906,8 @@ function run(){
         self:cells.filter(c=>c.classList.contains('self')).length};
       RING_MODE=keep; renderRingSwitch(); renderTransits(CURRENT);
       return out;})()`);
-    /* 10 строк внешних тел плюс шапка, 12 столбцов внутренних плюс угол. */
-    return (r.cols===13&&r.cells===143&&r.self===0)
+    /* 11 строк внешних тел плюс шапка, 13 столбцов внутренних плюс угол. */
+    return (r.cols===14&&r.cells===168&&r.self===0)
       ||`столбцов ${r.cols}, клеток ${r.cells}, диагональных ${r.self}`;
   });
   t('включение минорных добавляет клетки в таблицу',()=>{
@@ -1856,7 +1963,8 @@ function run(){
     const r=ev(SYN);
     /* Wrapped: an && chain returns its last operand, so this reported the
        partner's name as a failure message while everything actually worked. */
-    return !!(r.outerGlyphs===10&&r.hits>0&&r.partner)
+    /* Одиннадцать: десять планет партнёра и его Хирон. */
+    return !!(r.outerGlyphs===11&&r.hits>0&&r.partner)
       ||`глифов ${r.outerGlyphs}, попаданий ${r.hits}, партнёр "${r.partner}"`;
   });
   t('в синастрии нет сходящихся и расходящихся аспектов',()=>{
@@ -1883,7 +1991,7 @@ function run(){
     /* Направление читается именно так: внешнее кольцо к внутреннему. Если
        перепутать, синастрия будет считаться сама с собой. */
     const r=ev(SYN);
-    const bad=r.movers.filter(m=>!['Sun','Moon','Mercury','Venus','Mars','Jupiter','Saturn','Uranus','Neptune','Pluto'].includes(m));
+    const bad=r.movers.filter(m=>!['Sun','Moon','Mercury','Venus','Mars','Jupiter','Saturn','Uranus','Neptune','Pluto','Chiron'].includes(m));
     const recv=new Set(r.receivers);
     return (bad.length===0&&r.receivers.length>0)||`не планеты в движителях: ${bad.join(',')}`;
   });
@@ -1938,7 +2046,7 @@ function run(){
         .map(l=>lonOf(+l.getAttribute('x1'),+l.getAttribute('y1'))).sort((a,b)=>a-b);
       const truth=(pos,keys)=>keys.filter(k=>pos[k]).map(k=>rev(pos[k].lon)).sort((a,b)=>a-b);
       const ni=pick('--ink'), nb=truth(CURRENT.pos,BODIES.concat(POINTS));
-      const ti=pick('--accent'), tb=truth(TR_CHART.pos,BODIES);
+      const ti=pick('--accent'), tb=truth(TR_CHART.pos,WHEEL_BODIES);
       const worst=(a,b)=>a.length!==b.length?999:Math.max(...a.map((v,i)=>Math.abs(v-b[i])));
       return {natal:{n:ni.length,want:nb.length,err:worst(ni,nb)},
               transit:{n:ti.length,want:tb.length,err:worst(ti,tb)}};})()`);
@@ -2484,9 +2592,9 @@ function run(){
     return (r.transitInner-r.natalOuter>=6)
       ||`зазор ${(r.transitInner-r.natalOuter).toFixed(1)} px между кольцами`;
   });
-  t('в транзитном кольце все десять планет',()=>{
+  t('в транзитном кольце все десять планет и Хирон',()=>{
     const n=ev(`document.querySelectorAll('#wheel .trp').length`);
-    return n===10||`нарисовано ${n}`;
+    return n===11||`нарисовано ${n}`;
   });
 
   t('на пустой форме кнопка сохранения выключена',()=>{

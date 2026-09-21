@@ -16,13 +16,30 @@ face. Served, it installs to the home screen and runs with the network off.
 
 VSOP87D for the planets, ELP82B truncated to 607 terms for the Moon, and a piecewise
 Chebyshev fit to JPL DE441 for Pluto, because no compact analytic theory for Pluto
-holds outside 1885-2099. Apparent geocentric positions: light-time, annual aberration,
+holds outside 1885-2099. Chiron is fitted the same way, from JPL's own solution for
+small body 2060. Apparent geocentric positions: light-time, annual aberration,
 IAU2000B nutation, IAU 2006 mean obliquity, and Greenwich apparent sidereal time from
 the Earth Rotation Angle.
 
 Checked against JPL Horizons on **every chart in the library**: worst disagreement
 3.9″ over 1685-1984, under 0.5″ in the twentieth century. Pluto is reliable over
 1550-2250 and clamped, not extrapolated wildly, outside it.
+
+Chiron differs from Pluto in two ways, and both are forced by the source rather than
+chosen. Its segments are 12.5 years instead of 25, because a 50-year period and an
+eccentricity of 0.38 mean a 25-year piece spans half a revolution: at degree 20 the
+long segment plateaus at 3.4″ and the short one reaches 0.15″. And it covers 1600-2250
+rather than 1550-2250, because JPL has no solution for 2060 Chiron before 1599-12-11.
+Outside its span Chiron is **left out of the chart** rather than clamped the way Pluto
+is: a chart without Pluto is broken, a chart without Chiron is not, so a glyph frozen
+at the edge would be a confident wrong answer for no gain. Measured against Horizons
+it stays within 0.32″ from 1700 to 2100, reaching 1.9″ at 2199 - better across the
+whole range than the VSOP87D planets, which run 2-4″ out at the same far end.
+
+Chiron is drawn, listed, aspected and tabulated like a body, and stays out of two
+places on purpose: the element and modality tally, which counts the ten planets plus
+the two angles because that is the one weighting no school argues with, and the
+interpretation corpus, which has no text written for it.
 
 Eight house systems - Placidus, Koch, Regiomontanus, Campanus, Topocentric, Porphyry,
 equal, whole sign. Beyond the polar circle Placidus and Koch are undefined and the
@@ -466,7 +483,7 @@ mattered: before it did, a deliberately broken app passed every check. The runne
 for the city atlas to finish loading, or the atlas tests would silently check the inline
 seed instead.
 
-**220 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
+**227 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
 library, robustness over 1550-2250 and at polar latitudes, house systems (angles land
 on the cusps, cusps run round the circle without crossing, quadrant systems coincide at
 the equator, zero-latitude bodies get the same house from both methods), library data
