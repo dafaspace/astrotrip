@@ -367,6 +367,25 @@ function run(){
       return out.slice(0,5);})()`);
     return bad.length===0||bad.join('; ');
   });
+  t('современные управители не протекают в традиционный слой',()=>{
+    /* Найдено сравнением с чужой реализацией, а не рассуждением: слой считал
+       достоинство через общую dignity(), которая читает современные
+       управители, и выдавал Плутону в Скорпионе «обитель», а Водолею сразу
+       двух управителей, Сатурна и Урана. Внутри слоя, вся посылка которого
+       классическая. */
+    const r=ev(`(()=>{const F=chartFacts(${FCH});
+      const outers=['Uranus','Neptune','Pluto','Chiron']
+        .filter(p=>F.planets[p]&&F.planets[p].dignity!==null)
+        .map(p=>p+':'+F.planets[p].dignity);
+      const aqr=['Saturn','Uranus'].map(p=>p+':'+classicalDignity(p,10));
+      return {outers, aqr, plutoSco:classicalDignity('Pluto',7),
+        marsSco:classicalDignity('Mars',7)};})()`);
+    if(r.outers.length) return 'достоинство у внешних: '+r.outers.join(', ');
+    if(r.plutoSco!==null) return 'Плутон в Скорпионе получил '+r.plutoSco;
+    if(r.marsSco!=='ruler') return 'Марс в Скорпионе получил '+r.marsSco;
+    return r.aqr.join(', ')==='Saturn:ruler, Uranus:null'
+      ||'Водолей: '+r.aqr.join(', ');
+  });
   t('перехваченные знаки всегда идут противоположными парами',()=>{
     /* Математический инвариант, а не соглашение: противоположные куспиды
        отстоят на 180 градусов, поэтому знак может выпасть с куспидов только

@@ -3294,9 +3294,11 @@ function bodyHouse(ch,name){
    always in the direction of a more confident reading. */
 const CLASSICAL_RULERS={0:'Mars',1:'Venus',2:'Mercury',3:'Moon',4:'Sun',5:'Mercury',
   6:'Venus',7:'Mars',8:'Jupiter',9:'Saturn',10:'Saturn',11:'Jupiter'};
-/* Only these seven appear as values above, so only they can hold a chain: the
-   outers and Chiron take a dispositor like any other body but are never one,
-   which is also what guarantees every walk ends. */
+/* Only these seven appear as values above, so only they can hold a chain, and
+   only they have essential dignity: the outers and Chiron take a dispositor
+   like any other body but are never one, which is also what guarantees every
+   walk ends. */
+const TRAD_BODIES=['Sun','Moon','Mercury','Venus','Mars','Jupiter','Saturn'];
 const SECT_OF={Sun:'diurnal',Jupiter:'diurnal',Saturn:'diurnal',
   Moon:'nocturnal',Venus:'nocturnal',Mars:'nocturnal'};
 /* Cazimi 17', combust 8°30', under the beams 15°: Lilly's figures, still the
@@ -3304,10 +3306,27 @@ const SECT_OF={Sun:'diurnal',Jupiter:'diurnal',Saturn:'diurnal',
    threshold is one edit and not a hunt. */
 const SOLAR_LIMITS={cazimi:17/60, combust:8.5, underBeams:15};
 
-/* Peregrine is a state with a name, not an absence. dignity() answers null
-   because the interpretation corpus wants that; here the distinction between
-   "no essential dignity" and "not computed" has to survive. */
-const dignityOf=(p,s)=>dignity(p,s)||'peregrine';
+/* Essential dignity on the classical tables, and NOT the app's dignity(),
+   which is shared with the interpretation corpus and reads the modern rulers:
+   there it answers "ruler" for Pluto in Scorpio and for Uranus in Aquarius,
+   and it calls Saturn a ruler of Aquarius as well, so Aquarius has two. Inside
+   a layer whose whole premise is the classical scheme that is the modern
+   canon leaking into the traditional one, silently, one field at a time.
+
+   Three values and they are not interchangeable. A dignity name is the state.
+   'peregrine' means a body that COULD hold dignity and holds none here. null
+   means a body outside the scheme altogether - the outers and Chiron have no
+   traditional dignity, and calling them peregrine would quietly enrol them. */
+function classicalDignity(p,s){
+  if(!TRAD_BODIES.includes(p)) return null;
+  if(CLASSICAL_RULERS[s]===p) return 'ruler';
+  if(EXALT[p]===s) return 'exalt';
+  const o=(s+6)%12;
+  if(CLASSICAL_RULERS[o]===p) return 'detriment';
+  if(EXALT[p]===o) return 'fall';
+  return 'peregrine';
+}
+const dignityOf=classicalDignity;
 const signOfLon=lon=>Math.floor(rev(lon)/30);
 /* Shortest separation between two longitudes, 0 to 180. */
 const arcBetween=(a,b)=>{const d=Math.abs(rev(a-b));return d>180?360-d:d;};
