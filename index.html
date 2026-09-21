@@ -584,6 +584,13 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
         <div id="synaList" class="citylist"></div>
         <div class="tiny" id="synaWho"></div>
       </div>
+      <!-- Which of the two is the inner wheel. For two radix charts no order
+           is canonical - LUNA, which is the only one of the three that says so,
+           lets the user swap them - so this is a choice rather than a default
+           to get right. -->
+      <div class="row" id="synaSwapRow" hidden style="margin-top:8px">
+        <button id="synaSwap" data-i="synaSwap"></button>
+      </div>
       <div id="wheel"></div>
       <div class="scrub">
         <div class="momrow">
@@ -717,7 +724,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
 /* Bump together with CACHE in sw.js: the two are the same release, and the
    number on screen is how you tell from a phone which one you are looking at. */
-const APP_VERSION='3.0.0';
+const APP_VERSION='3.1.0';
 document.getElementById('ver').textContent=APP_VERSION;
 
 /* ---------- feature flags ----------
@@ -810,6 +817,8 @@ const STR = {
   ring_synastry:{ru:'Синастрия',en:'Synastry'},
   note_synastry:{ru:'Карта другого человека поверх вашей. Внутреннее колесо и дома остаются вашими, аспекты считаются от его планет к вашим.',en:'Another person\u2019s chart over yours. The inner wheel and the houses stay yours; the aspects run from their planets to yours.'},
   synaFind:{ru:'Кого сравниваем? Имя, город или год',en:'Compare with whom? Name, city or year'},
+  synaSwap:{ru:'Поменять кольца местами',en:'Swap the rings'},
+  synaInner:{ru:'внутри',en:'inner'},
   synaNone:{ru:'Никто не выбран. Найдите карту выше.',en:'Nobody chosen yet. Find a chart above.'},
   ring_transit:{ru:'Транзиты',en:'Transits'},
   ring_progressed:{ru:'Прогрессии',en:'Progressions'},
@@ -901,6 +910,7 @@ const STR = {
    standard terms of each tradition; the prose is mine. */
 const I18N={
   es:{
+    synaSwap:"Intercambiar los anillos", synaInner:"interior",
     printBtn:"Imprimir o PDF",
     reloc:"Relocalización", relocOff:"desactivada", relocFind:"¿Adónde? Ciudad", relocClear:"Volver al lugar de nacimiento", relocMark:"(relocalizada)",
     conf:"Configuraciones", confNone:"No hay figuras mayores dentro del orbe.", conf_stellium:"Estelium", conf_grandtrine:"Gran trígono", conf_tsquare:"Cuadratura en T", conf_grandcross:"Gran cruz", conf_kite:"Cometa", conf_yod:"Yod", conf_mystic:"Rectángulo místico",
@@ -951,6 +961,7 @@ const I18N={
     foot:"Las posiciones están cotejadas con JPL Horizons en todas las cartas de la biblioteca: la diferencia es menor de cuatro segundos de arco, y menor de medio en el siglo XX. Atlas de ciudades de GeoNames, CC BY 4.0. Tras la primera carga nada de aquí sale a la red.",
   },
   fr:{
+    synaSwap:"Échanger les anneaux", synaInner:"intérieur",
     printBtn:"Imprimer ou PDF",
     reloc:"Relocalisation", relocOff:"désactivée", relocFind:"Vers où ? Ville", relocClear:"Revenir au lieu de naissance", relocMark:"(relocalisé)",
     conf:"Configurations", confNone:"Aucune grande figure dans l’orbe.", conf_stellium:"Amas", conf_grandtrine:"Grand trigone", conf_tsquare:"Carré en T", conf_grandcross:"Grande croix", conf_kite:"Cerf-volant", conf_yod:"Yod", conf_mystic:"Rectangle mystique",
@@ -1002,6 +1013,7 @@ const I18N={
     foot:"Les positions sont vérifiées avec JPL Horizons sur toutes les cartes de la bibliothèque : l’écart est inférieur à quatre secondes d’arc, et à une demi-seconde pour le vingtième siècle. Atlas des villes : GeoNames, CC BY 4.0. Après le premier chargement, rien ici ne contacte le réseau.",
   },
   de:{
+    synaSwap:"Ringe tauschen", synaInner:"innen",
     printBtn:"Drucken oder PDF",
     reloc:"Relokation", relocOff:"aus", relocFind:"Wohin? Stadt", relocClear:"Zurück zum Geburtsort", relocMark:"(reloziert)",
     conf:"Konfigurationen", confNone:"Keine großen Figuren im Orbis.", conf_stellium:"Stellium", conf_grandtrine:"Großes Trigon", conf_tsquare:"T-Quadrat", conf_grandcross:"Großes Kreuz", conf_kite:"Drachen", conf_yod:"Yod", conf_mystic:"Mystisches Rechteck",
@@ -1050,6 +1062,7 @@ const I18N={
     foot:"Die Positionen sind bei jedem Chart der Bibliothek gegen JPL Horizons geprüft: die Abweichung bleibt unter vier Bogensekunden, im zwanzigsten Jahrhundert unter einer halben. Städte-Atlas von GeoNames, CC BY 4.0. Nach dem ersten Laden geht von hier nichts mehr ins Netz.",
   },
   it:{
+    synaSwap:"Scambia gli anelli", synaInner:"interno",
     printBtn:"Stampa o PDF",
     reloc:"Rilocazione", relocOff:"disattivata", relocFind:"Dove? Città", relocClear:"Torna al luogo di nascita", relocMark:"(rilocata)",
     conf:"Configurazioni", confNone:"Nessuna figura maggiore entro l’orbe.", conf_stellium:"Stellium", conf_grandtrine:"Grande trigono", conf_tsquare:"Quadrato a T", conf_grandcross:"Grande croce", conf_kite:"Aquilone", conf_yod:"Yod", conf_mystic:"Rettangolo mistico",
@@ -1098,6 +1111,7 @@ const I18N={
     foot:"Le posizioni sono confrontate con JPL Horizons su ogni carta della biblioteca: lo scarto resta sotto i quattro secondi d’arco, e sotto il mezzo secondo per il Novecento. Atlante delle città da GeoNames, CC BY 4.0. Dopo il primo caricamento nulla di qui va in rete.",
   },
   uk:{
+    synaSwap:"Поміняти кільця місцями", synaInner:"всередині",
     printBtn:"Друк або PDF",
     reloc:"Релокація", relocOff:"вимкнена", relocFind:"Куди переносимо? Місто", relocClear:"Повернути місце народження", relocMark:"(релокація)",
     conf:"Конфігурації", confNone:"Великих фігур в орбісі немає.", conf_stellium:"Стеліум", conf_grandtrine:"Великий тригон", conf_tsquare:"Тау-квадрат", conf_grandcross:"Великий хрест", conf_kite:"Повітряний змій", conf_yod:"Йод", conf_mystic:"Містичний прямокутник",
@@ -1146,6 +1160,7 @@ const I18N={
     foot:"Положення звірені з JPL Horizons на всіх картах бібліотеки: розбіжність менша за чотири секунди дуги, для XX століття менша за половину. Атлас міст - GeoNames, CC BY 4.0. Після першого завантаження ніщо звідси не виходить у мережу.",
   },
   ka:{
+    synaSwap:"რგოლების გაცვლა", synaInner:"შიგნით",
     printBtn:"ბეჭდვა ან PDF",
     reloc:"რელოკაცია", relocOff:"გამორთულია", relocFind:"სად? ქალაქი", relocClear:"დაბრუნება დაბადების ადგილზე", relocMark:"(რელოცირებული)",
     conf:"კონფიგურაციები", confNone:"ორბისში დიდი ფიგურები არ არის.", conf_stellium:"სტელიუმი", conf_grandtrine:"დიდი ტრიგონი", conf_tsquare:"T-კვადრატი", conf_grandcross:"დიდი ჯვარი", conf_kite:"კაიტი", conf_yod:"იოდი", conf_mystic:"მისტიკური მართკუთხედი",
@@ -3102,6 +3117,38 @@ const HOUSE_SYSTEMS={
     Math.abs(lat)>88?equalCusps(asc):quadrantCusps(ramc,lat,ecl,asc,mc,(H,la)=>Math.atan(tand(la)*sind(H))*R2D,'regiomontanus')},
   campanus:{ru:'Кампанус',en:'Campanus',fn:(ramc,lat,ecl,asc,mc)=>
     Math.abs(lat)>88?equalCusps(asc):quadrantCusps(ramc,lat,ecl,asc,mc,(H,la)=>asind(Math.max(-1,Math.min(1,sind(la)*sind(H)))),'campanus')},
+  /* Koch, transcribed from the Swiss Ephemeris reference implementation
+     (swehouse.c, case 'K') rather than from a description of it. Koch does not
+     vary the pole the way Regiomontanus and Campanus do: the pole stays the
+     geographic latitude and the RAMC offset is shifted instead, by a third of
+     the Ascendant's ascensional difference. That is why it needs its own
+     function and could not join quadrantCusps.
+
+     Inside the polar circle it is undefined and Swiss Ephemeris falls back to
+     Porphyry, which is what we do, and the chart title reports the system
+     actually used. This system was absent until now precisely because its pole
+     definition did not come out of the secondary sources unambiguously; the
+     source did. */
+  koch:{ru:'Кох',en:'Koch',fn:(ramc,lat,ecl,asc,mc)=>{
+    if(Math.abs(lat)>=90-ecl) return porphyryCusps(asc,mc);
+    let sina=sind(mc)*sind(ecl)/cosd(lat);
+    sina=Math.max(-1,Math.min(1,sina));
+    const cosa=Math.sqrt(1-sina*sina);
+    const c=Math.atan(tand(lat)/cosa)*R2D;
+    const ad3=asind(Math.max(-1,Math.min(1,sind(c)*sina)))/3;
+    const [c11,c12,c2,c3]=[[30,-2*ad3],[60,-ad3],[120,ad3],[150,2*ad3]]
+      .map(([H,d])=>ascUnderPole(ramc,lat,ecl,H+d));
+    return {cusps:[asc,c2,c3,rev(mc+180),rev(c11+180),rev(c12+180),
+                   rev(asc+180),rev(c2+180),rev(c3+180),mc,c11,c12],system:'koch'};
+  }},
+  /* Polich-Page, called topocentric. One line of definition: the pole is a
+     third of tan(latitude) for the 11th and 3rd and two thirds for the 12th
+     and 2nd. It lands within a few arc-minutes of Placidus over most of the
+     inhabited world, which is the point of it - the same houses from a closed
+     formula instead of an iteration. */
+  topocentric:{ru:'Топоцентрическая',en:'Topocentric',fn:(ramc,lat,ecl,asc,mc)=>
+    quadrantCusps(ramc,lat,ecl,asc,mc,
+      (H,la)=>Math.atan(tand(la)*((H===60||H===120)?2/3:1/3))*R2D,'topocentric')},
   porphyry:{ru:'Порфирий',en:'Porphyry',fn:(ramc,lat,ecl,asc,mc)=>porphyryCusps(asc,mc)},
   equal:{ru:'Равнодомная',en:'Equal',fn:(ramc,lat,ecl,asc)=>equalCusps(asc)},
   whole:{ru:'Цельнознаковая',en:'Whole sign',fn:(ramc,lat,ecl,asc)=>wholeSignCusps(asc)}
@@ -4528,6 +4575,10 @@ const RING_MOVERS={
    so a chart edited in the library is not silently frozen here, and so the
    store stays small. Resolved to an entry only when it is needed. */
 const PARTNER_KEY='astrarium_partner';
+/* Not persisted: it belongs to the pair being looked at, and coming back a
+   week later to find yourself drawn as somebody else's outer ring would be a
+   puzzle rather than a convenience. */
+let RING_SWAP=false;
 let PARTNER=(function(){
   try{ const v=JSON.parse(localStorage.getItem(PARTNER_KEY)||'null');
     return v&&v.id?v:null; }catch(e){ return null; }
@@ -4789,7 +4840,7 @@ function renderPartnerLine(){
   if(!e){ el.textContent=t('synaNone'); return; }
   const tz=e._own?e.tz:libTz(e);
   const hh=e.t==null?12:e.t;
-  el.textContent=`${partnerName(e)} · ${String(e.d).padStart(2,'0')}.${String(e.mo).padStart(2,'0')}.${e.y}`
+  el.textContent=`${RING_SWAP?t('synaInner')+': ':''}${partnerName(e)} · ${String(e.d).padStart(2,'0')}.${String(e.mo).padStart(2,'0')}.${e.y}`
     +` ${pad2(Math.floor(hh))}:${pad2(Math.round((hh%1)*60))}`
     +(e.t==null?` (${t('noTime')})`:'')
     +` · ${e._own?(e.city||''):LX(e.city)}`;
@@ -4812,6 +4863,7 @@ function renderRingSwitch(){
   document.querySelector('.scrub').hidden=bare||syn;
   document.getElementById('transitsCard').hidden=bare;
   document.getElementById('synaPick').hidden=!syn;
+  document.getElementById('synaSwapRow').hidden=!(syn&&partnerEntry());
   document.getElementById('synaFind').placeholder=t('synaFind');
   if(syn) renderPartnerLine();
   if(META_ARGS) renderChartMeta(...META_ARGS);
@@ -4847,11 +4899,18 @@ function renderTransits(ch){
   TR_CHART=tr;
   if(!tr){ TR_HITS=[]; drawWheel(ch,null); renderGrid(ch,null); renderConfigurations(ch); renderLearned(); return; }
   const syn=RING_MODE==='synastry';
+  /* Swapped, the partner's chart supplies the frame and the houses, and the
+     aspects run the other way. Only the wheel, the hit list and the grid
+     follow the swap: the positions, the balance and the configurations are
+     readings of a single chart, and that chart is yours whichever ring it is
+     drawn in. */
+  const swapped=syn&&RING_SWAP;
+  const inner=swapped?tr:ch, outer=swapped?ch:tr;
   if(!syn) renderMoment();
   /* Outer-planet-to-outer-planet hits are dropped for transits because they
      are generational: everyone born that decade has them. In a progressed or
      directed chart they are personal again, since the arc is this person's. */
-  let hits=aspectOrbs(ch,tr.pos)
+  let hits=aspectOrbs(inner,outer.pos)
     .filter(h=>RING_MODE!=='transit'
       ||!(['Uranus','Neptune','Pluto'].includes(h.tp)&&['Uranus','Neptune','Pluto'].includes(h.np)));
   /* Applying and separating mean nothing in synastry: neither chart is going
@@ -4859,8 +4918,8 @@ function renderTransits(ch){
      printed as "separating" because two identical orbs compared equal. */
   if(!syn) markApplying(ch,tr.pos,outerChart(ch,TR_MS+PROBE_MS[RING_MODE]).pos,hits);
   TR_HITS=hits;
-  drawWheel(ch,tr);
-  renderGrid(ch,tr);
+  drawWheel(inner,outer);
+  renderGrid(inner,outer);
   renderConfigurations(ch);
   /* Ranked by receiver rank times exactness. With the interpretation flag on,
      the private model multiplies that in; with it off the order is that rule
@@ -5543,6 +5602,12 @@ document.getElementById('reset').addEventListener('click',()=>{localStorage.remo
   document.getElementById('synaFind').addEventListener('blur',()=>{
     setTimeout(()=>{ document.getElementById('synaList').style.display='none'; },150);
   });
+  document.getElementById('synaSwap').addEventListener('click',()=>{
+    RING_SWAP=!RING_SWAP;
+    renderRingSwitch();
+    if(CURRENT) renderTransits(CURRENT);
+    scrollChartIntoView();
+  });
   document.getElementById('ringSel').addEventListener('change',e=>{
     const v=e.target.value;
     if((v==='progressed'||v==='directed')&&BIRTH_MS==null){
@@ -5731,36 +5796,48 @@ SIGN_LOC.it=SIGN_NAME.it.map(s=>SIGN_PREP.it?SIGN_PREP.it+' '+s:s);
 SIGN_LOC.uk=SIGN_NAME.uk.map(s=>SIGN_PREP.uk?SIGN_PREP.uk+' '+s:s);
 SIGN_LOC.ka=SIGN_NAME.ka.map(s=>SIGN_PREP.ka?SIGN_PREP.ka+' '+s:s);
 HOUSE_SYSTEMS.placidus.es="Placidus";
+HOUSE_SYSTEMS.koch.es="Koch";
+HOUSE_SYSTEMS.topocentric.es="Topocéntrico";
 HOUSE_SYSTEMS.regiomontanus.es="Regiomontano";
 HOUSE_SYSTEMS.campanus.es="Campanus";
 HOUSE_SYSTEMS.porphyry.es="Porfirio";
 HOUSE_SYSTEMS.equal.es="Casas iguales";
 HOUSE_SYSTEMS.whole.es="Signo entero";
 HOUSE_SYSTEMS.placidus.fr="Placidus";
+HOUSE_SYSTEMS.koch.fr="Koch";
+HOUSE_SYSTEMS.topocentric.fr="Topocentrique";
 HOUSE_SYSTEMS.regiomontanus.fr="Régiomontanus";
 HOUSE_SYSTEMS.campanus.fr="Campanus";
 HOUSE_SYSTEMS.porphyry.fr="Porphyre";
 HOUSE_SYSTEMS.equal.fr="Maisons égales";
 HOUSE_SYSTEMS.whole.fr="Signe entier";
 HOUSE_SYSTEMS.placidus.de="Placidus";
+HOUSE_SYSTEMS.koch.de="Koch";
+HOUSE_SYSTEMS.topocentric.de="Topozentrisch";
 HOUSE_SYSTEMS.regiomontanus.de="Regiomontanus";
 HOUSE_SYSTEMS.campanus.de="Campanus";
 HOUSE_SYSTEMS.porphyry.de="Porphyrius";
 HOUSE_SYSTEMS.equal.de="Gleiche Häuser";
 HOUSE_SYSTEMS.whole.de="Ganzzeichen";
 HOUSE_SYSTEMS.placidus.it="Placido";
+HOUSE_SYSTEMS.koch.it="Koch";
+HOUSE_SYSTEMS.topocentric.it="Topocentrico";
 HOUSE_SYSTEMS.regiomontanus.it="Regiomontano";
 HOUSE_SYSTEMS.campanus.it="Campano";
 HOUSE_SYSTEMS.porphyry.it="Porfirio";
 HOUSE_SYSTEMS.equal.it="Case uguali";
 HOUSE_SYSTEMS.whole.it="Segno intero";
 HOUSE_SYSTEMS.placidus.uk="Плацидус";
+HOUSE_SYSTEMS.koch.uk="Кох";
+HOUSE_SYSTEMS.topocentric.uk="Топоцентрична";
 HOUSE_SYSTEMS.regiomontanus.uk="Регіомонтан";
 HOUSE_SYSTEMS.campanus.uk="Кампанус";
 HOUSE_SYSTEMS.porphyry.uk="Порфирій";
 HOUSE_SYSTEMS.equal.uk="Рівнодомна";
 HOUSE_SYSTEMS.whole.uk="Цілознакова";
 HOUSE_SYSTEMS.placidus.ka="პლაციდუსი";
+HOUSE_SYSTEMS.koch.ka="კოხი";
+HOUSE_SYSTEMS.topocentric.ka="ტოპოცენტრული";
 HOUSE_SYSTEMS.regiomontanus.ka="რეგიომონტანუსი";
 HOUSE_SYSTEMS.campanus.ka="კამპანუსი";
 HOUSE_SYSTEMS.porphyry.ka="პორფირი";

@@ -225,10 +225,10 @@ function run(){
   /* ---------- системы домов ---------- */
   group('Системы домов');
   const SYS=Object.keys(ev('HOUSE_SYSTEMS'));
-  t('доступны шесть систем',()=>SYS.length===6||SYS.join(', '));
+  t('доступны все восемь систем домов',()=>SYS.length===8||SYS.join(', '));
   t('квадрантные системы ставят 1-й дом на Асцендент и 10-й на Меридиан',()=>{
     const bad=[];
-    ['placidus','regiomontanus','campanus','porphyry'].forEach(k=>{
+    ['placidus','regiomontanus','campanus','porphyry','koch','topocentric'].forEach(k=>{
       ev(`HSYS=${JSON.stringify(k)}`);
       const c=ev('computeChart(1985,11,3,13+37/60,3,59.9343,30.3351)');
       const d=(a,b)=>Math.abs(((a-b+540)%360)-180);
@@ -1401,6 +1401,136 @@ function run(){
       return out;})()`);
     const bad=Object.entries(r).filter(([,v])=>v!==true).map(([k])=>k);
     return bad.length===0||`натал не внутри при: ${bad.join(', ')}`;
+  });
+
+  /* ---------- системы домов Кох и Топоцентрическая ---------- */
+  group('Кох и Топоцентрическая');
+  t('обе совпадают с эталонной реализацией Swiss Ephemeris',()=>{
+    /* Asc1 и Asc2 из swehouse.c перенесены сюда дословно и служат только
+       эталоном. Это единственный способ проверить систему домов, чьё
+       определение не выходит однозначно из вторичных источников - именно
+       поэтому Кох до сих пор отсутствовал. Сверка идёт по сетке широт и
+       звёздных времён, а не на одной карте. */
+    const r=ev(`(()=>{
+      const D=Math.PI/180,R=180/Math.PI,VS=1e-10;
+      const sd=x=>Math.sin(x*D), cd=x=>Math.cos(x*D), td=x=>Math.tan(x*D);
+      const asd=x=>Math.asin(x)*R, atd=x=>Math.atan(x)*R, nm=x=>((x%360)+360)%360;
+      function Asc2(x,f,sine,cose){let a=-td(f)*sine+cose*cd(x); if(Math.abs(a)<VS)a=0;
+        let sx=sd(x); if(Math.abs(sx)<VS)sx=0;
+        if(sx===0)a=a<0?-VS:VS; else if(a===0)a=sx<0?-90:90; else a=atd(sx/a);
+        if(a<0)a=180+a; return a;}
+      function Asc1(x1,f,sine,cose){x1=nm(x1);const n=Math.floor(x1/90)+1;let a;
+        if(n===1)a=Asc2(x1,f,sine,cose); else if(n===2)a=180-Asc2(180-x1,-f,sine,cose);
+        else if(n===3)a=180+Asc2(x1-180,-f,sine,cose); else a=360-Asc2(360-x1,f,sine,cose);
+        return nm(a);}
+      function kochRef(th,fi,ekl,mc){const sine=sd(ekl),cose=cd(ekl);
+        let sina=sd(mc)*sine/cd(fi); sina=Math.max(-1,Math.min(1,sina));
+        const cosa=Math.sqrt(1-sina*sina), c=atd(td(fi)/cosa), ad3=asd(sd(c)*sina)/3;
+        return [Asc1(th+30-2*ad3,fi,sine,cose),Asc1(th+60-ad3,fi,sine,cose),
+                Asc1(th+120+ad3,fi,sine,cose),Asc1(th+150+2*ad3,fi,sine,cose)];}
+      function topoRef(th,fi,ekl){const sine=sd(ekl),cose=cd(ekl),tf=td(fi);
+        const f1=atd(tf/3),f2=atd(tf*2/3);
+        return [Asc1(30+th,f1,sine,cose),Asc1(60+th,f2,sine,cose),
+                Asc1(120+th,f2,sine,cose),Asc1(150+th,f1,sine,cose)];}
+      const diff=(a,b)=>{let d=Math.abs(a-b); if(d>180)d=360-d; return d;};
+      let wk=0, wt=0, n=0, polar=0;
+      for(let lat=-62; lat<=62; lat+=4)
+        for(let ra=0; ra<360; ra+=11){
+          const ecl=23.4367;
+          const mc=atan2d(sind(ra),cosd(ra)*cosd(ecl));
+          let asc=atan2d(cosd(ra),-(sind(ra)*cosd(ecl)+tand(lat)*sind(ecl)));
+          if(rev(asc-mc)>180) asc=rev(asc+180);
+          const k=HOUSE_SYSTEMS.koch.fn(ra,lat,ecl,asc,mc);
+          const tp=HOUSE_SYSTEMS.topocentric.fn(ra,lat,ecl,asc,mc);
+          if(k.system!=='koch'){ polar++; continue; }
+          const kr=kochRef(ra,lat,ecl,mc), tr=topoRef(ra,lat,ecl);
+          [k.cusps[10],k.cusps[11],k.cusps[1],k.cusps[2]]
+            .forEach((v,i)=>{const d=diff(v,kr[i]); if(d>wk)wk=d;});
+          [tp.cusps[10],tp.cusps[11],tp.cusps[1],tp.cusps[2]]
+            .forEach((v,i)=>{const d=diff(v,tr[i]); if(d>wt)wt=d;});
+          n++;
+        }
+      return {n, polar, wk:wk*3600, wt:wt*3600};})()`);
+    if(r.n<800) return `слишком мало выборок: ${r.n}`;
+    return (r.wk<0.001&&r.wt<0.001)
+      ||`Кох расходится на ${r.wk.toFixed(4)}", Топоцентрическая на ${r.wt.toFixed(4)}"`;
+  });
+  t('Топоцентрическая идёт рядом с Плацидусом на обитаемых широтах',()=>{
+    /* Она для того и существует: те же дома из замкнутой формулы вместо
+       итерации. Если разойдутся далеко, значит перепутаны полюса. */
+    const r=ev(`(()=>{let worst=0;
+      for(let lat=-55; lat<=55; lat+=5)
+        for(let ra=0; ra<360; ra+=17){
+          const ecl=23.4367;
+          const mc=atan2d(sind(ra),cosd(ra)*cosd(ecl));
+          let asc=atan2d(cosd(ra),-(sind(ra)*cosd(ecl)+tand(lat)*sind(ecl)));
+          if(rev(asc-mc)>180) asc=rev(asc+180);
+          const p=HOUSE_SYSTEMS.placidus.fn(ra,lat,ecl,asc,mc);
+          const t2=HOUSE_SYSTEMS.topocentric.fn(ra,lat,ecl,asc,mc);
+          if(p.system!=='placidus') continue;
+          for(const i of [10,11,1,2]){
+            let d=Math.abs(p.cusps[i]-t2.cusps[i]); if(d>180)d=360-d;
+            if(d>worst)worst=d;
+          }
+        }
+      return worst;})()`);
+    return r<2||`расходятся на ${r.toFixed(2)}°`;
+  });
+  t('Кох за полярным кругом честно переходит на Порфирия',()=>{
+    const r=ev(`(()=>{const ecl=23.4367, lat=71, ra=100;
+      const mc=atan2d(sind(ra),cosd(ra)*cosd(ecl));
+      let asc=atan2d(cosd(ra),-(sind(ra)*cosd(ecl)+tand(lat)*sind(ecl)));
+      if(rev(asc-mc)>180) asc=rev(asc+180);
+      const k=HOUSE_SYSTEMS.koch.fn(ra,lat,ecl,asc,mc);
+      return {system:k.system, finite:k.cusps.every(c=>isFinite(c))};})()`);
+    return (r.system==='porphyry'&&r.finite)||JSON.stringify(r);
+  });
+  t('обе новые системы есть во всех восьми языках',()=>{
+    const miss=ev(`(()=>{const out=[];
+      for(const c of LANG_CODES) for(const k of ['koch','topocentric'])
+        if(!HOUSE_SYSTEMS[k][c]) out.push(c+'.'+k);
+      return out;})()`);
+    return miss.length===0||`нет: ${miss.join(', ')}`;
+  });
+
+  /* ---------- обмен колец ---------- */
+  group('Обмен колец');
+  t('обмен меняет рамку и направление аспектов',()=>{
+    /* Для двух радиксов канонического порядка нет - LUNA прямо это говорит и
+       даёт ручку. Обмен обязан менять именно дома и направление, а не только
+       радиусы глифов. */
+    const r=ev(`(()=>{const kR=RING_MODE, kP=PARTNER, kS=RING_SWAP;
+      PARTNER={src:'lib',id:CHART_LIBRARY[0].id};
+      RING_MODE='synastry'; RING_SWAP=false;
+      renderRingSwitch(); renderTransits(CURRENT);
+      const a={hits:TR_HITS.length, recv:[...new Set(TR_HITS.map(h=>h.np))].join(',')};
+      RING_SWAP=true; renderRingSwitch(); renderTransits(CURRENT);
+      const b={hits:TR_HITS.length, recv:[...new Set(TR_HITS.map(h=>h.np))].join(',')};
+      RING_MODE=kR; PARTNER=kP; RING_SWAP=kS;
+      renderRingSwitch(); renderTransits(CURRENT);
+      return {a,b};})()`);
+    return (r.a.recv!==r.b.recv||r.a.hits!==r.b.hits)
+      ||`ничего не изменилось: ${JSON.stringify(r.a)}`;
+  });
+  t('ручка обмена появляется только в синастрии и только с выбранным партнёром',()=>{
+    const r=ev(`(()=>{const kR=RING_MODE, kP=PARTNER;
+      const row=document.getElementById('synaSwapRow');
+      RING_MODE='transit'; renderRingSwitch();
+      const onTransit=row.hidden;
+      RING_MODE='synastry'; PARTNER=null; renderRingSwitch();
+      const noPartner=row.hidden;
+      PARTNER={src:'lib',id:CHART_LIBRARY[0].id}; renderRingSwitch();
+      const withPartner=!row.hidden;
+      RING_MODE=kR; PARTNER=kP; renderRingSwitch();
+      if(CURRENT) renderTransits(CURRENT);
+      return {onTransit,noPartner,withPartner};})()`);
+    return (r.onTransit&&r.noPartner&&r.withPartner)||JSON.stringify(r);
+  });
+  t('обмен не сохраняется между сессиями',()=>{
+    /* Вернуться через неделю и обнаружить себя нарисованным чужим внешним
+       кольцом это загадка, а не удобство. */
+    const keys=ev(`Object.keys(localStorage).filter(k=>/swap/i.test(k))`);
+    return keys.length===0||`в хранилище: ${keys.join(', ')}`;
   });
 
   /* ---------- печать ---------- */

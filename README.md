@@ -24,11 +24,30 @@ Checked against JPL Horizons on **every chart in the library**: worst disagreeme
 3.9″ over 1685-1984, under 0.5″ in the twentieth century. Pluto is reliable over
 1550-2250 and clamped, not extrapolated wildly, outside it.
 
-Six house systems - Placidus, Regiomontanus, Campanus, Porphyry, equal, whole sign.
-Beyond the polar circle Placidus is undefined and the calculation falls back to equal
-houses, so the chart title names the system actually used rather than the one asked
-for. Koch is deliberately absent: its pole definition did not come out of the sources
-unambiguously, and an unverified house system is worse than none.
+Eight house systems - Placidus, Koch, Regiomontanus, Campanus, Topocentric, Porphyry,
+equal, whole sign. Beyond the polar circle Placidus and Koch are undefined and the
+calculation falls back to equal houses and to Porphyry respectively, so the chart title
+names the system actually used rather than the one asked for.
+
+Eight rather than the dozen the desktop tools carry, and the cut is deliberate. A
+survey of 500 professional astrologers puts Placidus at 50% and whole sign at 25%, so
+those two alone cover three quarters of practice; Regiomontanus is the horary choice
+and Koch the German one. Alcabitius, Morinus, Vehlow and the rest each add a line to a
+list and serve almost nobody, and an unverified house system is worse than none,
+because it looks like a feature and returns wrong cusps that only someone who already
+knows the answer can catch.
+
+Koch was absent until 3.1.0 for exactly that reason: its pole definition did not come
+out of the secondary sources unambiguously. It is here now because it was taken from
+the Swiss Ephemeris reference implementation instead, and both new systems are checked
+against a verbatim transcription of that implementation across 1056 samples from 62°S
+to 62°N - agreeing to **zero arcseconds**. That comparison is a test, not a one-off.
+
+Koch is also the one system that does not vary its pole: the pole stays the geographic
+latitude and the RAMC offset shifts by a third of the Ascendant's ascensional
+difference instead. Topocentric is the opposite kind of thing, a one-line definition
+whose poles are a third and two thirds of tan(latitude), landing within two degrees of
+Placidus across the inhabited world.
 
 A body's house comes from where the body actually is, by Placidus semi-arc on its real
 declination, not from its ecliptic projection. That matters most for Pluto, which
@@ -199,6 +218,15 @@ They are stored as a reference - which list, which id - rather than as a copy,
 so a chart corrected in the library is not silently frozen here, and a partner
 whose chart has since been deleted degrades to an empty ring rather than
 breaking the wheel.
+
+**Either chart can be the inner one.** For two radix charts no order is canonical -
+LUNA is the only one of the three that says so out loud, and it lets the user swap the
+rings - so this is a choice rather than a default to get right. Swapping moves the
+frame and the houses to the other person and reverses the direction the aspects are
+read in. The positions, the balance and the configurations stay yours whichever ring
+you are drawn in, because those are readings of a single chart. The swap is not
+persisted: coming back a week later to find yourself drawn as somebody else's outer
+ring would be a puzzle rather than a convenience.
 
 Two things are deliberately absent. **Applying and separating** do not appear,
 because neither chart is going anywhere and the label would be meaningless
@@ -438,7 +466,7 @@ mattered: before it did, a deliberately broken app passed every check. The runne
 for the city atlas to finish loading, or the atlas tests would silently check the inline
 seed instead.
 
-**213 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
+**220 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
 library, robustness over 1550-2250 and at polar latitudes, house systems (angles land
 on the cusps, cusps run round the circle without crossing, quadrant systems coincide at
 the equator, zero-latitude bodies get the same house from both methods), library data
