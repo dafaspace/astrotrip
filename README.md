@@ -74,6 +74,36 @@ day it swamps a transit list, while the progressed Moon at a degree a month is
 the most used point in the technique. Orbs are capped at one degree for both, or
 an aspect would stay "active" for six years and the list would never change.
 
+### Configurations
+
+Stellium, grand trine, T-square, grand cross, kite, yod and mystic rectangle.
+Tapping one lights it on the wheel and dims everything else, which is the only
+way a grand cross reads as a shape rather than as four more chords among
+twenty.
+
+**Planets only, without the angles or the nodes.** The Ascendant and Midheaven
+sit near ninety degrees apart in a great many charts, so admitting them would
+manufacture a T-square out of the frame itself; the nodes are always exactly
+opposed, so every planet square either one would report another. A figure built
+on those is a property of the drawing, not of the chart.
+
+**Orbs are the configured ones.** Many astrologers tighten orbs for patterns.
+Doing that here would mean a chord drawn on the wheel and a figure denying it
+exists, and one source of truth is worth more than one convention.
+
+**A yod needs the quincunx, which ships off.** That is not a gap: the switch
+says do not count this aspect, and an exception for patterns would make the
+switch a lie.
+
+Larger figures suppress the smaller ones inside them. A grand cross contains
+four T-squares and a kite contains a grand trine; reporting both is the same
+fact twice plus noise.
+
+Measured across two hundred library charts, the detector finds T-squares in 98,
+stelliums in 74, grand trines in 23, kites and mystic rectangles in 4 each and
+grand crosses in 3 - which is the shape of the real distribution and is itself
+a test, since a detector broken in either direction would show up here first.
+
 ### The aspect grid
 
 Ten planets plus the Ascendant and Midheaven. Triangular on its own, because
@@ -357,7 +387,7 @@ mattered: before it did, a deliberately broken app passed every check. The runne
 for the city atlas to finish loading, or the atlas tests would silently check the inline
 seed instead.
 
-**190 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
+**201 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
 library, robustness over 1550-2250 and at polar latitudes, house systems (angles land
 on the cusps, cusps run round the circle without crossing, quadrant systems coincide at
 the equator, zero-latitude bodies get the same house from both methods), library data

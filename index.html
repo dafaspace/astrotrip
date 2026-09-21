@@ -212,6 +212,15 @@ button.ico{width:44px;height:44px;padding:0;display:inline-flex;align-items:cent
 button.ico svg{width:18px;height:18px;flex:none}
 button.ico:disabled{opacity:.4;cursor:default}
 .steplab{display:inline;margin:0 0 0 2px;flex:none}
+/* ---- configurations ---- */
+.confrow{display:flex;align-items:center;gap:10px;min-height:44px;padding:4px 6px;margin:0 -6px;
+  border-bottom:1px solid var(--line);border-radius:8px;cursor:pointer;flex-wrap:wrap}
+.confrow:last-child{border-bottom:none}
+.confrow:hover,.confrow:focus-visible{background:var(--paper3);outline:none}
+.confrow.on{background:var(--paper2);box-shadow:inset 2px 0 0 var(--accent)}
+.confrow .nm{font-size:14px;flex:none}
+.confrow .who{font-size:17px;letter-spacing:2px;color:var(--ink2);flex:none}
+.confrow .names{flex:1;min-width:0;text-align:right;overflow-wrap:anywhere}
 /* ---- aspect grid ---- */
 /* Scrolls sideways rather than shrinking below legibility: thirteen columns at
    24px is 312, which fits a 375px phone, but a longer aspect set or a wider
@@ -548,6 +557,14 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
       <div class="tiny" style="margin-top:8px" data-i="posnote"></div>
     </details>
 
+    <!-- Configurations. Above the grid because a named figure is what a reader
+         looks for first; the grid is where they go to check it. -->
+    <details class="card fold" id="confCard">
+      <summary><h2 data-i="conf"></h2><span class="tiny" id="confBrief"></span></summary>
+      <div id="confList"></div>
+      <div class="tiny" style="margin-top:8px" data-i="confNote"></div>
+    </details>
+
     <!-- The aspect grid. Triangular for a chart on its own, rectangular when
          the outer ring is filled, which is what a synastry grid is. -->
     <details class="card fold" id="gridCard">
@@ -623,7 +640,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
 /* Bump together with CACHE in sw.js: the two are the same release, and the
    number on screen is how you tell from a phone which one you are looking at. */
-const APP_VERSION='2.8.0';
+const APP_VERSION='2.9.0';
 document.getElementById('ver').textContent=APP_VERSION;
 
 /* ---------- feature flags ----------
@@ -741,6 +758,16 @@ const STR = {
   playbtn:{ru:'Пуск',en:'Play'}, pausebtn:{ru:'Стоп',en:'Pause'},
   stepback:{ru:'Шаг назад',en:'Step back'}, stepfwd:{ru:'Шаг вперёд',en:'Step forward'},
   /* balance */
+  conf:{ru:'Конфигурации',en:'Configurations'},
+  confNone:{ru:'Крупных фигур в орбисе нет.',en:'No major figures within orb.'},
+  confNote:{ru:'Считаются десять планет, без Асцендента, MC и узлов: Асцендент и MC почти всегда стоят около девяноста градусов друг к другу, а узлы всегда строго напротив, и любая такая фигура была бы свойством рамки, а не карты. Орбисы берутся из настройки аспектов. Йод требует включённого квиконса. Коснитесь фигуры, чтобы подсветить её на колесе.',en:'Ten planets, without the Ascendant, Midheaven or nodes: the angles sit near ninety degrees apart in most charts and the nodes are always exactly opposed, so any figure built on them would be a property of the frame rather than of the chart. Orbs come from the aspect settings. A yod needs the quincunx switched on. Tap a figure to light it on the wheel.'},
+  conf_stellium:{ru:'Стеллиум',en:'Stellium'},
+  conf_grandtrine:{ru:'Большой тригон',en:'Grand trine'},
+  conf_tsquare:{ru:'Тау-квадрат',en:'T-square'},
+  conf_grandcross:{ru:'Большой крест',en:'Grand cross'},
+  conf_kite:{ru:'Воздушный змей',en:'Kite'},
+  conf_yod:{ru:'Йод',en:'Yod'},
+  conf_mystic:{ru:'Мистический прямоугольник',en:'Mystic rectangle'},
   grid:{ru:'Аспектная таблица',en:'Aspect grid'},
   gridInner:{ru:'вниз',en:'down'},
   gridOuter:{ru:'внешнее кольцо',en:'outer ring'},
@@ -789,6 +816,7 @@ const STR = {
    standard terms of each tradition; the prose is mine. */
 const I18N={
   es:{
+    conf:"Configuraciones", confNone:"No hay figuras mayores dentro del orbe.", conf_stellium:"Estelium", conf_grandtrine:"Gran trígono", conf_tsquare:"Cuadratura en T", conf_grandcross:"Gran cruz", conf_kite:"Cometa", conf_yod:"Yod", conf_mystic:"Rectángulo místico",
     grid:"Tabla de aspectos", gridInner:"abajo", gridOuter:"anillo exterior", gridOuterSyn:"pareja",
     ring_synastry:"Sinastría", note_synastry:"La carta de otra persona sobre la tuya. La rueda interior y las casas siguen siendo tuyas.", synaFind:"¿Con quién comparamos? Nombre, ciudad o año", synaNone:"Nadie elegido todavía.",
     orbNote:"Orbes en grados. Los menores están desactivados por defecto: con todos activados una carta lleva cerca de la mitad más de aspectos (11,6 frente a 16,4 en 60 cartas de la biblioteca). Se aplica a la carta natal y al anillo exterior.",
@@ -836,6 +864,7 @@ const I18N={
     foot:"Las posiciones están cotejadas con JPL Horizons en todas las cartas de la biblioteca: la diferencia es menor de cuatro segundos de arco, y menor de medio en el siglo XX. Atlas de ciudades de GeoNames, CC BY 4.0. Tras la primera carga nada de aquí sale a la red.",
   },
   fr:{
+    conf:"Configurations", confNone:"Aucune grande figure dans l’orbe.", conf_stellium:"Amas", conf_grandtrine:"Grand trigone", conf_tsquare:"Carré en T", conf_grandcross:"Grande croix", conf_kite:"Cerf-volant", conf_yod:"Yod", conf_mystic:"Rectangle mystique",
     grid:"Tableau des aspects", gridInner:"vers le bas", gridOuter:"anneau extérieur", gridOuterSyn:"partenaire",
     ring_synastry:"Synastrie", note_synastry:"Le thème d’une autre personne sur le vôtre. La roue intérieure et les maisons restent les vôtres.", synaFind:"Comparer avec qui ? Nom, ville ou année", synaNone:"Personne de choisi pour l’instant.",
     orbNote:"Orbes en degrés. Les mineurs sont désactivés par défaut : tous activés, un thème porte environ moitié plus d’aspects (11,6 contre 16,4 sur 60 thèmes de la bibliothèque). Vaut pour le thème natal comme pour l’anneau extérieur.",
@@ -884,6 +913,7 @@ const I18N={
     foot:"Les positions sont vérifiées avec JPL Horizons sur toutes les cartes de la bibliothèque : l’écart est inférieur à quatre secondes d’arc, et à une demi-seconde pour le vingtième siècle. Atlas des villes : GeoNames, CC BY 4.0. Après le premier chargement, rien ici ne contacte le réseau.",
   },
   de:{
+    conf:"Konfigurationen", confNone:"Keine großen Figuren im Orbis.", conf_stellium:"Stellium", conf_grandtrine:"Großes Trigon", conf_tsquare:"T-Quadrat", conf_grandcross:"Großes Kreuz", conf_kite:"Drachen", conf_yod:"Yod", conf_mystic:"Mystisches Rechteck",
     grid:"Aspekttabelle", gridInner:"nach unten", gridOuter:"äußerer Ring", gridOuterSyn:"Partner",
     ring_synastry:"Synastrie", note_synastry:"Das Chart einer anderen Person über Ihrem. Das innere Rad und die Häuser bleiben Ihre.", synaFind:"Mit wem vergleichen? Name, Ort oder Jahr", synaNone:"Noch niemand gewählt.",
     orbNote:"Orben in Grad. Die kleinen Aspekte sind standardmäßig aus: alle zusammen bringen etwa die Hälfte mehr Aspekte (11,6 gegen 16,4, gemessen an 60 Charts der Bibliothek). Gilt für das Radix und für den äußeren Ring.",
@@ -929,6 +959,7 @@ const I18N={
     foot:"Die Positionen sind bei jedem Chart der Bibliothek gegen JPL Horizons geprüft: die Abweichung bleibt unter vier Bogensekunden, im zwanzigsten Jahrhundert unter einer halben. Städte-Atlas von GeoNames, CC BY 4.0. Nach dem ersten Laden geht von hier nichts mehr ins Netz.",
   },
   it:{
+    conf:"Configurazioni", confNone:"Nessuna figura maggiore entro l’orbe.", conf_stellium:"Stellium", conf_grandtrine:"Grande trigono", conf_tsquare:"Quadrato a T", conf_grandcross:"Grande croce", conf_kite:"Aquilone", conf_yod:"Yod", conf_mystic:"Rettangolo mistico",
     grid:"Tabella degli aspetti", gridInner:"in giù", gridOuter:"anello esterno", gridOuterSyn:"partner",
     ring_synastry:"Sinastria", note_synastry:"La carta di un’altra persona sopra la tua. La ruota interna e le case restano le tue.", synaFind:"Con chi confrontiamo? Nome, città o anno", synaNone:"Ancora nessuno scelto.",
     orbNote:"Orbi in gradi. I minori sono disattivati per impostazione predefinita: con tutti attivi una carta porta circa metà aspetti in più (11,6 contro 16,4 su 60 carte della biblioteca). Vale per la carta natale e per l’anello esterno.",
@@ -974,6 +1005,7 @@ const I18N={
     foot:"Le posizioni sono confrontate con JPL Horizons su ogni carta della biblioteca: lo scarto resta sotto i quattro secondi d’arco, e sotto il mezzo secondo per il Novecento. Atlante delle città da GeoNames, CC BY 4.0. Dopo il primo caricamento nulla di qui va in rete.",
   },
   uk:{
+    conf:"Конфігурації", confNone:"Великих фігур в орбісі немає.", conf_stellium:"Стеліум", conf_grandtrine:"Великий тригон", conf_tsquare:"Тау-квадрат", conf_grandcross:"Великий хрест", conf_kite:"Повітряний змій", conf_yod:"Йод", conf_mystic:"Містичний прямокутник",
     grid:"Аспектна таблиця", gridInner:"вниз", gridOuter:"зовнішнє кільце", gridOuterSyn:"партнер",
     ring_synastry:"Синастрія", note_synastry:"Карта іншої людини поверх вашої. Внутрішнє колесо й доми лишаються вашими.", synaFind:"Кого порівнюємо? Ім’я, місто або рік", synaNone:"Нікого не вибрано.",
     orbNote:"Орбіс у градусах. Мінорні вимкнені типово: з усіма увімкненими аспектів у карті стає приблизно в півтора раза більше - на 60 картах бібліотеки 11.6 проти 16.4. Діє і на натал, і на зовнішнє кільце.",
@@ -1019,6 +1051,7 @@ const I18N={
     foot:"Положення звірені з JPL Horizons на всіх картах бібліотеки: розбіжність менша за чотири секунди дуги, для XX століття менша за половину. Атлас міст - GeoNames, CC BY 4.0. Після першого завантаження ніщо звідси не виходить у мережу.",
   },
   ka:{
+    conf:"კონფიგურაციები", confNone:"ორბისში დიდი ფიგურები არ არის.", conf_stellium:"სტელიუმი", conf_grandtrine:"დიდი ტრიგონი", conf_tsquare:"T-კვადრატი", conf_grandcross:"დიდი ჯვარი", conf_kite:"კაიტი", conf_yod:"იოდი", conf_mystic:"მისტიკური მართკუთხედი",
     grid:"ასპექტების ცხრილი", gridInner:"ქვემოთ", gridOuter:"გარე რგოლი", gridOuterSyn:"პარტნიორი",
     ring_synastry:"სინასტრია", note_synastry:"სხვა ადამიანის რუკა თქვენსაზე. შიდა ბორბალი და სახლები თქვენი რჩება.", synaFind:"ვისთან შევადაროთ? სახელი, ქალაქი ან წელი", synaNone:"ჯერ არავინ არის არჩეული.",
     orbNote:"ორბისი გრადუსებში. მინორული ასპექტები ნაგულისხმევად გამორთულია: ყველას ჩართვისას რუკაში ასპექტები დაახლოებით ნახევრად მეტი ხდება - ბიბლიოთეკის 60 რუკაზე 11.6 და 16.4. მოქმედებს ნატალურ რუკაზეც და გარე რგოლზეც.",
@@ -4121,7 +4154,7 @@ function drawWheel(ch,tr){
     return `<line x1="${ax.toFixed(1)}" y1="${ay.toFixed(1)}" x2="${bx.toFixed(1)}" y2="${by.toFixed(1)}" stroke="${colour}" stroke-width="1.7" stroke-linecap="round"/>`;
   }
   BODIES.concat(POINTS.filter(p=>ch.pos[p])).forEach(n=>{
-    const dimT=ISO&&ISO!==n;
+    const dimT=CONF_ISO?!CONF_ISO.includes(n):(ISO&&ISO!==n);
     s+=`<g opacity="${dimT?0.2:1}">${exactTick(ch.pos[n].lon,'var(--ink)',rNatScale,-8)}</g>`;
   });
   if(tr) BODIES.forEach(n=>{ if(tr.pos[n]) s+=exactTick(tr.pos[n].lon,'var(--accent)',rZodIn,8); });
@@ -4146,8 +4179,11 @@ function drawWheel(ch,tr){
     const dx=x2-x1,dy=y2-y1,L=Math.hypot(dx,dy)||1;
     const gap=8, ux=dx/L, uy=dy/L;
     const ax=mx-ux*gap, ay=my-uy*gap, bx=mx+ux*gap, by=my+uy*gap;
-    const dim=ISO&&ISO!==a.p1&&ISO!==a.p2;
-    const op=dim?0.07:(ISO?0.95:0.5);
+    /* A lit configuration dims everything that is not part of it, so a grand
+       cross reads as a shape instead of as four more chords among twenty. */
+    const inConf=CONF_ISO&&CONF_ISO.includes(a.p1)&&CONF_ISO.includes(a.p2);
+    const dim=CONF_ISO?!inConf:(ISO&&ISO!==a.p1&&ISO!==a.p2);
+    const op=dim?0.07:((ISO||CONF_ISO)?0.95:0.5);
     if(L>gap*2.6){
       s+=`<g opacity="${op}">`;
       s+=`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${ax.toFixed(1)}" y2="${ay.toFixed(1)}" stroke="${a.asp.color}" stroke-width="1"/>`;
@@ -4167,8 +4203,9 @@ function drawWheel(ch,tr){
     const disp=placed[idx][1];
     const [px,py]=polar(disp,rPl);
     const isPoint=POINTS.includes(n);
-    const dim=ISO&&ISO!==n&&!asps.some(a=>(a.p1===ISO&&a.p2===n)||(a.p2===ISO&&a.p1===n));
-    const hot=ISO===n;
+    const dim=CONF_ISO?!CONF_ISO.includes(n)
+      :(ISO&&ISO!==n&&!asps.some(a=>(a.p1===ISO&&a.p2===n)||(a.p2===ISO&&a.p1===n)));
+    const hot=CONF_ISO?CONF_ISO.includes(n):ISO===n;
     const [tx,ty]=polar(ch.pos[n].lon,rNatScale-8);
     s+=`<g class="pl" data-p="${n}" style="cursor:pointer" opacity="${dim?0.25:1}">`;
     s+=`<line x1="${tx.toFixed(1)}" y1="${ty.toFixed(1)}" x2="${px.toFixed(1)}" y2="${py.toFixed(1)}" stroke="var(--ink3)" stroke-width="0.7" opacity="0.7"/>`;
@@ -4223,7 +4260,11 @@ function drawWheel(ch,tr){
   document.querySelectorAll('#wheel .pl').forEach(g=>g.addEventListener('click',e=>{
     e.stopPropagation(); pick(g.dataset.p);
   }));
-  function pick(p){ ISO=(ISO===p?null:p); drawWheel(ch,tr); showDetail(p,ch); }
+  function pick(p){
+    CONF_ISO=null;                                  // one thing lit at a time
+    ISO=(ISO===p?null:p); drawWheel(ch,tr); showDetail(p,ch);
+    renderConfigurations(ch);
+  }
 
   /* Tap anywhere in the ring, not on the glyph itself. A drawn glyph is 19 px
      across on a phone, well under the 44 px a thumb needs, and making the disc
@@ -4699,7 +4740,7 @@ function renderTransits(ch){
   const o=learn();
   const tr=outerChart(ch,TR_MS);
   TR_CHART=tr;
-  if(!tr){ TR_HITS=[]; drawWheel(ch,null); renderGrid(ch,null); renderLearned(); return; }
+  if(!tr){ TR_HITS=[]; drawWheel(ch,null); renderGrid(ch,null); renderConfigurations(ch); renderLearned(); return; }
   const syn=RING_MODE==='synastry';
   if(!syn) renderMoment();
   /* Outer-planet-to-outer-planet hits are dropped for transits because they
@@ -4715,6 +4756,7 @@ function renderTransits(ch){
   TR_HITS=hits;
   drawWheel(ch,tr);
   renderGrid(ch,tr);
+  renderConfigurations(ch);
   /* Ranked by receiver rank times exactness. With the interpretation flag on,
      the private model multiplies that in; with it off the order is that rule
      and nothing else, which is why the personal-weight column disappears too. */
@@ -4926,6 +4968,109 @@ function redrawAspects(){
   renderOrbs();
   if(CURRENT){ renderTransits(CURRENT); if(ISO) showDetail(ISO,CURRENT); }
 }
+/* ---------- configurations ----------
+   Planets only, and deliberately not the angles. The Ascendant and Midheaven
+   sit roughly ninety degrees apart in a great many charts, so admitting them
+   would manufacture a T-square out of the frame itself in half the library.
+   The nodes are out for the same reason in reverse: they are always exactly
+   opposed, so every planet square either one would report a T-square.
+
+   Orbs are the configured ones. Many astrologers tighten orbs for patterns;
+   doing that here would mean a chord drawn on the wheel and a pattern that
+   denies it exists, and one source of truth is worth more than one convention.
+
+   A yod needs the quincunx, which ships off. That is not a gap: with the
+   aspect switched off the app is being told not to count it, and inventing an
+   exception for patterns would make the switch a lie. */
+const CONF_BODIES=BODIES.slice();
+const CONF_DEFS=['stellium','grandtrine','tsquare','grandcross','kite','yod','mystic'];
+function findConfigurations(pos){
+  const B=CONF_BODIES.filter(n=>pos[n]);
+  const A={};                                     // A[a][b] = aspect name or null
+  B.forEach(a=>{ A[a]={}; });
+  for(let i=0;i<B.length;i++)for(let j=i+1;j<B.length;j++){
+    const h=aspectBetween(pos[B[i]].lon,pos[B[j]].lon);
+    A[B[i]][B[j]]=A[B[j]][B[i]]=h?h.asp.name:null;
+  }
+  const is=(a,b,n)=>A[a][b]===n;
+  const out=[];
+  const add=(kind,bodies)=>out.push({kind,bodies:bodies.slice()});
+
+  /* Stellium: conjunctions chained, not all-to-all. Three bodies spread over
+     sixteen degrees are a stellium even though the outer two are ten degrees
+     past each other's orb, which is how the eye reads them and how the sign
+     they share behaves. */
+  const seen=new Set();
+  B.forEach(a=>{
+    if(seen.has(a)) return;
+    const group=[a]; seen.add(a);
+    for(let k=0;k<group.length;k++){
+      B.forEach(b=>{ if(!seen.has(b)&&is(group[k],b,'conjunction')){ group.push(b); seen.add(b); } });
+    }
+    if(group.length>=3) add('stellium',group);
+  });
+
+  const tri=[], cross=[];
+  for(let i=0;i<B.length;i++)for(let j=i+1;j<B.length;j++)for(let k=j+1;k<B.length;k++){
+    const a=B[i],b=B[j],c=B[k];
+    if(is(a,b,'trine')&&is(b,c,'trine')&&is(a,c,'trine')) tri.push([a,b,c]);
+  }
+  /* Kite first, so a grand trine that is part of one is not also listed alone:
+     the kite is the larger true statement and the trine inside it is implied. */
+  const kited=new Set();
+  tri.forEach(([a,b,c])=>{
+    B.forEach(d=>{
+      if(d===a||d===b||d===c) return;
+      const trio=[[a,b,c],[b,a,c],[c,a,b]];
+      for(const [opp,s1,s2] of trio){
+        if(is(d,opp,'opposition')&&is(d,s1,'sextile')&&is(d,s2,'sextile')){
+          add('kite',[a,b,c,d]); kited.add([a,b,c].join('|')); return;
+        }
+      }
+    });
+  });
+  tri.forEach(t=>{ if(!kited.has(t.join('|'))) add('grandtrine',t); });
+
+  for(let i=0;i<B.length;i++)for(let j=i+1;j<B.length;j++)for(let k=j+1;k<B.length;k++)
+    for(let l=k+1;l<B.length;l++){
+      const q=[B[i],B[j],B[k],B[l]];
+      const pairs=[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]];
+      const kinds=pairs.map(([x,y])=>A[q[x]][q[y]]);
+      const nOpp=kinds.filter(x=>x==='opposition').length;
+      const nSq=kinds.filter(x=>x==='square').length;
+      const nTri=kinds.filter(x=>x==='trine').length;
+      const nSex=kinds.filter(x=>x==='sextile').length;
+      if(nOpp===2&&nSq===4){ cross.push(q.join('|')); add('grandcross',q); }
+      else if(nOpp===2&&nTri===2&&nSex===2) add('mystic',q);
+    }
+
+  /* A grand cross contains four T-squares. Reporting both is not more
+     information, it is the same fact four times over plus the real one. */
+  const inCross=new Set();
+  cross.forEach(c=>{ const q=c.split('|');
+    for(let i=0;i<4;i++)for(let j=i+1;j<4;j++)for(let k=0;k<4;k++)
+      if(k!==i&&k!==j) inCross.add([q[i],q[j],q[k]].sort().join('|'));
+  });
+  for(let i=0;i<B.length;i++)for(let j=i+1;j<B.length;j++){
+    if(!is(B[i],B[j],'opposition')) continue;
+    B.forEach(c=>{
+      if(c===B[i]||c===B[j]) return;
+      if(is(c,B[i],'square')&&is(c,B[j],'square')){
+        if(inCross.has([B[i],B[j],c].sort().join('|'))) return;
+        add('tsquare',[B[i],B[j],c]);              // apex last
+      }
+    });
+  }
+  for(let i=0;i<B.length;i++)for(let j=i+1;j<B.length;j++){
+    if(!is(B[i],B[j],'sextile')) continue;
+    B.forEach(c=>{
+      if(c===B[i]||c===B[j]) return;
+      if(is(c,B[i],'quincunx')&&is(c,B[j],'quincunx')) add('yod',[B[i],B[j],c]);
+    });
+  }
+  return out;
+}
+
 /* ---------- the aspect grid ----------
    Ten planets plus the Ascendant and Midheaven. The nodes, Lilith and Selena
    are left out on purpose: fourteen rows do not fit the width of a phone, and
@@ -4978,6 +5123,50 @@ function renderGrid(ch,tr){
     el.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); say(el); } });
   });
   document.getElementById('gridBrief').textContent=`${n} ${pluralOf(n,PLURAL_ASPECT)}`;
+}
+/* Which configuration is lit on the wheel, as an array of body names. Separate
+   from ISO, which lights one body and its aspects: a figure is a set, and
+   dimming everything outside it is the only way to see a grand cross as a
+   shape rather than as four more chords. */
+let CONF_ISO=null;
+function renderConfigurations(ch){
+  const box=document.getElementById('confList'); if(!box) return;
+  const found=findConfigurations(ch.pos);
+  /* Biggest figures first, then by how tight they are: a grand cross outranks
+     a T-square, and among equals the closer one is the one being asked about. */
+  const rank={grandcross:0,kite:1,mystic:2,grandtrine:3,tsquare:4,yod:5,stellium:6};
+  found.sort((a,b)=>(rank[a.kind]-rank[b.kind])||(b.bodies.length-a.bodies.length));
+  if(!found.length){
+    box.innerHTML=`<p class="tiny">${t('confNone')}</p>`;
+    document.getElementById('confBrief').textContent='';
+    CONF_ISO=null;
+    return;
+  }
+  box.innerHTML=found.map((f,i)=>{
+    const lit=CONF_ISO&&CONF_ISO.join('|')===f.bodies.join('|');
+    return `<div class="confrow${lit?' on':''}" data-i="${i}" role="button" tabindex="0">
+      <span class="nm">${t('conf_'+f.kind)}</span>
+      <span class="who">${f.bodies.map(b=>`<span class="af">${GLYPH[b]}</span>`).join('')}</span>
+      <span class="tiny names">${f.bodies.map(b=>PN(b)).join(', ')}</span>
+    </div>`;
+  }).join('');
+  const go=el=>{
+    const f=found[+el.dataset.i];
+    const same=CONF_ISO&&CONF_ISO.join('|')===f.bodies.join('|');
+    CONF_ISO=same?null:f.bodies.slice();
+    ISO=null;
+    renderConfigurations(ch);
+    drawWheel(ch,TR_CHART);
+    scrollChartIntoView();
+  };
+  box.querySelectorAll('.confrow').forEach(el=>{
+    el.addEventListener('click',()=>go(el));
+    el.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); go(el); } });
+  });
+  const counts={};
+  found.forEach(f=>counts[f.kind]=(counts[f.kind]||0)+1);
+  document.getElementById('confBrief').textContent=
+    Object.entries(counts).map(([k,n])=>`${t('conf_'+k)}${n>1?' \u00d7'+n:''}`).join(' · ');
 }
 function renderCityList(items){
   const box=document.getElementById('citylist');
@@ -5082,7 +5271,7 @@ function run(){
   if(!dv||!tv||isNaN(lat)||isNaN(lng)||isNaN(tz)){ alert(t('needdata')); return; }
   const [y,mo,da]=dv.split('-').map(Number);
   const [hh,mi]=tv.split(':').map(Number);
-  CURRENT=computeChart(y,mo,da,hh+mi/60,tz,lat,lng); ISO=null;
+  CURRENT=computeChart(y,mo,da,hh+mi/60,tz,lat,lng); ISO=null; CONF_ISO=null;
   TR_TZ=tz;
   BIRTH_MS=utcMs(y,mo,da,0,0,0)+Math.round((hh+mi/60-tz)*3600000);
   document.getElementById('results').style.display='';

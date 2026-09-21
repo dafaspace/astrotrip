@@ -1322,6 +1322,122 @@ function run(){
       ||JSON.stringify(r);
   });
 
+  /* ---------- конфигурации ---------- */
+  group('Конфигурации');
+  /* Положения строятся вручную: только так известно, что именно обязано
+     найтись. На настоящих картах можно проверить лишь правдоподобие.
+
+     В pos кладутся ТОЛЬКО названные тела: findConfigurations берёт те, что
+     есть, и остальные просто не участвуют. Первый вариант заполнял пустые
+     места подряд с шагом семь градусов, и они слипались в собственный
+     стеллиум и лишние фигуры - проверка ломалась на исправном детекторе. */
+  const CONF=(lons)=>ev(`(()=>{const pos={}, L=${JSON.stringify(lons)};
+    Object.keys(L).forEach(b=>{ pos[b]={lon:L[b]}; });
+    return findConfigurations(pos).map(f=>f.kind+':'+f.bodies.slice().sort().join(','));
+  })()`);
+  t('большой тригон находится и не находится из ничего',()=>{
+    const yes=CONF({Sun:10,Moon:130,Mars:250});
+    const no=CONF({Sun:10,Moon:130,Mars:200});
+    return (yes.includes('grandtrine:Mars,Moon,Sun')&&!no.some(x=>x.startsWith('grandtrine')))
+      ||`с тригоном ${yes.join(' ')}; без ${no.join(' ')}`;
+  });
+  t('тау-квадрат: оппозиция плюс третий в квадрате к обоим',()=>{
+    const r=CONF({Sun:0,Moon:180,Mars:90});
+    return r.includes('tsquare:Mars,Moon,Sun')||r.join(' ');
+  });
+  t('большой крест находится, а четыре тау-квадрата внутри него подавлены',()=>{
+    /* Иначе один и тот же факт сообщается пять раз. */
+    const r=CONF({Sun:0,Moon:90,Mars:180,Venus:270});
+    const cross=r.filter(x=>x.startsWith('grandcross')).length;
+    const ts=r.filter(x=>x.startsWith('tsquare')).length;
+    return (cross===1&&ts===0)||`крестов ${cross}, тау-квадратов ${ts}: ${r.join(' ')}`;
+  });
+  t('змей находится, а тригон внутри него отдельно не выводится',()=>{
+    const r=CONF({Sun:0,Moon:120,Mars:240,Venus:180});
+    const kite=r.filter(x=>x.startsWith('kite')).length;
+    const gt=r.filter(x=>x.startsWith('grandtrine')).length;
+    return (kite===1&&gt===0)||`змеев ${kite}, тригонов ${gt}: ${r.join(' ')}`;
+  });
+  t('мистический прямоугольник: две оппозиции, два трина, два секстиля',()=>{
+    const r=CONF({Sun:0,Moon:60,Mars:180,Venus:240});
+    return r.some(x=>x.startsWith('mystic'))||r.join(' ');
+  });
+  t('стеллиум собирается цепочкой, а не попарно через всех',()=>{
+    /* Три тела на шестнадцати градусах это стеллиум, хотя крайние вышли из
+       орбиса друг друга. Так его читает глаз и так ведёт себя общий знак. */
+    const r=CONF({Sun:0,Moon:8,Mars:16});
+    const st=r.filter(x=>x.startsWith('stellium'));
+    return (st.length===1&&st[0]==='stellium:Mars,Moon,Sun')||r.join(' ');
+  });
+  t('йод требует включённого квиконса и без него не выдумывается',()=>{
+    /* Выключенный аспект означает "не считать его". Исключение для фигур
+       сделало бы выключатель неправдой. */
+    const r=ev(`(()=>{const keep=JSON.parse(JSON.stringify(ORBS));
+      const mk=()=>({Sun:{lon:0},Moon:{lon:60},Mars:{lon:210}});
+      ORBS.quincunx.on=false; rebuildAspects();
+      const off=findConfigurations(mk()).filter(f=>f.kind==='yod').length;
+      ORBS.quincunx.on=true; rebuildAspects();
+      const on=findConfigurations(mk()).filter(f=>f.kind==='yod').length;
+      Object.keys(keep).forEach(k=>{ORBS[k].on=keep[k].on;ORBS[k].orb=keep[k].orb;});
+      rebuildAspects();
+      return {off,on};})()`);
+    return (r.off===0&&r.on===1)||`выключен ${r.off}, включён ${r.on}`;
+  });
+  t('углы и узлы в фигуры не входят',()=>{
+    /* Асцендент и MC почти всегда стоят около девяноста друг к другу, а узлы
+       всегда строго напротив: любая такая фигура была бы свойством рамки. */
+    const r=ev(`CONF_BODIES.filter(b=>['ASC','MC','NNode','SNode'].includes(b)).length`);
+    return r===0||`в набор попали углы или узлы: ${r}`;
+  });
+  t('частоты фигур по библиотеке правдоподобны',()=>{
+    /* Внешняя проверка здравого смысла: тау-квадрат частый, большой крест
+       редкий. Если детектор сломается в одну из сторон, это будет видно. */
+    const r=ev(`(()=>{const c={}; let n=0;
+      for(const e of CHART_LIBRARY.slice(0,200)){
+        const ch=computeChart(e.y,e.mo,e.d,e.t==null?12:e.t,libTz(e),e.lat,e.lon,false);
+        n++; findConfigurations(ch.pos).forEach(f=>c[f.kind]=(c[f.kind]||0)+1);
+      }
+      return {c,n};})()`);
+    const c=r.c;
+    if(!(c.tsquare>30&&c.tsquare<r.n*1.5)) return `тау-квадратов ${c.tsquare} на ${r.n} карт`;
+    if(!(c.grandtrine>3&&c.grandtrine<r.n)) return `тригонов ${c.grandtrine}`;
+    if(!((c.grandcross||0)<r.n*0.1)) return `большой крест слишком част: ${c.grandcross}`;
+    return true;
+  });
+  t('подсветка фигуры гасит всё остальное на колесе',()=>{
+    const r=ev(`(()=>{const keepC=CONF_ISO, keepI=ISO;
+      /* The suite's own chart need not contain a figure, so one that does is
+         loaded for the measurement and put back afterwards. */
+      let ch=CURRENT, found=findConfigurations(ch.pos);
+      if(!found.length){
+        for(const e of CHART_LIBRARY){
+          const c=computeChart(e.y,e.mo,e.d,e.t==null?12:e.t,libTz(e),e.lat,e.lon,false);
+          const f=findConfigurations(c.pos);
+          if(f.length){ ch=c; found=f; break; }
+        }
+      }
+      if(!found.length){ return {skip:true}; }
+      CONF_ISO=found[0].bodies.slice(); ISO=null;
+      drawWheel(ch,null);
+      const gs=[...document.querySelectorAll('#wheel .pl')];
+      const lit=gs.filter(g=>+g.getAttribute('opacity')>=0.9).length;
+      const dim=gs.filter(g=>+g.getAttribute('opacity')<0.5).length;
+      CONF_ISO=keepC; ISO=keepI; drawWheel(CURRENT,TR_CHART);
+      return {lit,dim,n:found[0].bodies.length};})()`);
+    if(r.skip) return 'в текущей карте нет фигур';
+    return (r.lit===r.n&&r.dim>0)||`горит ${r.lit} при ${r.n} в фигуре, притушено ${r.dim}`;
+  });
+  t('имена фигур есть во всех восьми языках',()=>{
+    const miss=ev(`(()=>{const out=[];
+      for(const c of LANG_CODES){ const k=LANG; LANG=c;
+        CONF_DEFS.forEach(d=>{ const v=t('conf_'+d); if(!v||v==='conf_'+d) out.push(c+'.'+d); });
+        ['conf','confNone','confNote'].forEach(key=>{ const v=t(key); if(!v||v===key) out.push(c+'.'+key); });
+        LANG=k;
+      }
+      return out;})()`);
+    return miss.length===0||`нет: ${miss.slice(0,6).join(', ')}`;
+  });
+
   /* ---------- аспектная таблица ---------- */
   group('Аспектная таблица');
   t('без внешнего кольца таблица треугольная и без диагонали',()=>{
