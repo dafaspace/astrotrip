@@ -100,16 +100,10 @@ input,select{
 .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
 button{font:inherit;cursor:pointer;border-radius:10px;border:1px solid var(--line);background:var(--paper3);color:var(--ink);padding:9px 14px}
 button.primary{background:var(--accentBtn);border-color:var(--accentBtn);color:var(--accentInk)}
-/* The language control is a select, not a row of buttons: eight will not fit
-   across a phone, and a native select gets the platform's own picker. It sits
-   beside the theme switch and the two read as a pair, so the height is 34 and
-   not 32: the theme switch is a 32px button inside a 1px border. */
-.langsel{width:auto;flex:none;min-height:34px;padding:4px 22px 4px 10px;font-size:13px;letter-spacing:.04em;
-  border-radius:9px;background:var(--paper2);
-  -webkit-appearance:none;appearance:none;
-  background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);
-  background-position:calc(100% - 14px) 52%,calc(100% - 9px) 52%;
-  background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+/* The language control was a native select until the app grew its own
+   dropdown; its styling now lives with .dd.langsel. The old rule is gone
+   rather than left to also match the wrapper, which it did, painting a second
+   chevron beside the first. */
 .lang{display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;flex:none}
 .lang button{border:none;border-radius:0;padding:6px 11px;background:var(--paper2);font-size:13px}
 .lang button.on{background:var(--accentBtn);color:var(--accentInk)}
@@ -221,6 +215,72 @@ button.ico:disabled{opacity:.4;cursor:default}
 .confrow .nm{font-size:14px;flex:none}
 .confrow .who{font-size:17px;letter-spacing:2px;color:var(--ink2);flex:none}
 .confrow .names{flex:1;min-width:0;text-align:right;overflow-wrap:anywhere}
+/* ---- print ----
+   A chart sheet, not a screenshot of an app. Everything that is a control
+   goes, everything that is the chart stays, and the dark theme goes with them:
+   a printer asked for a dark wheel returns a black page and an empty
+   cartridge. The light palette is restated here rather than inherited,
+   because the theme is chosen by an attribute on <html> that print cannot
+   override. */
+@media print{
+  @page{ margin:12mm; }
+  :root, :root[data-theme="dark"], :root[data-theme="light"]{
+    --paper:#fff; --paper2:#fff; --paper3:#fff; --line:#b9b2a4;
+    --ink:#000; --ink2:#333; --ink3:#555;
+    --accent:#7a4a1c; --accentBtn:#7a4a1c; --accentInk:#fff;
+    --wheelbg:#fff; --glass:#fff;
+    --fire:#f0d9cc; --earth:#cfe8c9; --air:#ece2b6; --water:#cfe4ee;
+  }
+  html,body{background:#fff;color:#000}
+  header, #formCard, #libCard, #emptycard, #orbCard, #relocCard, #transitsCard,
+  .scrub, .ringrow, .detail, .noprint, .foot{ display:none !important; }
+  .card{border:none;box-shadow:none;padding:0;margin:0 0 10mm;background:#fff}
+  .card.fold>summary{list-style:none;cursor:auto}
+  .card.fold>summary::-webkit-details-marker{display:none}
+  #chartCard #wheel svg{max-height:none;max-width:150mm;width:100%}
+  /* Each block keeps itself whole rather than splitting across the fold. */
+  #positionsCard, #confCard, #gridCard{break-inside:avoid;page-break-inside:avoid}
+  .planet-row{break-inside:avoid}
+  .gridwrap{overflow:visible}
+  h2{font-size:14pt}
+  .tiny{font-size:8pt}
+}
+/* ---- the app's own dropdown ---- */
+/* Takes the select's place in the layout: full width by default, because that
+   is what `input,select` gave it, and flexible where it sat in a flex row. */
+.dd{position:relative;display:flex;width:100%;min-width:0}
+.ringrow .dd{flex:1;min-width:0;width:auto}
+/* The step control shares its row with three 44px buttons and a label, and
+   flex alone shrank it until сутки came out as сут... The floor is the
+   longest unit name plus the chevron. */
+.scrubctl .dd{flex:1;min-width:112px;width:auto}
+/* The header pair: this one is a 34px chip beside the theme switch, not a
+   44px form control. */
+.dd.langsel{width:auto;flex:none}
+.dd.langsel .ddbtn{min-height:34px;padding:4px 26px 4px 10px;font-size:13px;
+  background:var(--paper2);letter-spacing:.04em;
+  background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),
+    linear-gradient(135deg,currentColor 50%,transparent 50%);
+  background-position:calc(100% - 14px) 52%,calc(100% - 9px) 52%;
+  background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+.ddnative{position:absolute;opacity:0;pointer-events:none;width:100%;height:100%;left:0;top:0}
+.ddbtn{width:100%;min-height:44px;padding:9px 30px 9px 12px;text-align:left;
+  border:1px solid var(--line);border-radius:10px;background:var(--paper);color:var(--ink);
+  font:inherit;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;justify-content:flex-start;
+  background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),
+    linear-gradient(135deg,currentColor 50%,transparent 50%);
+  background-position:calc(100% - 17px) 52%,calc(100% - 12px) 52%;
+  background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+.dd.open .ddbtn{border-color:var(--accent)}
+.ddlist{position:absolute;z-index:60;top:calc(100% + 4px);left:0;min-width:100%;
+  max-height:min(52vh,340px);overflow-y:auto;-webkit-overflow-scrolling:touch;
+  background:var(--paper);border:1px solid var(--line);border-radius:12px;
+  box-shadow:0 12px 32px rgba(0,0,0,.28);padding:4px}
+.ddopt{min-height:44px;display:flex;align-items:center;padding:8px 12px;border-radius:8px;
+  cursor:pointer;white-space:nowrap}
+.ddopt:hover{background:var(--paper3)}
+.ddopt.on{background:var(--paper2);font-weight:500}
 /* ---- aspect grid ---- */
 /* Scrolls sideways rather than shrinking below legibility: thirteen columns at
    24px is 312, which fits a 375px phone, but a longer aspect set or a wider
@@ -435,7 +495,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
 <div class="wrap">
 
-  <div class="card">
+  <div class="card" id="formCard">
     <h2 data-i="birth"></h2>
     <div class="grid">
       <div><label data-i="date"></label><input id="date" type="date"></div>
@@ -547,14 +607,31 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
         </div>
       </div>
       <div class="detail empty" id="detail"></div>
+      <div class="row noprint" style="margin-top:10px">
+        <button id="printBtn" data-i="printBtn"></button>
+      </div>
     </div>
 
     <!-- Reference data, collapsed by default: the reading is the point, the
          raw table is there when you want to check a degree. -->
-    <details class="card fold">
+    <details class="card fold" id="positionsCard">
       <summary><h2 data-i="positions"></h2></summary>
       <div id="positions"></div>
       <div class="tiny" style="margin-top:8px" data-i="posnote"></div>
+    </details>
+
+    <!-- Relocation. Its own card rather than a row in the form, because it is
+         a way of reading a chart and not a fact about the birth. -->
+    <details class="card fold" id="relocCard">
+      <summary><h2 data-i="reloc"></h2><span class="tiny" id="relocBrief"></span></summary>
+      <div class="citywrap">
+        <input id="relocFind" type="text" autocomplete="off">
+        <div id="relocList" class="citylist"></div>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <button id="relocClear" data-i="relocClear"></button>
+      </div>
+      <div class="tiny" style="margin-top:8px" data-i="relocNote"></div>
     </details>
 
     <!-- Configurations. Above the grid because a named figure is what a reader
@@ -640,7 +717,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
 /* Bump together with CACHE in sw.js: the two are the same release, and the
    number on screen is how you tell from a phone which one you are looking at. */
-const APP_VERSION='2.9.0';
+const APP_VERSION='3.0.0';
 document.getElementById('ver').textContent=APP_VERSION;
 
 /* ---------- feature flags ----------
@@ -724,11 +801,12 @@ const STR = {
   posnote:{ru:'Движок: VSOP87D, ELP82B и чебышёвская подгонка Плутона, целиком офлайн. Узлы средние. Чёрная Луна - средняя или истинная, на выбор; Селена считается по определению Swiss Ephemeris. Плутон надёжен на 1550-2250, дальше экстраполируется. Хирона пока нет.',en:'Engine: VSOP87D, ELP82B and a Chebyshev fit for Pluto, fully offline. Nodes are mean. The Black Moon is mean or true, your choice; Selena follows the Swiss Ephemeris definition. Pluto is reliable over 1550-2250 and extrapolated beyond. Chiron is not here yet.'},
   reading:{ru:'Разбор карты',en:'Reading'},
   corpusnote:{ru:'Тексты - структурная заготовка: кратко + подробнее по касанию. Настоящий корпус интерпретаций подключается отдельно.',en:'Texts are a structural stub: short + detail on tap. The real interpretation corpus plugs in separately.'},
-  ringLabel:{ru:'Внешнее кольцо',en:'Outer ring'},
-  /* One word: the label beside it already says what is empty, and the longer
-     form was cut off mid-word in the closed select on a phone. */
-  ring_none:{ru:'Пусто',en:'Empty'},
-  note_none:{ru:'Натальная карта сама по себе.',en:'The natal chart on its own.'},
+  ringLabel:{ru:'Тип карты',en:'Chart type'},
+  /* Named for the chart it draws, not for the ring being empty. Astro Gold,
+     Solar Fire and LUNA all call this a chart type and all call this one
+     Natal; "empty" describes our implementation rather than the thing chosen. */
+  ring_none:{ru:'Натальная карта',en:'Natal'},
+  note_none:{ru:'Натальная карта сама по себе. Она же остаётся внутренним колесом, когда выбран другой тип: так делают Solar Fire, Astro Gold и LUNA - неподвижная рамка внутри, движущееся снаружи.',en:'The natal chart on its own. It stays the inner wheel under every other type too, the way Solar Fire, Astro Gold and LUNA all do it: the fixed frame inside, what moves against it outside.'},
   ring_synastry:{ru:'Синастрия',en:'Synastry'},
   note_synastry:{ru:'Карта другого человека поверх вашей. Внутреннее колесо и дома остаются вашими, аспекты считаются от его планет к вашим.',en:'Another person\u2019s chart over yours. The inner wheel and the houses stay yours; the aspects run from their planets to yours.'},
   synaFind:{ru:'Кого сравниваем? Имя, город или год',en:'Compare with whom? Name, city or year'},
@@ -758,6 +836,13 @@ const STR = {
   playbtn:{ru:'Пуск',en:'Play'}, pausebtn:{ru:'Стоп',en:'Pause'},
   stepback:{ru:'Шаг назад',en:'Step back'}, stepfwd:{ru:'Шаг вперёд',en:'Step forward'},
   /* balance */
+  printBtn:{ru:'Печать или PDF',en:'Print or PDF'},
+  reloc:{ru:'Релокация',en:'Relocation'},
+  relocOff:{ru:'выключена',en:'off'},
+  relocFind:{ru:'Куда переносим? Город',en:'Relocate where? City'},
+  relocClear:{ru:'Вернуть место рождения',en:'Back to the birthplace'},
+  relocMark:{ru:'(релокация)',en:'(relocated)'},
+  relocNote:{ru:'Тот же момент, другое место. Планеты не сдвигаются - их положения геоцентрические и не зависят от того, где вы стоите; меняются только углы, дома и всё, что от них считается. Часовой пояс нового города ни при чём: момент остался прежним. Релокация сбрасывается при построении новой карты.',en:'The same instant, a different place. The planets do not move: their positions are geocentric and do not depend on where you stand. Only the angles, the houses and everything measured from them change. The new city\u2019s timezone is irrelevant, because the moment has not changed. Relocation resets when a new chart is cast.'},
   conf:{ru:'Конфигурации',en:'Configurations'},
   confNone:{ru:'Крупных фигур в орбисе нет.',en:'No major figures within orb.'},
   confNote:{ru:'Считаются десять планет, без Асцендента, MC и узлов: Асцендент и MC почти всегда стоят около девяноста градусов друг к другу, а узлы всегда строго напротив, и любая такая фигура была бы свойством рамки, а не карты. Орбисы берутся из настройки аспектов. Йод требует включённого квиконса. Коснитесь фигуры, чтобы подсветить её на колесе.',en:'Ten planets, without the Ascendant, Midheaven or nodes: the angles sit near ninety degrees apart in most charts and the nodes are always exactly opposed, so any figure built on them would be a property of the frame rather than of the chart. Orbs come from the aspect settings. A yod needs the quincunx switched on. Tap a figure to light it on the wheel.'},
@@ -816,12 +901,14 @@ const STR = {
    standard terms of each tradition; the prose is mine. */
 const I18N={
   es:{
+    printBtn:"Imprimir o PDF",
+    reloc:"Relocalización", relocOff:"desactivada", relocFind:"¿Adónde? Ciudad", relocClear:"Volver al lugar de nacimiento", relocMark:"(relocalizada)",
     conf:"Configuraciones", confNone:"No hay figuras mayores dentro del orbe.", conf_stellium:"Estelium", conf_grandtrine:"Gran trígono", conf_tsquare:"Cuadratura en T", conf_grandcross:"Gran cruz", conf_kite:"Cometa", conf_yod:"Yod", conf_mystic:"Rectángulo místico",
     grid:"Tabla de aspectos", gridInner:"abajo", gridOuter:"anillo exterior", gridOuterSyn:"pareja",
     ring_synastry:"Sinastría", note_synastry:"La carta de otra persona sobre la tuya. La rueda interior y las casas siguen siendo tuyas.", synaFind:"¿Con quién comparamos? Nombre, ciudad o año", synaNone:"Nadie elegido todavía.",
     orbNote:"Orbes en grados. Los menores están desactivados por defecto: con todos activados una carta lleva cerca de la mitad más de aspectos (11,6 frente a 16,4 en 60 cartas de la biblioteca). Se aplica a la carta natal y al anillo exterior.",
     aspects:"Aspectos y orbes", orbReset:"Restablecer", orbOn:"encendido",
-    ringLabel:"Anillo exterior", ring_none:"Vacío", note_none:"La carta natal por sí sola.",
+    ringLabel:"Tipo de carta", ring_none:"Natal", note_none:"La carta natal por sí sola.",
     m_mean:"media", m_true:"verdadera",
     atlasLoading:"Descargando el atlas de ciudades", atlasOnce:"{n} lugares, 4 MB. Solo una vez, luego sin conexión.", atlasFail:"El atlas no se descargó. Por ahora solo están las ciudades grandes.", atlasRetry:"Reintentar",
     tagline:"Cartas precisas sin conexión, y un tiempo que puedes mover.", birth:"Datos de nacimiento",
@@ -864,12 +951,14 @@ const I18N={
     foot:"Las posiciones están cotejadas con JPL Horizons en todas las cartas de la biblioteca: la diferencia es menor de cuatro segundos de arco, y menor de medio en el siglo XX. Atlas de ciudades de GeoNames, CC BY 4.0. Tras la primera carga nada de aquí sale a la red.",
   },
   fr:{
+    printBtn:"Imprimer ou PDF",
+    reloc:"Relocalisation", relocOff:"désactivée", relocFind:"Vers où ? Ville", relocClear:"Revenir au lieu de naissance", relocMark:"(relocalisé)",
     conf:"Configurations", confNone:"Aucune grande figure dans l’orbe.", conf_stellium:"Amas", conf_grandtrine:"Grand trigone", conf_tsquare:"Carré en T", conf_grandcross:"Grande croix", conf_kite:"Cerf-volant", conf_yod:"Yod", conf_mystic:"Rectangle mystique",
     grid:"Tableau des aspects", gridInner:"vers le bas", gridOuter:"anneau extérieur", gridOuterSyn:"partenaire",
     ring_synastry:"Synastrie", note_synastry:"Le thème d’une autre personne sur le vôtre. La roue intérieure et les maisons restent les vôtres.", synaFind:"Comparer avec qui ? Nom, ville ou année", synaNone:"Personne de choisi pour l’instant.",
     orbNote:"Orbes en degrés. Les mineurs sont désactivés par défaut : tous activés, un thème porte environ moitié plus d’aspects (11,6 contre 16,4 sur 60 thèmes de la bibliothèque). Vaut pour le thème natal comme pour l’anneau extérieur.",
     aspects:"Aspects et orbes", orbReset:"Réinitialiser", orbOn:"activé",
-    ringLabel:"Anneau extérieur", ring_none:"Vide", note_none:"Le thème natal seul.",
+    ringLabel:"Type de thème", ring_none:"Thème natal", note_none:"Le thème natal seul.",
     m_mean:"moyenne", m_true:"vraie",
     atlasLoading:"Téléchargement de l’atlas des villes", atlasOnce:"{n} lieux, 4 Mo. Une seule fois, ensuite hors ligne.", atlasFail:"L’atlas ne s’est pas téléchargé. Seules les grandes villes sont disponibles pour l’instant.", atlasRetry:"Réessayer",
     tagline:"Des cartes précises hors ligne, et un temps que l’on peut déplacer.",
@@ -913,12 +1002,14 @@ const I18N={
     foot:"Les positions sont vérifiées avec JPL Horizons sur toutes les cartes de la bibliothèque : l’écart est inférieur à quatre secondes d’arc, et à une demi-seconde pour le vingtième siècle. Atlas des villes : GeoNames, CC BY 4.0. Après le premier chargement, rien ici ne contacte le réseau.",
   },
   de:{
+    printBtn:"Drucken oder PDF",
+    reloc:"Relokation", relocOff:"aus", relocFind:"Wohin? Stadt", relocClear:"Zurück zum Geburtsort", relocMark:"(reloziert)",
     conf:"Konfigurationen", confNone:"Keine großen Figuren im Orbis.", conf_stellium:"Stellium", conf_grandtrine:"Großes Trigon", conf_tsquare:"T-Quadrat", conf_grandcross:"Großes Kreuz", conf_kite:"Drachen", conf_yod:"Yod", conf_mystic:"Mystisches Rechteck",
     grid:"Aspekttabelle", gridInner:"nach unten", gridOuter:"äußerer Ring", gridOuterSyn:"Partner",
     ring_synastry:"Synastrie", note_synastry:"Das Chart einer anderen Person über Ihrem. Das innere Rad und die Häuser bleiben Ihre.", synaFind:"Mit wem vergleichen? Name, Ort oder Jahr", synaNone:"Noch niemand gewählt.",
     orbNote:"Orben in Grad. Die kleinen Aspekte sind standardmäßig aus: alle zusammen bringen etwa die Hälfte mehr Aspekte (11,6 gegen 16,4, gemessen an 60 Charts der Bibliothek). Gilt für das Radix und für den äußeren Ring.",
     aspects:"Aspekte und Orben", orbReset:"Zurücksetzen", orbOn:"an",
-    ringLabel:"Äußerer Ring", ring_none:"Leer", note_none:"Das Radix für sich allein.",
+    ringLabel:"Chart-Typ", ring_none:"Radix", note_none:"Das Radix für sich allein.",
     m_mean:"mittlere", m_true:"wahre",
     atlasLoading:"Städte-Atlas wird geladen", atlasOnce:"{n} Orte, 4 MB. Nur einmal, danach offline.", atlasFail:"Der Atlas wurde nicht geladen. Vorerst gibt es nur die großen Städte.", atlasRetry:"Erneut versuchen",
     tagline:"Genaue Charts offline, und eine Zeit, die sich bewegen lässt.", birth:"Geburtsdaten",
@@ -959,12 +1050,14 @@ const I18N={
     foot:"Die Positionen sind bei jedem Chart der Bibliothek gegen JPL Horizons geprüft: die Abweichung bleibt unter vier Bogensekunden, im zwanzigsten Jahrhundert unter einer halben. Städte-Atlas von GeoNames, CC BY 4.0. Nach dem ersten Laden geht von hier nichts mehr ins Netz.",
   },
   it:{
+    printBtn:"Stampa o PDF",
+    reloc:"Rilocazione", relocOff:"disattivata", relocFind:"Dove? Città", relocClear:"Torna al luogo di nascita", relocMark:"(rilocata)",
     conf:"Configurazioni", confNone:"Nessuna figura maggiore entro l’orbe.", conf_stellium:"Stellium", conf_grandtrine:"Grande trigono", conf_tsquare:"Quadrato a T", conf_grandcross:"Grande croce", conf_kite:"Aquilone", conf_yod:"Yod", conf_mystic:"Rettangolo mistico",
     grid:"Tabella degli aspetti", gridInner:"in giù", gridOuter:"anello esterno", gridOuterSyn:"partner",
     ring_synastry:"Sinastria", note_synastry:"La carta di un’altra persona sopra la tua. La ruota interna e le case restano le tue.", synaFind:"Con chi confrontiamo? Nome, città o anno", synaNone:"Ancora nessuno scelto.",
     orbNote:"Orbi in gradi. I minori sono disattivati per impostazione predefinita: con tutti attivi una carta porta circa metà aspetti in più (11,6 contro 16,4 su 60 carte della biblioteca). Vale per la carta natale e per l’anello esterno.",
     aspects:"Aspetti e orbi", orbReset:"Ripristina", orbOn:"attivo",
-    ringLabel:"Anello esterno", ring_none:"Vuoto", note_none:"La carta natale da sola.",
+    ringLabel:"Tipo di carta", ring_none:"Natale", note_none:"La carta natale da sola.",
     m_mean:"media", m_true:"vera",
     atlasLoading:"Scaricamento dell’atlante delle città", atlasOnce:"{n} luoghi, 4 MB. Una volta sola, poi offline.", atlasFail:"L’atlante non si è scaricato. Per ora ci sono solo le città grandi.", atlasRetry:"Riprova",
     tagline:"Carte precise offline, e un tempo che si può muovere.", birth:"Dati di nascita", date:"Data",
@@ -1005,12 +1098,14 @@ const I18N={
     foot:"Le posizioni sono confrontate con JPL Horizons su ogni carta della biblioteca: lo scarto resta sotto i quattro secondi d’arco, e sotto il mezzo secondo per il Novecento. Atlante delle città da GeoNames, CC BY 4.0. Dopo il primo caricamento nulla di qui va in rete.",
   },
   uk:{
+    printBtn:"Друк або PDF",
+    reloc:"Релокація", relocOff:"вимкнена", relocFind:"Куди переносимо? Місто", relocClear:"Повернути місце народження", relocMark:"(релокація)",
     conf:"Конфігурації", confNone:"Великих фігур в орбісі немає.", conf_stellium:"Стеліум", conf_grandtrine:"Великий тригон", conf_tsquare:"Тау-квадрат", conf_grandcross:"Великий хрест", conf_kite:"Повітряний змій", conf_yod:"Йод", conf_mystic:"Містичний прямокутник",
     grid:"Аспектна таблиця", gridInner:"вниз", gridOuter:"зовнішнє кільце", gridOuterSyn:"партнер",
     ring_synastry:"Синастрія", note_synastry:"Карта іншої людини поверх вашої. Внутрішнє колесо й доми лишаються вашими.", synaFind:"Кого порівнюємо? Ім’я, місто або рік", synaNone:"Нікого не вибрано.",
     orbNote:"Орбіс у градусах. Мінорні вимкнені типово: з усіма увімкненими аспектів у карті стає приблизно в півтора раза більше - на 60 картах бібліотеки 11.6 проти 16.4. Діє і на натал, і на зовнішнє кільце.",
     aspects:"Аспекти й орбіси", orbReset:"Повернути типові", orbOn:"увімк",
-    ringLabel:"Зовнішнє кільце", ring_none:"Порожньо", note_none:"Натальна карта сама по собі.",
+    ringLabel:"Тип карти", ring_none:"Натальна карта", note_none:"Натальна карта сама по собі.",
     m_mean:"середній", m_true:"істинний",
     atlasLoading:"Завантажується атлас міст", atlasOnce:"{n} місць, 4 МБ. Лише один раз, далі офлайн.", atlasFail:"Атлас не завантажився. Поки доступні лише великі міста.", atlasRetry:"Повторити",
     tagline:"Точні карти офлайн, і час, який можна рухати.", birth:"Дані народження", date:"Дата",
@@ -1051,12 +1146,14 @@ const I18N={
     foot:"Положення звірені з JPL Horizons на всіх картах бібліотеки: розбіжність менша за чотири секунди дуги, для XX століття менша за половину. Атлас міст - GeoNames, CC BY 4.0. Після першого завантаження ніщо звідси не виходить у мережу.",
   },
   ka:{
+    printBtn:"ბეჭდვა ან PDF",
+    reloc:"რელოკაცია", relocOff:"გამორთულია", relocFind:"სად? ქალაქი", relocClear:"დაბრუნება დაბადების ადგილზე", relocMark:"(რელოცირებული)",
     conf:"კონფიგურაციები", confNone:"ორბისში დიდი ფიგურები არ არის.", conf_stellium:"სტელიუმი", conf_grandtrine:"დიდი ტრიგონი", conf_tsquare:"T-კვადრატი", conf_grandcross:"დიდი ჯვარი", conf_kite:"კაიტი", conf_yod:"იოდი", conf_mystic:"მისტიკური მართკუთხედი",
     grid:"ასპექტების ცხრილი", gridInner:"ქვემოთ", gridOuter:"გარე რგოლი", gridOuterSyn:"პარტნიორი",
     ring_synastry:"სინასტრია", note_synastry:"სხვა ადამიანის რუკა თქვენსაზე. შიდა ბორბალი და სახლები თქვენი რჩება.", synaFind:"ვისთან შევადაროთ? სახელი, ქალაქი ან წელი", synaNone:"ჯერ არავინ არის არჩეული.",
     orbNote:"ორბისი გრადუსებში. მინორული ასპექტები ნაგულისხმევად გამორთულია: ყველას ჩართვისას რუკაში ასპექტები დაახლოებით ნახევრად მეტი ხდება - ბიბლიოთეკის 60 რუკაზე 11.6 და 16.4. მოქმედებს ნატალურ რუკაზეც და გარე რგოლზეც.",
     aspects:"ასპექტები და ორბისები", orbReset:"ნაგულისხმევის დაბრუნება", orbOn:"ჩართ",
-    ringLabel:"გარე რგოლი", ring_none:"ცარიელი", note_none:"ნატალური რუკა თავისთავად.",
+    ringLabel:"რუკის ტიპი", ring_none:"ნატალური რუკა", note_none:"ნატალური რუკა თავისთავად.",
     m_mean:"საშუალო", m_true:"ჭეშმარიტი",
     atlasLoading:"ქალაქების ატლასი იტვირთება", atlasOnce:"{n} ადგილი, 4 მბ. მხოლოდ ერთხელ, შემდეგ ოფლაინში.", atlasFail:"ატლასი ვერ ჩამოიტვირთა. ჯერჯერობით მხოლოდ დიდი ქალაქებია.", atlasRetry:"ხელახლა",
     tagline:"ზუსტი რუკები ოფლაინში, და დრო, რომელიც შეიძლება გადაანაცვლო.", birth:"დაბადების მონაცემები",
@@ -4074,7 +4171,15 @@ function drawWheel(ch,tr){
      now has its own degree scale and hugs it the same way. */
   const rNatScale=tr?C-82:rZodIn;
   const rPl=rNatScale-19;
-  const rDeg=rPl-16, rAsp=rDeg-12;
+  const rDeg=rPl-16;
+  /* Aspect chords start where the body's exact tick ends, not on a small inner
+     circle. A chord drawn between two points on a circle of radius 91 has its
+     ends at the right angles, but the line extended from it does not pass
+     through those angles on the scale at radius 138 - a chord is not a radius.
+     Read on the wheel that looks like an aspect line pointing at nothing in
+     particular, which is what it was. Running them from tick to tick removes
+     the question: each end is on the body's own degree. */
+  const rAsp=rNatScale-8;
   /* How far apart two glyphs must sit so their discs do not overlap. It is an
      angle, and an angle that depends on the radius: the same 8.5 degrees that
      kept them clear at radius 114 leaves 12.7 units between centres at radius
@@ -5168,6 +5273,88 @@ function renderConfigurations(ch){
   document.getElementById('confBrief').textContent=
     Object.entries(counts).map(([k,n])=>`${t('conf_'+k)}${n>1?' \u00d7'+n:''}`).join(' · ');
 }
+/* ---------- the app's own dropdown ----------
+   A native select opens the platform's picker: a grey iOS wheel or a Windows
+   listbox, in the system font, on the system background, ignoring everything
+   the app looks like. Six of them sit in this app and each one was a hole in
+   the middle of it.
+
+   The <select> stays in the DOM as the source of truth - hidden, still
+   focusable by label, still the thing every existing change handler listens
+   to - and this draws a button and a listbox over it. Nothing downstream knows
+   the difference, which is why all six could be converted at once rather than
+   one at a time. A system applied halfway is worse than none. */
+let DD_OPEN=null;
+function closeDropdown(){
+  if(!DD_OPEN) return;
+  DD_OPEN.wrap.classList.remove('open');
+  DD_OPEN.list.hidden=true;
+  DD_OPEN.btn.setAttribute('aria-expanded','false');
+  DD_OPEN=null;
+}
+document.addEventListener('click',e=>{ if(DD_OPEN&&!DD_OPEN.wrap.contains(e.target)) closeDropdown(); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeDropdown(); });
+function upgradeSelect(sel){
+  if(!sel||sel.dataset.dd) return;
+  sel.dataset.dd='1';
+  /* The wrapper inherits the select's classes, so every rule written for the
+     old control keeps a handle on the new one instead of each call site
+     needing a second selector. */
+  const wrap=document.createElement('div');
+  wrap.className=('dd '+(sel.className||'')).trim();
+  const btn=document.createElement('button'); btn.type='button'; btn.className='ddbtn';
+  btn.setAttribute('aria-haspopup','listbox'); btn.setAttribute('aria-expanded','false');
+  const list=document.createElement('div'); list.className='ddlist'; list.hidden=true;
+  list.setAttribute('role','listbox');
+  sel.parentNode.insertBefore(wrap,sel);
+  wrap.appendChild(sel); wrap.appendChild(btn); wrap.appendChild(list);
+  sel.classList.add('ddnative');
+  const paint=()=>{
+    btn.textContent=sel.selectedOptions[0]?sel.selectedOptions[0].textContent:'';
+    list.innerHTML=[...sel.options].map((o,i)=>
+      `<div class="ddopt${o.selected?' on':''}" role="option" data-i="${i}" tabindex="-1">${o.textContent}</div>`).join('');
+    list.querySelectorAll('.ddopt').forEach(el=>el.addEventListener('click',()=>{
+      sel.selectedIndex=+el.dataset.i;
+      sel.dispatchEvent(new Event('change',{bubbles:true}));
+      closeDropdown(); paint(); btn.focus();
+    }));
+  };
+  btn.addEventListener('click',()=>{
+    const wasOpen=DD_OPEN&&DD_OPEN.wrap===wrap;
+    closeDropdown();
+    if(wasOpen) return;
+    paint();
+    list.hidden=false; wrap.classList.add('open'); btn.setAttribute('aria-expanded','true');
+    DD_OPEN={wrap,list,btn};
+    const on=list.querySelector('.ddopt.on'); if(on) on.scrollIntoView({block:'nearest'});
+  });
+  /* Arrow keys move the value without opening anything, which is what a native
+     select does and what a keyboard user expects. */
+  btn.addEventListener('keydown',e=>{
+    if(e.key!=='ArrowDown'&&e.key!=='ArrowUp') return;
+    e.preventDefault();
+    const n=sel.options.length;
+    sel.selectedIndex=(sel.selectedIndex+(e.key==='ArrowDown'?1:n-1))%n;
+    sel.dispatchEvent(new Event('change',{bubbles:true}));
+    paint();
+  });
+  /* The app rebuilds these option lists whenever the language changes, so the
+     button has to follow the select rather than remember what it drew. The
+     observer catches anything that forgets to ask, but it fires on a
+     microtask, so the repaint is also callable directly: code that rebuilds a
+     list and reads the button in the same tick would otherwise see the old
+     label, which is exactly what a test caught. */
+  sel._ddPaint=paint;
+  new MutationObserver(paint).observe(sel,{childList:true,subtree:true,attributes:true});
+  sel.addEventListener('change',paint);
+  paint();
+}
+function repaintDropdowns(){
+  document.querySelectorAll('select[data-dd]').forEach(s=>{ if(s._ddPaint) s._ddPaint(); });
+}
+function upgradeAllSelects(){
+  document.querySelectorAll('select').forEach(upgradeSelect);
+}
 function renderCityList(items){
   const box=document.getElementById('citylist');
   if(!items.length){box.style.display='none';box.innerHTML='';return;}
@@ -5197,6 +5384,9 @@ function applyStatic(){
   document.getElementById('langSel').value=LANG;
   document.getElementById('detail').textContent=t('tapdetail');
   document.getElementById('city').placeholder=t('cityph');
+  document.getElementById('relocFind').placeholder=t('relocFind');
+  document.getElementById('synaFind').placeholder=t('synaFind');
+  renderRelocBrief();
   if(SELECTED_CITY) document.getElementById('city').value=cityLabel(SELECTED_CITY);
   document.title='AstroTrip';
 }
@@ -5228,7 +5418,7 @@ function renderChartMeta(ch,y,mo,da,hh,mi,tz){
   const line1=[
     `<b>${String(da).padStart(2,'0')}.${String(mo).padStart(2,'0')}.${y}</b>`
       +` ${weekdayName(y,mo,da)} <b>${pad2(hh)}:${pad2(mi)}</b> ${off}`,
-    fmtGeo(ch.geolat,ch.geolon)
+    fmtGeo(ch.geolat,ch.geolon)+(RELOC?' '+t('relocMark'):'')
   ].filter(Boolean).join(' · ');
   /* "Geocentric" is dropped: it is the only thing this app computes, and a
      constant printed as though it were a setting is noise. "Tropical" stays -
@@ -5242,7 +5432,13 @@ function renderChartMeta(ch,y,mo,da,hh,mi,tz){
   /* Name and place share a line. On their own they cost two lines of the
      phone screen the wheel and the slider are budgeted against, and the card
      then stopped fitting - which is the whole point of that budget. */
-  let who=[name?`<b>${name}</b>`:'', city].filter(Boolean).join(' · ');
+  /* A relocated chart names both places, and in the order it happened. A
+     wheel that shows only the birth city while its houses belong to another
+     one is a wrong chart to anyone reading it later. */
+  /* With no birth city entered there is nothing to point an arrow away from,
+     and "Relocation -> Berlin" reads as though the first word were a place. */
+  const place=RELOC ? (city?`${city} \u2192 <b>${RELOC.city}</b>`:`<b>${RELOC.city}</b>`) : city;
+  let who=[name?`<b>${name}</b>`:'', place].filter(Boolean).join(' · ');
   /* In synastry the chart is about two people, so the header has to say both.
      A wheel that names only one of them is the wrong wheel to anyone reading
      it later. */
@@ -5271,6 +5467,11 @@ function run(){
   if(!dv||!tv||isNaN(lat)||isNaN(lng)||isNaN(tz)){ alert(t('needdata')); return; }
   const [y,mo,da]=dv.split('-').map(Number);
   const [hh,mi]=tv.split(':').map(Number);
+  /* Kept so the same moment can be recast at another place. Relocation is
+     cleared on a new chart: carrying it over silently would put the next
+     person's houses in a city they never mentioned. */
+  CAST_ARGS={y,mo,da,hh,mi,tz,lat,lng};
+  RELOC=null;
   CURRENT=computeChart(y,mo,da,hh+mi/60,tz,lat,lng); ISO=null; CONF_ISO=null;
   TR_TZ=tz;
   BIRTH_MS=utcMs(y,mo,da,0,0,0)+Math.round((hh+mi/60-tz)*3600000);
@@ -5280,6 +5481,7 @@ function run(){
   document.getElementById('charttitle').textContent=
     `${t('natal')} · ${(hs?LX(hs):CURRENT.houses.system)}`;
   renderPositions(CURRENT); renderBalance(CURRENT); renderChartMeta(CURRENT,y,mo,da,hh,mi,tz);
+  renderRelocBrief();
   if(FEATURES.interpretation) document.getElementById('reading').innerHTML=natalReading(CURRENT);
   renderTransits(CURRENT);          // casts the transit ring and draws the wheel
   document.getElementById('detail').className='detail empty';
@@ -5289,6 +5491,30 @@ function run(){
      in. The header is sticky and translucent, so the offset is measured rather
      than written down: it changes with the language and the window width. */
   scrollChartIntoView();
+}
+let CAST_ARGS=null, RELOC=null;
+/* Recast the same instant at another place. Only the angles and the houses
+   move: the planets are geocentric ecliptic longitudes and do not know where
+   you are standing. The local time and the offset are passed through
+   unchanged, which is what keeps the moment the same - the new city's own
+   timezone is irrelevant, and getting that wrong is the usual way relocation
+   is implemented badly. */
+function applyRelocation(){
+  const a=CAST_ARGS; if(!a) return;
+  const lat=RELOC?RELOC.lat:a.lat, lng=RELOC?RELOC.lon:a.lng;
+  CURRENT=computeChart(a.y,a.mo,a.da,a.hh+a.mi/60,a.tz,lat,lng);
+  ISO=null; CONF_ISO=null;
+  const hs=HOUSE_SYSTEMS[CURRENT.houses.system];
+  document.getElementById('charttitle').textContent=
+    `${t('natal')} · ${(hs?LX(hs):CURRENT.houses.system)}`;
+  renderPositions(CURRENT); renderBalance(CURRENT);
+  renderChartMeta(CURRENT,a.y,a.mo,a.da,a.hh,a.mi,a.tz);
+  renderTransits(CURRENT);
+  renderRelocBrief();
+}
+function renderRelocBrief(){
+  const el=document.getElementById('relocBrief'); if(!el) return;
+  el.textContent=RELOC?RELOC.city:t('relocOff');
 }
 /* Birth moment in UTC ms, so the scrubber can jump back to it. Held apart from
    the chart because a chart is positions and a moment is a clock reading. */
@@ -5354,7 +5580,9 @@ document.getElementById('langSel').addEventListener('change',e=>{
   LANG=e.target.value; localStorage.setItem('astrarium_lang',LANG);
   document.documentElement.lang=LANG;
   applyStatic(); fillHsys(); fillLil(); renderOrbs(); fillScrubUnit(); renderRingSwitch();
-  setPlaying(PLAYING); fillNamePh(); fillLibSort(); renderLibrary(); if(CURRENT)run();
+  setPlaying(PLAYING); fillNamePh(); fillLibSort(); renderLibrary();
+  upgradeAllSelects(); repaintDropdowns();
+  if(CURRENT)run();
 });
 fillLangSel();
 document.getElementById('city').addEventListener('input',e=>renderCityList(searchCities(e.target.value)));
@@ -5422,6 +5650,9 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{
 });
 applyTheme();
 applyStatic();
+/* After the option lists exist, so the first paint of each button has a label
+   to show. Everything built later goes through the same call. */
+upgradeAllSelects();
 /* The atlas is 3.8 MB over the wire, so it starts after first paint rather
    than blocking it: the seed answers meanwhile and the swap is invisible. */
 if('requestIdleCallback' in window) requestIdleCallback(atlasLoad,{timeout:4000});
@@ -5761,6 +5992,41 @@ document.getElementById('expCsv').addEventListener('click',()=>{
   a.download=`astrotrip-charts-${todayStr()}.csv`;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+});
+{
+  const f=document.getElementById('relocFind'), box=document.getElementById('relocList');
+  const show=()=>{
+    const items=searchCities(f.value);
+    if(!items.length){ box.style.display='none'; box.innerHTML=''; return; }
+    box.innerHTML=items.map(c=>`<div><span>${cityLabel(c)}</span><span class="cc">${c.c}</span></div>`).join('');
+    box.style.display='block';
+    [...box.children].forEach((el,i)=>el.addEventListener('mousedown',ev=>{
+      ev.preventDefault();
+      const c=items[i];
+      RELOC={lat:c.lat, lon:c.lon, city:cityLabel(c)};
+      f.value=''; box.style.display='none';
+      applyRelocation(); scrollChartIntoView();
+    }));
+  };
+  f.addEventListener('input',show);
+  f.addEventListener('focus',show);
+  f.addEventListener('blur',()=>{ setTimeout(()=>{ box.style.display='none'; },150); });
+  document.getElementById('relocClear').addEventListener('click',()=>{
+    if(!RELOC) return;
+    RELOC=null; applyRelocation(); scrollChartIntoView();
+  });
+}
+/* The browser's own print dialog is also the PDF export on every platform
+   this runs on, so there is nothing to build beyond a sheet that is worth
+   printing. */
+document.getElementById('printBtn').addEventListener('click',()=>{
+  /* Open the folds first: a <details> that is shut prints shut, and a chart
+     sheet without its positions is the half of the page people actually keep. */
+  ['positionsCard','confCard','gridCard'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.open=true;
+  });
+  closeDropdown();
+  window.print();
 });
 document.getElementById('orbReset').addEventListener('click',()=>{
   ASPECT_DEFS.forEach(a=>ORBS[a.name]={on:!a.minor,orb:a.orb});

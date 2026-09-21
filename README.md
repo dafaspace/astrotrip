@@ -34,6 +34,31 @@ A body's house comes from where the body actually is, by Placidus semi-arc on it
 declination, not from its ecliptic projection. That matters most for Pluto, which
 reaches 17.5° of latitude and lands in a different house on about a fifth of charts.
 
+### Chart types, and which ring is which
+
+One list: Natal, Transits, Progressions, Directions, Synastry. It names the
+chart being drawn rather than the state of a ring, because that is what every
+comparable tool calls it and because "empty" described our implementation
+rather than the thing chosen.
+
+**The natal chart is always the inner wheel.** Checked rather than assumed, in
+three places: Solar Fire places the radix in the inside position automatically,
+Astro Gold's help says a bi-wheel is created "with a transits chart in the
+outer wheel around the natal chart in the innermost wheel", and LUNA's says
+"the radix chart is automatically placed in the inside position" and "the
+transit chart is automatically placed in the outer position". The reason is
+structural: the inner wheel supplies the houses, so it is the fixed frame, and
+what moves against it belongs outside. LUNA does note one nuance worth keeping
+- for two radix charts, which is synastry, no order is canonical, and it lets
+the user swap the rings.
+
+**The dropdown is the app's own.** A native select opens the platform picker -
+a grey iOS wheel in the system font over the top of everything - and six of
+them were six holes in the middle of the app. The `<select>` stays in the DOM
+as the source of truth, hidden but still the thing every handler listens to,
+and a button and listbox are drawn over it. Nothing downstream knows, which is
+why all six converted at once: a system applied halfway is worse than none.
+
 ### The outer ring is a slot
 
 The inner wheel is always natal. The outer ring is either empty or filled -
@@ -103,6 +128,32 @@ Measured across two hundred library charts, the detector finds T-squares in 98,
 stelliums in 74, grand trines in 23, kites and mystic rectangles in 4 each and
 grand crosses in 3 - which is the shape of the real distribution and is itself
 a test, since a detector broken in either direction would show up here first.
+
+### Relocation
+
+The same instant, a different place. The planets do not move - their positions
+are geocentric and do not depend on where you stand - so only the angles, the
+houses and everything measured from them change. The new city's timezone is
+irrelevant because the moment has not changed, and getting that wrong is the
+usual way relocation is implemented badly; a test asserts that every planet is
+byte-identical and both angles have moved.
+
+It resets when a new chart is cast. Carrying it over silently would put the
+next person's houses in a city they never mentioned.
+
+### Printing
+
+The browser's print dialog is also the PDF export on every platform this runs
+on, so the work is the sheet rather than the plumbing. Controls, form, library
+and footnote come out; header, wheel, positions, configurations and grid stay;
+the collapsed cards are opened first, because a shut `<details>` prints shut.
+
+The dark theme is replaced by an explicit light palette: a printer asked for a
+dark wheel returns a black page and an empty cartridge. A test walks every
+selector in the print block and fails on any that matches nothing, which is how
+`footer` was caught - the app has no `<footer>`, the footnote is a `.foot`, and
+that rule had been doing nothing at all. A print rule is invisible until
+somebody prints.
 
 ### The aspect grid
 
@@ -387,7 +438,7 @@ mattered: before it did, a deliberately broken app passed every check. The runne
 for the city atlas to finish loading, or the atlas tests would silently check the inline
 seed instead.
 
-**201 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
+**213 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
 library, robustness over 1550-2250 and at polar latitudes, house systems (angles land
 on the cusps, cusps run round the circle without crossing, quadrant systems coincide at
 the equator, zero-latitude bodies get the same house from both methods), library data

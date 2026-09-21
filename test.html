@@ -685,7 +685,10 @@ function run(){
     /* Они стоят рядом в шапке и читаются как пара: разная высота это первое,
        что бросается в глаза. Кольцевой переключатель сюда не относится - он
        живёт в карточке и ему положены полные 44 пикселя. */
-    const th=D.getElementById('themeSw'), lg=D.getElementById('langSel');
+    /* The visible control, not the select behind it: since the app grew its own
+       dropdown, #langSel is a hidden element that happens to fill its wrapper,
+       so measuring it was right by luck rather than by construction. */
+    const th=D.getElementById('themeSw'), lg=D.querySelector('.dd.langsel .ddbtn');
     if(!th||!lg) return 'переключатель не найден';
     const a=th.getBoundingClientRect().height, b=lg.getBoundingClientRect().height;
     return Math.abs(a-b)<1.5||`${a.toFixed(1)} против ${b.toFixed(1)}`;
@@ -1320,6 +1323,181 @@ function run(){
       return {said, before, after, mode};})()`);
     return (r.said&&r.after===r.before&&r.mode!=='progressed')
       ||JSON.stringify(r);
+  });
+
+  /* ---------- выпадающий список ---------- */
+  group('Выпадающий список');
+  t('ни один список не остался родным для браузера',()=>{
+    /* Родной select открывает подборщик платформы - серое колесо iOS в
+       системном шрифте поверх приложения. Либо все шесть переведены, либо
+       система применена наполовину, что хуже, чем не применена вовсе. */
+    const all=[...D.querySelectorAll('select')];
+    const left=all.filter(s=>!s.dataset.dd).map(s=>s.id||s.className);
+    return (all.length>0&&left.length===0)||`осталось родных: ${left.join(', ')}`;
+  });
+  t('кнопка списка показывает выбранное и открывает свой список',()=>{
+    const r=ev(`(()=>{const sel=document.getElementById('ringSel');
+      const wrap=sel.closest('.dd'), btn=wrap.querySelector('.ddbtn');
+      const before=btn.textContent;
+      btn.click();
+      const opened=!wrap.querySelector('.ddlist').hidden;
+      const opts=[...wrap.querySelectorAll('.ddopt')].map(o=>o.textContent);
+      document.body.click();
+      const closed=wrap.querySelector('.ddlist').hidden;
+      return {before, opened, closed, opts, native:[...sel.options].map(o=>o.textContent)};})()`);
+    if(!r.opened) return 'список не открылся';
+    if(!r.closed) return 'список не закрылся по клику вне его';
+    if(r.opts.join('|')!==r.native.join('|')) return `в списке ${r.opts.join(', ')}, в select ${r.native.join(', ')}`;
+    return r.before===r.native[D.getElementById('ringSel').selectedIndex]
+      ||`на кнопке "${r.before}"`;
+  });
+  t('выбор в списке доходит до приложения',()=>{
+    /* Смысл обёртки в том, что select остаётся источником правды и все старые
+       обработчики продолжают работать без единой правки. */
+    const r=ev(`(()=>{const keep=RING_MODE;
+      const sel=document.getElementById('ringSel'), wrap=sel.closest('.dd');
+      wrap.querySelector('.ddbtn').click();
+      const opt=[...wrap.querySelectorAll('.ddopt')].find(o=>o.dataset.i==='1');
+      opt.click();
+      const got=RING_MODE;
+      RING_MODE=keep; renderRingSwitch(); if(CURRENT) renderTransits(CURRENT);
+      return got;})()`);
+    return r==='transit'||`выбралось ${r}`;
+  });
+  t('кнопка следует за сменой языка',()=>{
+    const r=ev(`(()=>{const k=LANG, sel=document.getElementById('ringSel');
+      const btn=sel.closest('.dd').querySelector('.ddbtn');
+      const s2=document.getElementById('langSel');
+      s2.value='en'; s2.dispatchEvent(new Event('change'));
+      const en=btn.textContent;
+      s2.value='ru'; s2.dispatchEvent(new Event('change'));
+      const ru=btn.textContent;
+      s2.value=k; s2.dispatchEvent(new Event('change'));
+      return {en,ru};})()`);
+    return (r.en&&r.ru&&r.en!==r.ru)||`en "${r.en}", ru "${r.ru}"`;
+  });
+  t('первый тип карты называет карту, а не пустоту',()=>{
+    /* Выбирается тип карты. Astro Gold, Solar Fire и LUNA называют этот
+       вариант Natal; "пусто" описывало бы нашу реализацию. */
+    const r=ev(`(()=>{const k=LANG, out={};
+      for(const c of ['en','ru']){ LANG=c; out[c]=t('ring_none'); }
+      LANG=k; return out;})()`);
+    return (/natal/i.test(r.en)&&/натал/i.test(r.ru))||JSON.stringify(r);
+  });
+  t('натальная карта остаётся внутренним колесом при любом типе',()=>{
+    /* Проверено у трёх крупных: Solar Fire, Astro Gold и LUNA ставят радикс
+       внутрь, а динамическую карту наружу. */
+    const r=ev(`(()=>{const keep=RING_MODE, out={};
+      const C=190;
+      for(const m of ['transit','progressed','directed']){
+        RING_MODE=m; renderRingSwitch(); renderTransits(CURRENT);
+        const na=document.querySelector('#wheel .pl circle');
+        const tr=document.querySelector('#wheel .trp circle');
+        if(!na||!tr){ out[m]=null; continue; }
+        const rad=e=>Math.hypot(+e.getAttribute('cx')-C,+e.getAttribute('cy')-C);
+        out[m]=rad(na)<rad(tr);
+      }
+      RING_MODE=keep; renderRingSwitch(); renderTransits(CURRENT);
+      return out;})()`);
+    const bad=Object.entries(r).filter(([,v])=>v!==true).map(([k])=>k);
+    return bad.length===0||`натал не внутри при: ${bad.join(', ')}`;
+  });
+
+  /* ---------- печать ---------- */
+  group('Печать');
+  t('каждый селектор в печатных правилах кого-то находит',()=>{
+    /* Опечатка в селекторе печати не видна никогда: правила применяются
+       только в диалоге печати, а на экране всё выглядит как прежде. Именно
+       так #form вместо #formCard прожил бы до первой чужой распечатки. */
+    const bad=ev(`(()=>{const out=[];
+      for(const sheet of document.styleSheets){
+        let rules; try{ rules=sheet.cssRules; }catch(e){ continue; }
+        for(const r of rules){
+          if(!(r.media&&[...r.media].includes('print'))) continue;
+          for(const inner of r.cssRules){
+            if(!inner.selectorText) continue;
+            for(const sel of inner.selectorText.split(',')){
+              const t=sel.trim();
+              if(/^(html|body|:root|@page)/.test(t)) continue;
+              /* querySelectorAll cannot match a pseudo-element, so asking it
+                 to would report every one of them as dead. */
+              if(t.includes('::')) continue;
+              let n=0; try{ n=document.querySelectorAll(t).length; }catch(e){ n=-1; }
+              if(n===0) out.push(t);
+            }
+          }
+        }
+      }
+      return out;})()`);
+    return bad.length===0||`ничего не находят: ${bad.join(', ')}`;
+  });
+  t('печать раскрывает свёрнутые карточки, иначе они уйдут в бумагу закрытыми',()=>{
+    const r=ev(`(()=>{const ids=['positionsCard','confCard','gridCard'];
+      const was=ids.map(i=>document.getElementById(i).open);
+      ids.forEach(i=>document.getElementById(i).open=false);
+      const p=window.print; let called=false; window.print=()=>{called=true;};
+      document.getElementById('printBtn').click();
+      window.print=p;
+      const now=ids.map(i=>document.getElementById(i).open);
+      ids.forEach((i,k)=>document.getElementById(i).open=was[k]);
+      return {called, now};})()`);
+    return (r.called&&r.now.every(Boolean))||`print вызван ${r.called}, раскрыты ${r.now}`;
+  });
+  t('органы управления в печать не попадают',()=>{
+    /* Проверяется, что каждый такой элемент действительно назван в правиле, а
+       не что он невидим на экране. */
+    const r=ev(`(()=>{const hidden=new Set();
+      for(const sheet of document.styleSheets){
+        let rules; try{ rules=sheet.cssRules; }catch(e){ continue; }
+        for(const r of rules){
+          if(!(r.media&&[...r.media].includes('print'))) continue;
+          for(const inner of r.cssRules){
+            if(inner.style&&inner.style.display==='none')
+              inner.selectorText.split(',').forEach(s=>hidden.add(s.trim()));
+          }
+        }
+      }
+      return ['#formCard','#libCard','.scrub','.ringrow','#transitsCard','header','.foot']
+        .filter(s=>!hidden.has(s));})()`);
+    return r.length===0||`не скрыто при печати: ${r.join(', ')}`;
+  });
+
+  /* ---------- релокация ---------- */
+  group('Релокация');
+  t('планеты не двигаются, углы двигаются',()=>{
+    /* Положения геоцентрические и не зависят от того, где вы стоите. Если
+       сдвинулась хоть одна планета, значит поехал момент, а не место. */
+    const r=ev(`(()=>{const keep=RELOC;
+      const a=CAST_ARGS;
+      const home=computeChart(a.y,a.mo,a.da,a.hh+a.mi/60,a.tz,a.lat,a.lng);
+      const away=computeChart(a.y,a.mo,a.da,a.hh+a.mi/60,a.tz,-33.87,151.21);
+      RELOC=keep;
+      const moved=BODIES.filter(b=>Math.abs(home.pos[b].lon-away.pos[b].lon)>1e-9);
+      return {moved, dAsc:Math.abs(home.asc-away.asc), dMc:Math.abs(home.mc-away.mc),
+        sameUT:home.jdUT===away.jdUT};})()`);
+    if(r.moved.length) return `сдвинулись планеты: ${r.moved.join(', ')}`;
+    if(!r.sameUT) return 'момент изменился';
+    return (r.dAsc>1&&r.dMc>1)||`углы почти не двинулись: Asc ${r.dAsc}, MC ${r.dMc}`;
+  });
+  t('релокация сбрасывается при построении новой карты',()=>{
+    /* Перенос на следующего человека молча поставил бы его дома в городе,
+       которого он не называл. */
+    const r=ev(`(()=>{const keep=RELOC;
+      RELOC={lat:1,lon:2,city:'X'};
+      document.getElementById('calc').click();
+      const after=RELOC; RELOC=keep;
+      return after;})()`);
+    return r===null||`осталась ${JSON.stringify(r)}`;
+  });
+  t('шапка называет оба места и помечает релокацию',()=>{
+    const r=ev(`(()=>{const keep=RELOC, a=CAST_ARGS;
+      RELOC={lat:52.52,lon:13.405,city:'Берлин'};
+      applyRelocation();
+      const txt=document.getElementById('chartMeta').innerText;
+      RELOC=keep; applyRelocation();
+      return txt;})()`);
+    return (r.includes('Берлин')&&/52n31|13e24|13e25/.test(r))
+      ||`шапка: ${r.replace(/\n/g,' | ')}`;
   });
 
   /* ---------- конфигурации ---------- */
