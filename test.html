@@ -469,6 +469,95 @@ function run(){
     return miss.length===0||'без происхождения: '+miss.join(', ');
   });
 
+  /* ---------- карточка планеты ---------- */
+  group('Карточка планеты');
+  /* Читается структура DOM, а не отрендеренные слова. Первая версия искала
+     подписи "УПРАВЛЯЕТ" и "RULES" в innerText и провалилась дважды: набор
+     идёт на английском, а innerText не применяет text-transform, так что в
+     тексте лежало "Rules". Секции надо спрашивать у разметки. */
+  const CARD=`(()=>{const el=document.getElementById('detail');
+    const keep=el.innerHTML, keepCls=el.className, keepLang=LANG;
+    const c=computeChart(1985,3,20,6.5,3,55.7558,37.6173);
+    const read=(p,lang)=>{LANG=lang||keepLang; showDetail(p,c);
+      return {html:el.innerHTML, text:el.innerText,
+        sections:[...el.querySelectorAll('.sfact')].map(x=>[
+          (x.querySelector('.lbl')||{}).textContent||'',
+          (x.querySelector('.val')||{}).textContent||''])};};
+    const out={moon:read('Moon','en'), pluto:read('Pluto','en'), saturn:read('Saturn','en')};
+    read('Venus','en'); out.moonAgain=read('Moon','en');
+    out.moonRu=read('Moon','ru'); out.plutoRu=read('Pluto','ru');
+    out.saturnRu=read('Saturn','ru');
+    LANG=keepLang; el.innerHTML=keep; el.className=keepCls;
+    return out;})()`;
+  const secOf=(card,name)=>card.sections.find(x=>x[0]===name);
+  t('одна и та же карта рисуется байт в байт одинаково',()=>{
+    /* Порядок задан целиком: рецепции по достоинству и затем по имени,
+       управляемые дома по номеру, цепочка всегда от выбранной планеты.
+       Без этого сравнение скриншотов невозможно в принципе. */
+    const r=ev(CARD);
+    return r.moon.html===r.moonAgain.html||'два рендера одной планеты разошлись';
+  });
+  t('пустых секций нет',()=>{
+    /* Панель сообщает структуру, а не демонстрирует полноту базы. Строки
+       "Рецепции: нет" быть не должно. Заголовок "Аспекты" пуст намеренно:
+       он разделитель перед уже существующим списком. */
+    const r=ev(CARD);
+    const bad=[];
+    ['moon','pluto','saturn','moonRu'].forEach(k=>
+      r[k].sections.forEach(([lbl,val])=>{
+        if(!/^(Aspects|Аспекты)$/i.test(lbl)&&!val.trim()) bad.push(k+': "'+lbl+'" пуста');
+      }));
+    return bad.length===0||bad.join('; ');
+  });
+  t('планета без управления домом не получает секцию управления',()=>{
+    /* Плутон не управляет ни одним куспидом по классической схеме, поэтому
+       секции у него нет, а у Сатурна она есть и называет два дома. */
+    const r=ev(CARD);
+    if(secOf(r.pluto,'Rules')) return 'у Плутона есть секция управления';
+    const sat=secOf(r.saturn,'Rules');
+    if(!sat) return 'у Сатурна нет секции управления';
+    return /11.*12/.test(sat[1])||'у Сатурна: '+sat[1];
+  });
+  t('рецепции идут в заданном порядке: обитель, затем экзальтация',()=>{
+    const r=ev(CARD);
+    const rec=secOf(r.moon,'Receptions');
+    if(!rec) return 'у Луны нет секции рецепций';
+    return /domicile[\s\S]*exaltation/.test(rec[1])||'порядок: '+rec[1];
+  });
+  t('стрелка переноса темы объясняется словами',()=>{
+    /* Сокращение "5 → 1" удобно, но само по себе ничего не утверждает.
+       Проверяемый факт лежит в title, чтобы стрелка не превратилась
+       незаметно в трактовку. */
+    const r=ev(CARD);
+    const m=/title="([^"]*)"/.exec(r.moonRu.html);
+    return (m&&/управляет 5 домом и находится в 1 доме/.test(m[1]))
+      ||'нет расшифровки: '+(m?m[1]:'title отсутствует');
+  });
+  t('структурный блок есть у каждого нарисованного тела',()=>{
+    const bad=ev(`(()=>{const el=document.getElementById('detail');
+      const keep=el.innerHTML, keepCls=el.className;
+      const c=computeChart(1985,3,20,6.5,3,55.7558,37.6173), out=[];
+      WHEEL_BODIES.filter(p=>c.pos[p]).forEach(p=>{
+        showDetail(p,c);
+        if(!el.querySelector('.sfact')) out.push(p);
+      });
+      el.innerHTML=keep; el.className=keepCls;
+      return out;})()`);
+    return bad.length===0||'без структуры: '+bad.join(', ');
+  });
+  t('род и падеж в русском тексте не плывут',()=>{
+    /* Три ошибки, которые видно только на живом тексте: "принимает Луна"
+       вместо "Луну", "управляет 5 дом" вместо "домом", и прилагательные,
+       согласованные по женскому роду у планет мужского. */
+    const r=ev(CARD);
+    const all=[r.moonRu.text,r.plutoRu.text,r.saturnRu.text].join('\n');
+    const bad=[];
+    if(/принимает (Луна|Венера)\b/.test(all)) bad.push('именительный после «принимает»');
+    if(/управляет|УПРАВЛЯЕТ/.test(all)&&/\d+ дом\b/.test(all)) bad.push('«дом» вместо «домом»');
+    if(/(последующая|падающая|угловая|свободна|сожжена)/.test(all)) bad.push('прилагательное по роду');
+    return bad.length===0||bad.join('; ');
+  });
+
   /* ---------- устойчивость ---------- */
   group('Устойчивость');
   const EDGE=[[1850,55.75,37.62,'1850 Москва'],[2200,55.75,37.62,'2200 Москва'],

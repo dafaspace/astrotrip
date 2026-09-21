@@ -357,6 +357,10 @@ button.ico:disabled{opacity:.4;cursor:default}
    Left at the default 700 the browser synthesizes a fake bold, which is
    exactly the cross-platform inconsistency self-hosting is meant to remove. */
 .detail b{font-weight:500}
+.sfact{margin:8px 0 2px;padding-top:8px;border-top:1px solid var(--line)}
+.sfact .lbl{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);margin-bottom:2px}
+.sfact .val{font-size:13px;line-height:1.45}
+.sfact .val .dim{color:var(--ink3)}
 .learn-line{padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
 .learn-line:last-child{border:none}
 .learn-line b{color:var(--accent);font-weight:500}
@@ -724,7 +728,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
 /* Bump together with CACHE in sw.js: the two are the same release, and the
    number on screen is how you tell from a phone which one you are looking at. */
-const APP_VERSION='3.2.0';
+const APP_VERSION='3.3.0';
 document.getElementById('ver').textContent=APP_VERSION;
 
 /* ---------- feature flags ----------
@@ -866,6 +870,29 @@ const STR = {
   gridInner:{ru:'вниз',en:'down'},
   gridOuter:{ru:'внешнее кольцо',en:'outer ring'},
   gridOuterSyn:{ru:'партнёр',en:'partner'},
+  sfStructure:{ru:'Структура',en:'Structure'},
+  sfDispositor:{ru:'Диспозитор',en:'Dispositor'},
+  sfCycle:{ru:'Цикл диспозиторов',en:'Dispositor cycle'},
+  sfFinal:{ru:'Конечный диспозитор',en:'Final dispositor'},
+  sfNoFinal:{ru:'Конечного диспозитора нет',en:'No final dispositor'},
+  sfOwnSign:{ru:'в своём знаке, конечный диспозитор',en:'in its own sign, a final dispositor'},
+  sfRules:{ru:'Управляет',en:'Rules'},
+  sfReceptions:{ru:'Рецепции',en:'Receptions'},
+  sfPlacement:{ru:'Положение',en:'Placement'},
+  sfAspects:{ru:'Аспекты',en:'Aspects'},
+  sfReceives:{ru:'принимает',en:'receives'},
+  sfByDomicile:{ru:'по обители',en:'by domicile'},
+  sfByExaltation:{ru:'по экзальтации',en:'by exaltation'},
+  sfMutual:{ru:'взаимно',en:'mutual'},
+  digRuler:{ru:'обитель',en:'domicile'}, digExalt:{ru:'экзальтация',en:'exaltation'},
+  digDetriment:{ru:'изгнание',en:'detriment'}, digFall:{ru:'падение',en:'fall'},
+  digPeregrine:{ru:'перегрин',en:'peregrine'},
+  angAngular:{ru:'в угловом доме',en:'angular'},
+  angSuccedent:{ru:'в последующем доме',en:'succedent'},
+  angCadent:{ru:'в падающем доме',en:'cadent'},
+  sectIn:{ru:'в секте',en:'in sect'}, sectContrary:{ru:'вне секты',en:'contrary to sect'},
+  solCazimi:{ru:'казими',en:'cazimi'}, solCombust:{ru:'сожжение',en:'combust'},
+  solUnderBeams:{ru:'под лучами',en:'under the beams'}, solFree:{ru:'вне лучей',en:'free of the beams'},
   gridNote:{ru:'Десять планет, Хирон, Асцендент и MC. Знак в клетке - аспект, коснитесь клетки, чтобы увидеть пару и орбис. Без внешнего кольца таблица треугольная: верхняя половина повторяла бы нижнюю. С внешним кольцом строки - его тела, столбцы - ваши.',en:'The ten planets, Chiron, the Ascendant and the Midheaven. The mark in a cell is the aspect; tap a cell for the pair and the orb. Without an outer ring the grid is triangular, since the upper half would repeat the lower. With one, the rows are its bodies and the columns are yours.'},
   aspects:{ru:'Аспекты и орбисы',en:'Aspects and orbs'},
   orbReset:{ru:'Вернуть по умолчанию',en:'Reset to defaults'},
@@ -4750,6 +4777,102 @@ function drawWheel(ch,tr){
     if(best) pick(best);
   });
 }
+/* ---------- the structural block of the planet card ----------
+   It answers one question, "what structural state is this body in", and the
+   aspect list below answers a different one, "what is it interacting with".
+   They are kept apart on purpose: the interpretation layer will want the two
+   separately, and merging them now would have to be undone then.
+
+   Two rules hold this block together. Nothing is shown that has nothing to
+   say, so there is never a line reading "Receptions: none" - the panel reports
+   structure, it does not demonstrate the completeness of a database. And the
+   order is fully determined: receptions by dignity then by planet name, ruled
+   houses by number, the chain always starting at the tapped body. The same
+   chart therefore always renders identically, which is what makes a screenshot
+   comparison possible at all. */
+const DIG_KEY={ruler:'digRuler',exalt:'digExalt',detriment:'digDetriment',
+  fall:'digFall',peregrine:'digPeregrine'};
+const ANG_KEY={angular:'angAngular',succedent:'angSuccedent',cadent:'angCadent'};
+const SOL_KEY={cazimi:'solCazimi',combust:'solCombust',
+  underBeams:'solUnderBeams',free:'solFree'};
+const REC_KEY={domicile:'sfByDomicile',exaltation:'sfByExaltation'};
+const REC_ORDER={domicile:0,exaltation:1};
+/* "Юпитер принимает Луна" was wrong: the object takes the accusative. Planet
+   names are grammatically inanimate in Russian, so every masculine one already
+   matches its nominative and only the two feminine ones need a form. */
+const PLANET_ACC={ru:{Moon:'Луну',Venus:'Венеру'}};
+const PNacc=n=>((PLANET_ACC[LANG]||{})[n])||PN(n);
+
+function structureBlock(ch,p){
+  const F=ch.__facts||(ch.__facts=chartFacts(ch));
+  const f=F.planets[p]; if(!f) return '';
+  const sec=(label,body)=>body?`<div class="sfact"><div class="lbl">${label}</div><div class="val">${body}</div></div>`:'';
+  let out='';
+
+  /* Dispositors. Three distinct endings and they are not interchangeable: the
+     body stands in its own sign, the walk reaches a body that does, or the
+     walk closes into a cycle. "Cycle" and not "pair" because three and four
+     are just as possible, and a name that only fits the common case quietly
+     becomes wrong the day it does not. */
+  {
+    let body='';
+    if(f.dispositor==null){
+      body=`<span class="dim">${t('sfOwnSign')}</span>`;
+    }else{
+      body=[p,...f.dispositorChain].map(PN).join(' \u2192 ');
+      if(f.loop){
+        const cyc=f.loop.length===2?f.loop.map(PN).join(' \u2194 ')
+          :[...f.loop,f.loop[0]].map(PN).join(' \u2192 ');
+        body+=`<br><span class="dim">${t('sfCycle')}: ${cyc}<br>${t('sfNoFinal')}</span>`;
+      }else if(f.terminal){
+        body+=`<br><span class="dim">${t('sfFinal')}: ${PN(f.terminal)}</span>`;
+      }
+    }
+    out+=sec(t('sfDispositor'),body);
+  }
+
+  /* Houses ruled, and the theme each one is carried into. The arrow is a
+     shorthand; the title spells the same fact out in words, so that a reader
+     who is not sure what it means never has to guess, and so the arrow cannot
+     drift into meaning something the data does not say. */
+  if(f.rulesHouses.length){
+    const arrows=f.carries.map(c=>{
+      const plain=LANG==='ru'
+        ? `${PN(p)} управляет ${c.from} домом и находится в ${c.into} доме`
+        : `${PN(p)} rules house ${c.from} and is in house ${c.into}`;
+      return `<span class="dim" title="${plain}">${c.from} \u2192 ${c.into}</span>`;
+    }).join(' · ');
+    const hs2=f.rulesHouses.slice().sort((a,b)=>a-b);
+    const head=LANG==='ru'
+      ? (hs2.length===1?`${hs2[0]} домом`
+         :`${hs2.slice(0,-1).join(', ')} и ${hs2[hs2.length-1]} домами`)
+      : `house${hs2.length>1?'s':''} ${hs2.join(', ')}`;
+    out+=sec(t('sfRules'),head+(arrows?' · '+arrows:''));
+  }
+
+  /* Who receives this body. Sorted by dignity and then by the giver's name so
+     that two runs of the same chart cannot swap two lines. A reception that is
+     answered back is marked, rather than repeated as a separate fact. */
+  {
+    const mine=F.receptions.filter(r=>r.to===p).slice().sort((a,b)=>
+      (REC_ORDER[a.type]-REC_ORDER[b.type])||PN(a.from).localeCompare(PN(b.from)));
+    const isMutual=(a,b)=>F.mutualReceptions.some(m=>
+      (m.a===a&&m.b===b)||(m.a===b&&m.b===a));
+    out+=sec(t('sfReceptions'),mine.map(r=>
+      `${PN(r.from)} ${t('sfReceives')} ${PNacc(p)} ${t(REC_KEY[r.type])}`
+      +(isMutual(r.from,p)?` <span class="dim">(${t('sfMutual')})</span>`:'')).join('<br>'));
+  }
+
+  {
+    const bits=[];
+    if(f.angularity) bits.push(t(ANG_KEY[f.angularity]));
+    if(f.sect.status!=='neutral') bits.push(t(f.sect.status==='inSect'?'sectIn':'sectContrary'));
+    if(f.solar.condition) bits.push(t(SOL_KEY[f.solar.condition]));
+    out+=sec(t('sfPlacement'),bits.join(' · '));
+  }
+  return out;
+}
+
 function showDetail(p,ch){
   const el=document.getElementById('detail'); el.classList.remove('empty');
   const f=fmtPos(ch.pos[p].lon),hs=bodyHouse(ch,p);
@@ -4759,6 +4882,8 @@ function showDetail(p,ch){
   const spd=sp==null?'':` · ${t('dailymotion')} ${sp>=0?'+':'\u2212'}${Math.abs(sp).toFixed(3)}\u00b0`;
   let html=`<div style="font-size:16px"><span class="af">${GLYPH[p]}</span> <b>${PN(p)}</b> - <span class="deg">${f.html}</span>${rx}, ${t('house')} ${hs}${spd}</div>`;
   if(LX(PLANET_FN)[p]) html+=`<div class="tiny" style="margin:4px 0 8px">${LX(PLANET_FN)[p]}</div>`;
+  html+=structureBlock(ch,p);
+  html+=`<div class="sfact"><div class="lbl">${t('sfAspects')}</div></div>`;
   html+= asps.length? asps.sort((a,b)=>a.orb-b.orb).map(a=>{
       const other=a.p1===p?a.p2:a.p1;
       return `<div style="padding:3px 0"><span style="color:${a.asp.color}"><span class="af">${ASPECT_GLYPH[a.asp.name]}</span> ${LX(ASPECT_NAME)[a.asp.name]}</span> <span class="af">${GLYPH[other]}</span> ${PN(other)} <span class="tiny">${t('orb')} ${a.orb.toFixed(1)}°</span></div>`;

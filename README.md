@@ -41,6 +41,34 @@ places on purpose: the element and modality tally, which counts the ten planets 
 the two angles because that is the one weighting no school argues with, and the
 interpretation corpus, which has no text written for it.
 
+### The structural layer
+
+`chartFacts()` computes everything about a chart that follows from a rule and that
+nobody argues about: dispositors and their chains, house rulerships and the theme each
+ruler carries into the house it occupies, receptions, sect, angularity, solar condition,
+intercepted signs. It is a pure function with no DOM and no interpretation, and
+deliberately **no scores** - "strong" and "weak" are judgements, and a test asserts that
+no field matching `score|strength|weak|strong` exists, because the moment one does the
+text layer starts asking for the word "afflicted".
+
+Three limits, stated rather than discovered later. Chains walk the **classical** rulers,
+because Pluto rules Scorpio but disposits nothing back into the seven and half the
+chains would end on a planet that cannot pass them on; the modern ruler is reported
+beside it where they differ. Receptions are by domicile and exaltation only, because
+triplicity, term and face each have competing tables and picking one silently would be a
+decision dressed as a calculation. House rulership comes from the cusp sign, so the
+layer lists which signs are intercepted instead of noting the gap in the abstract.
+
+Derived facts carry `derivedFrom`. "Moon in Capricorn" and "the Moon's dispositor is
+Saturn" are one fact written twice, and anything that later weighs evidence has to be
+able to see that or it will over-count, always toward a more confident reading.
+
+Tapping a body on the wheel shows this as a card: the chain, the houses ruled and where
+their themes land, who receives it and by what, and its placement. The order is fully
+determined - receptions by dignity then by name, houses by number, the chain always
+starting at the tapped body - so the same chart renders identically every time. Sections
+with nothing to say are omitted rather than printed as "Receptions: none".
+
 Eight house systems - Placidus, Koch, Regiomontanus, Campanus, Topocentric, Porphyry,
 equal, whole sign. Beyond the polar circle Placidus and Koch are undefined and the
 calculation falls back to equal houses and to Porphyry respectively, so the chart title
@@ -483,7 +511,7 @@ mattered: before it did, a deliberately broken app passed every check. The runne
 for the city atlas to finish loading, or the atlas tests would silently check the inline
 seed instead.
 
-**227 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
+**246 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
 library, robustness over 1550-2250 and at polar latitudes, house systems (angles land
 on the cusps, cusps run round the circle without crossing, quadrant systems coincide at
 the equator, zero-latitude bodies get the same house from both methods), library data
