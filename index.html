@@ -240,6 +240,10 @@ button.ico:disabled{opacity:.4;cursor:default}
   #chartCard #wheel svg{max-height:none;max-width:150mm;width:100%}
   /* Each block keeps itself whole rather than splitting across the fold. */
   #positionsCard, #confCard, #gridCard{break-inside:avoid;page-break-inside:avoid}
+  /* The sheet is the reason .detail can stay hidden: it carries every body,
+     including whichever one happens to be tapped, so printing the panel as
+     well would put the same facts on the page twice. */
+  #printFactsCard{display:block !important;break-before:page;page-break-before:always}
   .planet-row{break-inside:avoid}
   .gridwrap{overflow:visible}
   h2{font-size:14pt}
@@ -361,6 +365,14 @@ button.ico:disabled{opacity:.4;cursor:default}
 .sfact .lbl{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);margin-bottom:2px}
 .sfact .val{font-size:13px;line-height:1.45}
 .sfact .val .dim{color:var(--ink3)}
+#printFactsCard{display:none}
+.pf-top{font-size:9pt;color:var(--ink2);margin-bottom:3mm}
+.pf-body{break-inside:avoid;page-break-inside:avoid;margin:0 0 3.5mm}
+.pf-head{font-size:10pt;font-weight:500;margin-bottom:.8mm}
+.pf-head .pf-pos{font-weight:400;color:var(--ink2)}
+.pf-row{display:flex;gap:3mm;font-size:8.5pt;line-height:1.35}
+.pf-row .lbl{flex:0 0 24mm;color:var(--ink3)}
+.pf-row .val{flex:1;min-width:0}
 .learn-line{padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
 .learn-line:last-child{border:none}
 .learn-line b{color:var(--accent);font-weight:500}
@@ -662,6 +674,16 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
       <div class="tiny" style="margin-top:8px" data-i="gridNote"></div>
     </details>
 
+    <!-- Paper only. Every body under the same headings, so the whole
+         structural layer can be checked in one pass instead of eleven taps.
+         Hidden on screen because on screen the panel already answers this
+         one body at a time, and two copies of the same thing on one page is
+         worse than either. -->
+    <section class="card" id="printFactsCard" aria-hidden="true">
+      <h2 data-i="sheetTitle"></h2>
+      <div id="printFacts"></div>
+    </section>
+
     <!-- Which aspects count, and how wide. Collapsed, because the defaults are
          the five majors and most people never open it; but the orb is the thing
          astrologers actually disagree about, so it has to be reachable. -->
@@ -728,7 +750,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
 /* Bump together with CACHE in sw.js: the two are the same release, and the
    number on screen is how you tell from a phone which one you are looking at. */
-const APP_VERSION='3.3.0';
+const APP_VERSION='3.4.0';
 document.getElementById('ver').textContent=APP_VERSION;
 
 /* ---------- feature flags ----------
@@ -880,6 +902,10 @@ const STR = {
   sfReceptions:{ru:'Рецепции',en:'Receptions'},
   sfPlacement:{ru:'Положение',en:'Placement'},
   sfAspects:{ru:'Аспекты',en:'Aspects'},
+  sheetTitle:{ru:'Структура карты',en:'Chart structure'},
+  sheetDay:{ru:'карта дневная',en:'day chart'},
+  sheetNight:{ru:'карта ночная',en:'night chart'},
+  sheetIntercepted:{ru:'перехвачены',en:'intercepted'},
   sfReceives:{ru:'принимает',en:'receives'},
   sfByDomicile:{ru:'по обители',en:'by domicile'},
   sfByExaltation:{ru:'по экзальтации',en:'by exaltation'},
@@ -4803,11 +4829,14 @@ const REC_ORDER={domicile:0,exaltation:1};
 const PLANET_ACC={ru:{Moon:'Луну',Venus:'Венеру'}};
 const PNacc=n=>((PLANET_ACC[LANG]||{})[n])||PN(n);
 
-function structureBlock(ch,p){
+/* The lines, once. The panel stacks them and the print sheet lays them across,
+   and two copies of this logic would have drifted the first time a label
+   changed on one side only - which is the defect this repo has paid for before
+   in two apps that shared button CSS. */
+function structureLines(ch,p){
   const F=ch.__facts||(ch.__facts=chartFacts(ch));
-  const f=F.planets[p]; if(!f) return '';
-  const sec=(label,body)=>body?`<div class="sfact"><div class="lbl">${label}</div><div class="val">${body}</div></div>`:'';
-  let out='';
+  const f=F.planets[p]; if(!f) return null;
+  const out=[];
 
   /* Dispositors. Three distinct endings and they are not interchangeable: the
      body stands in its own sign, the walk reaches a body that does, or the
@@ -4828,7 +4857,7 @@ function structureBlock(ch,p){
         body+=`<br><span class="dim">${t('sfFinal')}: ${PN(f.terminal)}</span>`;
       }
     }
-    out+=sec(t('sfDispositor'),body);
+    out.push([t('sfDispositor'),body]);
   }
 
   /* Houses ruled, and the theme each one is carried into. The arrow is a
@@ -4847,7 +4876,7 @@ function structureBlock(ch,p){
       ? (hs2.length===1?`${hs2[0]} домом`
          :`${hs2.slice(0,-1).join(', ')} и ${hs2[hs2.length-1]} домами`)
       : `house${hs2.length>1?'s':''} ${hs2.join(', ')}`;
-    out+=sec(t('sfRules'),head+(arrows?' · '+arrows:''));
+    out.push([t('sfRules'),head+(arrows?' · '+arrows:'')]);
   }
 
   /* Who receives this body. Sorted by dignity and then by the giver's name so
@@ -4858,9 +4887,9 @@ function structureBlock(ch,p){
       (REC_ORDER[a.type]-REC_ORDER[b.type])||PN(a.from).localeCompare(PN(b.from)));
     const isMutual=(a,b)=>F.mutualReceptions.some(m=>
       (m.a===a&&m.b===b)||(m.a===b&&m.b===a));
-    out+=sec(t('sfReceptions'),mine.map(r=>
+    if(mine.length) out.push([t('sfReceptions'),mine.map(r=>
       `${PN(r.from)} ${t('sfReceives')} ${PNacc(p)} ${t(REC_KEY[r.type])}`
-      +(isMutual(r.from,p)?` <span class="dim">(${t('sfMutual')})</span>`:'')).join('<br>'));
+      +(isMutual(r.from,p)?` <span class="dim">(${t('sfMutual')})</span>`:'')).join('<br>')]);
   }
 
   {
@@ -4868,9 +4897,61 @@ function structureBlock(ch,p){
     if(f.angularity) bits.push(t(ANG_KEY[f.angularity]));
     if(f.sect.status!=='neutral') bits.push(t(f.sect.status==='inSect'?'sectIn':'sectContrary'));
     if(f.solar.condition) bits.push(t(SOL_KEY[f.solar.condition]));
-    out+=sec(t('sfPlacement'),bits.join(' · '));
+    if(bits.length) out.push([t('sfPlacement'),bits.join(' · ')]);
   }
-  return out;
+  return {f,lines:out};
+}
+
+/* Sign, house and dignity on one line. Shared for the same reason as above:
+   the panel prints it in its own header, the sheet needs it per body. */
+function structureHead(ch,p){
+  const r=structureLines(ch,p); if(!r) return '';
+  const f=r.f;
+  const bits=[LX(SIGN_NAME)[f.sign], (LANG==='ru'?`${f.house} дом`:`house ${f.house}`)];
+  if(f.dignity) bits.push(t(DIG_KEY[f.dignity]));
+  return bits.join(' · ');
+}
+
+function structureBlock(ch,p){
+  const r=structureLines(ch,p); if(!r) return '';
+  return r.lines.map(([label,body])=>
+    `<div class="sfact"><div class="lbl">${label}</div><div class="val">${body}</div></div>`).join('');
+}
+
+/* Filled on the way to paper, not on every render: nothing on screen reads it,
+   and the browser's own print command bypasses the button entirely, so both
+   doors lead here. */
+function fillPrintSheet(){
+  const el=document.getElementById('printFacts'); if(!el) return;
+  el.innerHTML=(typeof CURRENT!=='undefined'&&CURRENT)?printFactsSheet(CURRENT):'';
+}
+if(typeof window!=='undefined') window.addEventListener('beforeprint',fillPrintSheet);
+
+/* ---------- the print sheet ----------
+   Every body under the same headings, so an astrologer checking the app gets
+   one page per chart and can go through the whole structural layer in a single
+   pass instead of tapping eleven glyphs. This exists as a QA instrument first
+   and a feature second, which is why it is a plain list and not a design. */
+function printFactsSheet(ch){
+  const F=ch.__facts||(ch.__facts=chartFacts(ch));
+  const head=[];
+  head.push(t(F.sect.chart==='day'?'sheetDay':'sheetNight'));
+  if(F.intercepted.length)
+    head.push(t('sheetIntercepted')+': '+F.intercepted.map(i=>LX(SIGN_NAME)[i]).join(', '));
+  if(F.terminals.length)
+    head.push(t('sfFinal')+': '+F.terminals.map(PN).join(', '));
+  F.loops.forEach(l=>head.push(t('sfCycle')+': '+
+    (l.length===2?l.map(PN).join(' \u2194 '):[...l,l[0]].map(PN).join(' \u2192 '))));
+
+  const bodies=WHEEL_BODIES.filter(x=>ch.pos[x]).map(x=>{
+    const r=structureLines(ch,x); if(!r) return '';
+    const rows=r.lines.map(([label,body])=>
+      `<div class="pf-row"><div class="lbl">${label}</div><div class="val">${body}</div></div>`).join('');
+    return `<div class="pf-body"><div class="pf-head">`
+      +`<span class="af">${GLYPH[x]}</span> ${PN(x)} <span class="pf-pos">${structureHead(ch,x)}</span>`
+      +`</div>${rows}</div>`;
+  }).join('');
+  return `<div class="pf-top">${head.join(' · ')}</div>${bodies}`;
 }
 
 function showDetail(p,ch){
@@ -6535,6 +6616,7 @@ document.getElementById('printBtn').addEventListener('click',()=>{
     const el=document.getElementById(id); if(el) el.open=true;
   });
   closeDropdown();
+  fillPrintSheet();
   window.print();
 });
 document.getElementById('orbReset').addEventListener('click',()=>{

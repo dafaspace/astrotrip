@@ -63,6 +63,14 @@ Derived facts carry `derivedFrom`. "Moon in Capricorn" and "the Moon's disposito
 Saturn" are one fact written twice, and anything that later weighs evidence has to be
 able to see that or it will over-count, always toward a more confident reading.
 
+Printing adds a **structure sheet**: every body under the same headings, on its own
+page, so an astrologer checking the app gets one PDF per chart and can go through the
+whole structural layer in a single pass instead of tapping eleven glyphs. The sheet and
+the on-screen card build their lines from the same function, and a test compares them
+body by body - two copies of that logic would have drifted the first time a label
+changed on one side, which is a bill this repo has already paid once, in two apps that
+shared button CSS.
+
 Tapping a body on the wheel shows this as a card: the chain, the houses ruled and where
 their themes land, who receives it and by what, and its placement. The order is fully
 determined - receptions by dignity then by name, houses by number, the chain always
@@ -511,7 +519,7 @@ mattered: before it did, a deliberately broken app passed every check. The runne
 for the city atlas to finish loading, or the atlas tests would silently check the inline
 seed instead.
 
-**246 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
+**252 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
 library, robustness over 1550-2250 and at polar latitudes, house systems (angles land
 on the cusps, cusps run round the circle without crossing, quadrant systems coincide at
 the equator, zero-latitude bodies get the same house from both methods), library data

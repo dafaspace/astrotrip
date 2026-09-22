@@ -490,6 +490,7 @@ function run(){
     LANG=keepLang; el.innerHTML=keep; el.className=keepCls;
     return out;})()`;
   const secOf=(card,name)=>card.sections.find(x=>x[0]===name);
+  const bad_none=a=>a.length===0;
   t('одна и та же карта рисуется байт в байт одинаково',()=>{
     /* Порядок задан целиком: рецепции по достоинству и затем по имени,
        управляемые дома по номеру, цепочка всегда от выбранной планеты.
@@ -556,6 +557,102 @@ function run(){
     if(/управляет|УПРАВЛЯЕТ/.test(all)&&/\d+ дом\b/.test(all)) bad.push('«дом» вместо «домом»');
     if(/(последующая|падающая|угловая|свободна|сожжена)/.test(all)) bad.push('прилагательное по роду');
     return bad.length===0||bad.join('; ');
+  });
+
+  /* ---------- печатный лист ---------- */
+  group('Печатный лист');
+  const SHEET=`(()=>{const el=document.getElementById('printFacts');
+    const keep=el.innerHTML, keepLang=LANG;
+    const pick=id=>{const e=CHART_LIBRARY.find(x=>x.id===id), hh=e.t==null?12:e.t;
+      return computeChart(e.y,e.mo,e.d,hh,libTz(e),e.lat,e.lon);};
+    const read=(ch,lang)=>{LANG=lang||keepLang; el.innerHTML=printFactsSheet(ch);
+      return {html:el.innerHTML,
+        top:(el.querySelector('.pf-top')||{}).textContent||'',
+        bodies:[...el.querySelectorAll('.pf-body')].map(b=>({
+          head:b.querySelector('.pf-head').textContent.trim(),
+          rows:[...b.querySelectorAll('.pf-row')].map(r=>[
+            r.querySelector('.lbl').textContent, r.querySelector('.val').textContent])}))};};
+    const c=computeChart(1985,3,20,6.5,3,55.7558,37.6173);
+    const out={ru:read(c,'ru'), en:read(c,'en'),
+      terminal:read(pick('alonsocano'),'ru'), noRec:read(pick('salvatorrosa'),'ru')};
+    out.again=read(c,'ru');
+    LANG=keepLang; el.innerHTML=keep;
+    return out;})()`;
+  t('на листе есть каждое нарисованное тело',()=>{
+    const r=ev(SHEET);
+    const want=ev(`WHEEL_BODIES.filter(p=>computeChart(1985,3,20,6.5,3,55.7558,37.6173).pos[p]).length`);
+    return r.ru.bodies.length===want||`тел на листе ${r.ru.bodies.length}, в карте ${want}`;
+  });
+  t('лист и панель берут строки из одного источника',()=>{
+    /* Ради этого structureLines вынесена отдельно. Две копии логики разошлись
+       бы в первый же раз, когда подпись поменяли бы на одной стороне: этот
+       репозиторий уже платил за это байт-в-байт одинаковым CSS кнопок в двух
+       приложениях. */
+    const r=ev(`(()=>{const el=document.getElementById('detail');
+      const sh=document.getElementById('printFacts');
+      const keepD=el.innerHTML, keepS=sh.innerHTML, keepLang=LANG; LANG='ru';
+      const c=computeChart(1985,3,20,6.5,3,55.7558,37.6173);
+      sh.innerHTML=printFactsSheet(c);
+      const bad=[];
+      WHEEL_BODIES.filter(p=>c.pos[p]).forEach((p,i)=>{
+        showDetail(p,c);
+        const panel=[...el.querySelectorAll('.sfact')]
+          .map(x=>[(x.querySelector('.lbl')||{}).textContent||'',
+                   (x.querySelector('.val')||{}).textContent||''])
+          .filter(x=>x[1].trim());
+        const body=[...sh.querySelectorAll('.pf-body')][i];
+        const sheet=[...body.querySelectorAll('.pf-row')]
+          .map(x=>[x.querySelector('.lbl').textContent,x.querySelector('.val').textContent]);
+        if(JSON.stringify(panel)!==JSON.stringify(sheet))
+          bad.push(p+': панель '+JSON.stringify(panel)+' лист '+JSON.stringify(sheet));
+      });
+      LANG=keepLang; el.innerHTML=keepD; sh.innerHTML=keepS;
+      return bad.slice(0,2);})()`);
+    return bad_none(r)||r.join(' | ').slice(0,300);
+  });
+  t('пустых секций на листе нет',()=>{
+    const r=ev(SHEET);
+    const bad=[];
+    ['ru','en','terminal','noRec'].forEach(k=>r[k].bodies.forEach(b=>
+      b.rows.forEach(([l,v])=>{ if(!v.trim()) bad.push(k+'/'+b.head+': "'+l+'"'); })));
+    return bad.length===0||bad.join('; ');
+  });
+  t('лист рисуется байт в байт одинаково',()=>{
+    const r=ev(SHEET);
+    return r.ru.html===r.again.html||'два рендера листа разошлись';
+  });
+  t('лист покрывает все четыре формы, которые надо проверить глазами',()=>{
+    /* Цикл диспозиторов, планета в своём знаке, несколько управляемых домов,
+       внешняя планета без достоинства. Если карта библиотеки поменяется и одна
+       из форм пропадёт, проверять будет нечего, и тест скажет об этом. */
+    const r=ev(SHEET);
+    const flat=k=>r[k].bodies.map(b=>b.head+' '+b.rows.map(x=>x.join(' ')).join(' ')).join('\n');
+    const all=flat('ru')+'\n'+flat('terminal')+'\n'+flat('noRec');
+    const miss=[];
+    if(!/Цикл диспозиторов/.test(all)) miss.push('цикл');
+    if(!/в своём знаке/.test(all)) miss.push('своя обитель');
+    if(!/ и \d+ домами/.test(all)) miss.push('несколько домов');
+    if(!r.ru.bodies.some(b=>/Плутон/.test(b.head)&&!/перегрин|обитель|изгнание|экзальтация|падение/.test(b.head)))
+      miss.push('внешняя без достоинства');
+    if(!r.noRec.bodies.some(b=>!b.rows.some(x=>/Рецепции/.test(x[0])))) miss.push('без рецепций');
+    return miss.length===0||'форм не нашлось: '+miss.join(', ');
+  });
+  t('на экране лист не виден, на бумаге виден',()=>{
+    const r=ev(`(()=>{const c=document.getElementById('printFactsCard');
+      const screen=getComputedStyle(c).display;
+      let paper=null;
+      for(const sh of document.styleSheets){
+        let rules; try{rules=sh.cssRules}catch(e){continue}
+        for(const rule of rules||[]){
+          if(rule.media&&[...rule.media].includes('print'))
+            for(const inner of rule.cssRules||[])
+              if(inner.selectorText&&/#printFactsCard/.test(inner.selectorText))
+                paper=inner.style.display;
+        }
+      }
+      return {screen,paper};})()`);
+    if(r.screen!=='none') return 'на экране display: '+r.screen;
+    return r.paper==='block'||'в печати display: '+r.paper;
   });
 
   /* ---------- устойчивость ---------- */
