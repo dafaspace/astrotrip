@@ -77,10 +77,17 @@ html,body{margin:0}
 body{
   background:var(--paper); color:var(--ink);
   font:15px/1.5 'Inter',system-ui,-apple-system,sans-serif;
-  -webkit-text-size-adjust:100%; padding:0 0 60px;
+  -webkit-text-size-adjust:100%;
+  /* The viewport is already viewport-fit=cover, which is what lets the wheel
+     use the full width; the insets are what keeps the content out from under
+     the Dynamic Island and the home indicator. Both halves are required, and
+     for a while only the first was here, which on a notched phone means the
+     cover is doing harm rather than good. The left and right insets matter in
+     landscape, where the notch eats a side. */
+  padding:0 env(safe-area-inset-right) calc(60px + env(safe-area-inset-bottom)) env(safe-area-inset-left);
 }
 h1,h2,h3,.serif{font-family:'Literata',Georgia,"Times New Roman",serif;font-weight:500}
-header{padding:20px 20px 8px;max-width:760px;margin:0 auto;display:flex;align-items:flex-start;gap:12px}
+header{padding:calc(20px + env(safe-area-inset-top)) 20px 8px;max-width:760px;margin:0 auto;display:flex;align-items:flex-start;gap:12px}
 header .ht{flex:1}
 header h1{font-size:26px;margin:0;letter-spacing:.2px}
 /* Version rides the title so it is obvious from a phone whether the build in
@@ -365,6 +372,9 @@ button.ico:disabled{opacity:.4;cursor:default}
 .sfact .lbl{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);margin-bottom:2px}
 .sfact .val{font-size:13px;line-height:1.45}
 .sfact .val .dim{color:var(--ink3)}
+/* WKWebView ignores window.print() silently, so inside the store build the
+   button is removed rather than left there doing nothing. */
+html.native #printBtn{display:none}
 #printFactsCard{display:none}
 .pf-top{font-size:9pt;color:var(--ink2);margin-bottom:3mm}
 .pf-body{break-inside:avoid;page-break-inside:avoid;margin:0 0 3.5mm}
@@ -750,7 +760,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
 /* Bump together with CACHE in sw.js: the two are the same release, and the
    number on screen is how you tell from a phone which one you are looking at. */
-const APP_VERSION='3.4.0';
+const APP_VERSION='3.5.0';
 document.getElementById('ver').textContent=APP_VERSION;
 
 /* ---------- feature flags ----------
@@ -902,6 +912,7 @@ const STR = {
   sfReceptions:{ru:'Рецепции',en:'Receptions'},
   sfPlacement:{ru:'Положение',en:'Placement'},
   sfAspects:{ru:'Аспекты',en:'Aspects'},
+  pointOrb:{ru:'Узлы, Лилит, Селена',en:'Nodes, Lilith, Selena'},
   sheetTitle:{ru:'Структура карты',en:'Chart structure'},
   sheetDay:{ru:'карта дневная',en:'day chart'},
   sheetNight:{ru:'карта ночная',en:'night chart'},
@@ -1670,7 +1681,7 @@ const RECEIVER_RANK={ASC:1.5,MC:1.5,Sun:1.3,Moon:1.3,Mercury:1.0,Venus:1.0,Mars:
    the same length Saturn's and Uranus's run. Written out rather than left to
    the lookup, because an absent entry here makes SPEED_ORB[T]+2 a NaN and a
    NaN cap silently drops every transiting Chiron aspect. */
-const SPEED_ORB={Sun:2,Moon:6,Mercury:2,Venus:2,Mars:2,Jupiter:1.5,Saturn:1.5,Uranus:1,Neptune:1,Pluto:1,Chiron:1.5};
+const SPEED_ORB={Sun:2,Moon:6,Mercury:2,Venus:2,Mars:2,Jupiter:1.5,Saturn:1.5,Uranus:1,Neptune:1,Pluto:1,Chiron:1.5,NNode:1.5,SNode:1.5,Lilith:1.5,Selena:1.5};
 /* Every aspect the app knows, with the orb it ships with. The five majors are
    on by default and the six minors are off. Measured across sixty charts from
    the library, switching every minor on takes a chart from 11.6 aspects to
@@ -3358,6 +3369,10 @@ const SECT_OF={Sun:'diurnal',Jupiter:'diurnal',Saturn:'diurnal',
    ones most traditional practice uses. Kept as one table so that changing a
    threshold is one edit and not a hunt. */
 const SOLAR_LIMITS={cazimi:17/60, combust:8.5, underBeams:15};
+/* Named separately from ASPECT_POINTS, which is defined much further down with
+   the aspect engine. The two lists are the same four and must stay so; the
+   test suite compares them rather than trusting this comment. */
+const FACT_POINTS=['NNode','SNode','Lilith','Selena'];
 
 /* Essential dignity on the classical tables, and NOT the app's dignity(),
    which is shared with the interpretation corpus and reads the modern rulers:
@@ -3385,7 +3400,12 @@ const signOfLon=lon=>Math.floor(rev(lon)/30);
 const arcBetween=(a,b)=>{const d=Math.abs(rev(a-b));return d>180?360-d:d;};
 
 function chartFacts(ch){
-  const bodies=WHEEL_BODIES.filter(p=>ch.pos[p]);
+  /* The karmic points are here too. They have no essential dignity and rule no
+     house, but "the North Node in Taurus, disposed by Venus" is ordinary
+     practice and the walk costs nothing once the signs are known. Leaving them
+     out was the same defect as leaving them out of the aspects: drawn on the
+     ring, inert everywhere else. */
+  const bodies=WHEEL_BODIES.concat(FACT_POINTS).filter(p=>ch.pos[p]);
   const sign={}, house={};
   bodies.forEach(p=>{ sign[p]=signOfLon(ch.pos[p].lon); house[p]=bodyHouse(ch,p); });
 
@@ -3479,6 +3499,8 @@ function chartFacts(ch){
       :elong<=SOLAR_LIMITS.underBeams?'underBeams':'free';
 
     const natal=SECT_OF[p]||(p==='Mercury'?(mercOriental?'diurnal':'nocturnal'):null);
+    /* A point is not a body that happens to be missing its dignity: it is
+       outside the scheme, the same as the outers, and it rules nothing. */
     F.planets[p]={
       sign:s, house:hs, lon,
       dignity:dignityOf(p,s),
@@ -3548,23 +3570,46 @@ function fmtPos(lon){
 /* The single place that answers "do these two degrees aspect, and by how
    much". findAspects and the grid both go through it, so a change to the
    active set or an orb cannot reach one and miss the other. */
-function aspectBetween(l1,l2){
+/* ---------- the karmic points aspect too ----------
+   Until now they did not. findAspects looped over WHEEL_BODIES, so a Moon
+   exactly conjunct the North Node had no chord on the wheel, no line in the
+   detail panel, no cell in the grid and no part in any configuration, while
+   the glyph sat on the ring looking like a participant. Drawn but inert is the
+   worst of the three states, because it reads as an answer.
+
+   They come in on a tighter orb, which is both the usual convention and a
+   measured necessity. Across 60 library charts, letting them use the planets'
+   orbs takes a chart from 14.4 aspects to 27.5 and the worst case from 25 to
+   39 - nearly double, on a 300 px wheel. Capped at 3 degrees it is 21.4 and
+   32. The cap is one number and it is exactly the kind of number astrologers
+   disagree about, so it lives with the other orbs and not buried in here. */
+const ASPECT_POINTS=['NNode','SNode','Lilith','Selena'];
+const POINT_ORB_KEY='astrarium_pointorb';
+let POINT_ORB=(()=>{const v=parseFloat(localStorage.getItem(POINT_ORB_KEY));
+  return isFinite(v)&&v>0&&v<=10?v:3;})();
+const isAspectPoint=p=>ASPECT_POINTS.includes(p);
+/* The nodes are exactly opposite by definition, so reporting that opposition
+   would be reporting the definition rather than the chart. */
+const nodePair=(a,b)=>(a==='NNode'&&b==='SNode')||(a==='SNode'&&b==='NNode');
+const pairOrbCap=(a,b)=>(isAspectPoint(a)||isAspectPoint(b))?POINT_ORB:null;
+/* Everything that aspects, in a fixed order, filtered by what this chart has. */
+const aspectingBodies=pos=>WHEEL_BODIES.concat(ASPECT_POINTS).filter(p=>pos[p]);
+
+function aspectBetween(l1,l2,cap){
   let diff=Math.abs(rev(l1-l2)); if(diff>180) diff=360-diff;
   for(const asp of ASPECTS){
     const orb=Math.abs(diff-asp.angle);
-    if(orb<=asp.orb) return {asp,orb};
+    if(orb<=(cap==null?asp.orb:Math.min(asp.orb,cap))) return {asp,orb};
   }
   return null;
 }
 function findAspects(pos){
-  const out=[], B=WHEEL_BODIES;
+  const out=[], B=aspectingBodies(pos);
   for(let a=0;a<B.length;a++)for(let b=a+1;b<B.length;b++){
-    /* Chiron is the one entry that can be missing, before 1600 and after 2250.
-       Skipping the pair is all that is needed; every other body is always
-       there, so this never fires for them. */
-    if(!pos[B[a]]||!pos[B[b]]) continue;
-    let diff=Math.abs(rev(pos[B[a]].lon-pos[B[b]].lon)); if(diff>180)diff=360-diff;
-    for(const asp of ASPECTS){const orb=Math.abs(diff-asp.angle);if(orb<=asp.orb){out.push({p1:B[a],p2:B[b],asp,orb});break;}}
+    const A=B[a], C=B[b];
+    if(nodePair(A,C)) continue;
+    const h=aspectBetween(pos[A].lon,pos[C].lon,pairOrbCap(A,C));
+    if(h) out.push({p1:A,p2:C,asp:h.asp,orb:h.orb});
   }
   return out;
 }
@@ -4927,6 +4972,44 @@ function fillPrintSheet(){
 }
 if(typeof window!=='undefined') window.addEventListener('beforeprint',fillPrintSheet);
 
+/* ---------- golden parity ----------
+   One string that stands for the whole structural layer on a fixed set of
+   charts. The web build and the store build must produce the same one, and if
+   they do not, the wrapper has changed an answer rather than only the way it
+   is delivered - which is a far more dangerous class of defect than anything
+   visual, and invisible without this.
+
+   Deliberately not a hash: when it differs you want to see WHERE, and a digest
+   tells you only that it does. It is small enough to diff by eye. */
+const PARITY_CHARTS=[
+  [1985,3,20,6.5,3,55.7558,37.6173],        // the hand-checked one, with a cycle
+  [1990,1,1,12,3,55.75,37.62],              // the ephemeris anchor
+  [2000,1,1,0,0,0,0],                       // equator, prime meridian, midnight UT
+  [1650,6,15,0,0,48.8566,2.3522],           // before the atlas, before ΔT is known
+  [2001,6,21,23.75,2,69.6492,18.9553],      // above the polar circle, Placidus falls back
+  [2200,3,1,0,0,-33.8688,151.2093]          // far future, southern hemisphere
+];
+function parityDigest(){
+  const S=['Ari','Tau','Gem','Cnc','Leo','Vir','Lib','Sco','Sgr','Cap','Aqr','Psc'];
+  return PARITY_CHARTS.map(a=>{
+    const ch=computeChart(a[0],a[1],a[2],a[3],a[4],a[5],a[6],false);
+    const F=chartFacts(ch);
+    const head=`${a[0]}-${a[1]}-${a[2]} ${ch.houses.system} ${F.sect.chart}`
+      +` int:${F.intercepted.map(i=>S[i]).join('')||'-'}`
+      +` term:${F.terminals.join('/')||'-'}`
+      +` loop:${F.loops.map(l=>l.join('+')).join('/')||'-'}`;
+    const bodies=WHEEL_BODIES.filter(p=>ch.pos[p]).map(p=>{
+      const f=F.planets[p];
+      return `${p} ${S[f.sign]}${Math.floor(rev(ch.pos[p].lon)%30)} h${f.house}`
+        +` ${f.dignity||'-'} d:${f.dispositor||'self'}`
+        +` r:${f.rulesHouses.join(',')||'-'} ${f.angularity} ${f.sect.status}`
+        +` ${f.solar.condition||'-'}`;
+    });
+    const rec=F.receptions.map(r=>`${r.from}>${r.to}:${r.type[0]}`).sort().join(' ');
+    return [head,...bodies,'rec '+(rec||'-')].join('\n');
+  }).join('\n--\n');
+}
+
 /* ---------- the print sheet ----------
    Every body under the same headings, so an astrologer checking the app gets
    one page per chart and can go through the whole structural layer in a single
@@ -5069,7 +5152,7 @@ function outerChart(ch,ms){
   return {...ch, pos, mc, asc:a.asc, ramc:a.ramc, houses:a.houses, arc};
 }
 const RING_MOVERS={
-  transit:['Jupiter','Saturn','Uranus','Neptune','Pluto','Chiron','Mars','Sun','Venus','Mercury'],
+  transit:['Jupiter','Saturn','Uranus','Neptune','Pluto','Chiron','NNode','Mars','Sun','Venus','Mercury'],
   progressed:['Moon','Sun','Mercury','Venus','Mars','Jupiter','Saturn','Uranus','Neptune','Pluto','Chiron'],
   directed:['Moon','Sun','Mercury','Venus','Mars','Jupiter','Saturn','Uranus','Neptune','Pluto','Chiron'],
   /* Everything, Moon included: in synastry the Moon is half the reading, and
@@ -5112,7 +5195,7 @@ function aspectOrbs(ch,tp){
   /* Natal Chiron receives, which is the whole point of carrying it: the Chiron
      return near fifty is transiting Chiron reaching its own natal degree, and
      without it in this list that event would never be reported. */
-  const receivers=BODIES.concat(['ASC','MC','Chiron','NNode','Lilith']);
+  const receivers=WHEEL_BODIES.concat(['ASC','MC'],ASPECT_POINTS);
   RING_MOVERS[RING_MODE].forEach(T=>{
     if(!tp[T]) return;
     receivers.forEach(np=>{
@@ -5125,7 +5208,11 @@ function aspectOrbs(ch,tp){
          and the list would never change. Synastry is not moving at all: neither
          chart advances, so nothing needs narrowing and the orb you configured
          is the orb you get. */
-      const cap=RING_MODE==='transit'?SPEED_ORB[T]+2:(RING_MODE==='synastry'?99:1);
+      let cap=RING_MODE==='transit'?SPEED_ORB[T]+2:(RING_MODE==='synastry'?99:1);
+      /* A karmic point on either side narrows the orb the same way it does in
+         the natal chart, so the two halves of the app cannot disagree about
+         how much weight a node carries. */
+      if(isAspectPoint(np)) cap=Math.min(cap,POINT_ORB);
       for(const asp of ASPECTS){const orb=Math.abs(diff-asp.angle),maxo=Math.min(asp.orb,cap);if(orb<=maxo){hits.push({tp:T,np,asp,orb,maxo});break;}}
     });
   });
@@ -5625,6 +5712,24 @@ function renderOrbs(){
       <input class="orb" type="number" min="0.1" max="15" step="0.1" value="${cfg.orb}" data-orb="${a.name}" aria-label="${LX(ASPECT_NAME)[a.name]}">
     </div>`;
   }).join('');
+  /* One number for the four karmic points, under the eleven aspects rather
+     than beside each of them: the argument is never "how wide a trine to the
+     node" but "how much weight the node gets at all", and eleven boxes would
+     invite an answer nobody has. */
+  box.insertAdjacentHTML('beforeend',
+    `<div class="orbrow" style="border-top:1px solid var(--line);margin-top:6px;padding-top:8px">
+      <span class="g af" style="color:var(--ink3);grid-column:span 2">${GLYPH.NNode}${GLYPH.Lilith}</span>
+      <span class="nm">${t('pointOrb')}</span>
+      <span class="ang"></span>
+      <input class="orb" type="number" min="0.1" max="10" step="0.5" value="${POINT_ORB}" data-pointorb aria-label="${t('pointOrb')}">
+    </div>`);
+  const po=box.querySelector('input[data-pointorb]');
+  po.addEventListener('change',()=>{
+    const v=parseFloat(po.value);
+    if(!isFinite(v)||v<=0||v>10){ po.value=POINT_ORB; return; }
+    POINT_ORB=v; localStorage.setItem(POINT_ORB_KEY,String(v));
+    rebuildAspects(); redrawAspects();
+  });
   box.querySelectorAll('input[data-orb-on]').forEach(el=>el.addEventListener('change',()=>{
     ORBS[el.dataset.orbOn].on=el.checked; saveOrbs(); rebuildAspects(); redrawAspects();
   }));
@@ -5656,14 +5761,17 @@ function redrawAspects(){
    A yod needs the quincunx, which ships off. That is not a gap: with the
    aspect switched off the app is being told not to count it, and inventing an
    exception for patterns would make the switch a lie. */
-const CONF_BODIES=BODIES.slice();
+/* Configurations take the same participants as the aspects do. A grand trine
+   that quietly omits the node is not a smaller answer, it is a different one. */
+const CONF_BODIES=WHEEL_BODIES.concat(ASPECT_POINTS);
 const CONF_DEFS=['stellium','grandtrine','tsquare','grandcross','kite','yod','mystic'];
 function findConfigurations(pos){
   const B=CONF_BODIES.filter(n=>pos[n]);
   const A={};                                     // A[a][b] = aspect name or null
   B.forEach(a=>{ A[a]={}; });
   for(let i=0;i<B.length;i++)for(let j=i+1;j<B.length;j++){
-    const h=aspectBetween(pos[B[i]].lon,pos[B[j]].lon);
+    const h=nodePair(B[i],B[j])?null
+      :aspectBetween(pos[B[i]].lon,pos[B[j]].lon,pairOrbCap(B[i],B[j]));
     A[B[i]][B[j]]=A[B[j]][B[i]]=h?h.asp.name:null;
   }
   const is=(a,b,n)=>A[a][b]===n;
@@ -5757,7 +5865,7 @@ function findConfigurations(pos){
    illegible things instead of one legible one, so the orb appears under the
    grid when a cell is tapped - which also gives the pair a name, since a grid
    is exactly the place where people lose track of which row they are on. */
-const GRID_BODIES=WHEEL_BODIES.concat(['ASC','MC']);
+const GRID_BODIES=WHEEL_BODIES.concat(ASPECT_POINTS,['ASC','MC']);
 function gridLon(ch,n){ return n==='ASC'?ch.asc:n==='MC'?ch.mc:(ch.pos[n]?ch.pos[n].lon:null); }
 function renderGrid(ch,tr){
   const box=document.getElementById('aspGrid'); if(!box) return;
@@ -6032,6 +6140,33 @@ function scrollChartIntoView(){
      gliding. */
   window.scrollTo(0,Math.max(0,y));
 }
+/* ---------- the form survives a restart ----------
+   On the web a reload loses the chart, which is mildly annoying. In a store
+   build it is a defect: iOS reclaims a backgrounded app whenever it likes, and
+   coming back to an empty form after glancing at a message is the whole app
+   forgetting what you were doing. Only the inputs are kept, never the computed
+   chart - the engine is deterministic, so recasting is cheaper and safer than
+   storing a result that a later version might compute differently. */
+const FORM_KEY='astrarium_form';
+const FORM_FIELDS=['date','time','city','chartName','lat','lng','tz'];
+function saveForm(){
+  try{
+    const o={};
+    FORM_FIELDS.forEach(id=>{const e=document.getElementById(id); if(e) o[id]=e.value;});
+    if(typeof SELECTED_CITY!=='undefined'&&SELECTED_CITY) o.__city=SELECTED_CITY;
+    localStorage.setItem(FORM_KEY,JSON.stringify(o));
+  }catch(e){}
+}
+function restoreForm(){
+  let o; try{ o=JSON.parse(localStorage.getItem(FORM_KEY)); }catch(e){ return false; }
+  if(!o) return false;
+  FORM_FIELDS.forEach(id=>{const e=document.getElementById(id);
+    if(e&&o[id]!=null&&o[id]!=='') e.value=o[id];});
+  if(o.__city&&typeof SELECTED_CITY!=='undefined') SELECTED_CITY=o.__city;
+  syncSaveBtn&&syncSaveBtn();
+  return !!(o.date&&o.time);
+}
+
 function run(){
   const dv=document.getElementById('date').value, tv=document.getElementById('time').value;
   const lat=parseFloat(document.getElementById('lat').value), lng=parseFloat(document.getElementById('lng').value);
@@ -6053,6 +6188,7 @@ function run(){
   document.getElementById('charttitle').textContent=
     `${t('natal')} · ${(hs?LX(hs):CURRENT.houses.system)}`;
   renderPositions(CURRENT); renderBalance(CURRENT); renderChartMeta(CURRENT,y,mo,da,hh,mi,tz);
+  saveForm();
   renderRelocBrief();
   if(FEATURES.interpretation) document.getElementById('reading').innerHTML=natalReading(CURRENT);
   renderTransits(CURRENT);          // casts the transit ring and draws the wheel
@@ -6618,6 +6754,10 @@ document.getElementById('printBtn').addEventListener('click',()=>{
   closeDropdown();
   fillPrintSheet();
   window.print();
+  /* WKWebView ignores window.print() and returns without a word, so on the
+     store build the button is hidden rather than left to do nothing. Printing
+     is a desktop and QA affordance; on a phone people screenshot. Stated here
+     because a hidden control with no explanation is its own bug report. */
 });
 document.getElementById('orbReset').addEventListener('click',()=>{
   ASPECT_DEFS.forEach(a=>ORBS[a.name]={on:!a.minor,orb:a.orb});
@@ -6650,10 +6790,37 @@ document.getElementById('libSort').addEventListener('change',function(){
 fillLibSort();
 renderLibrary();
 
+/* Last, after every control exists and the atlas hook is in place: put the
+   form back and recast. Recast rather than restore a stored chart, because the
+   engine is deterministic and a saved result would be a second version of the
+   truth that a later build could disagree with. */
+if(restoreForm()) run();
+/* iOS does not reload the page when the app returns from the background, so
+   nothing else would write the form back; and when it does reclaim the app,
+   the last thing written is what comes back. */
+addEventListener('pagehide',saveForm);
+addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden') saveForm(); });
+
 /* Offline shell. Registered after load so it never competes with first paint,
    and failures stay silent: the app works fine without it, it just loses
    offline. Needs https or localhost, so it is inert on file:// */
-if('serviceWorker' in navigator){
+/* The service worker is how the web build works offline. Inside the store
+   build it is how the app would get a SECOND copy of itself: Capacitor already
+   serves every asset from the signed bundle, and a worker on top of that keeps
+   its own cache which can outlive an update and start answering with the
+   previous version's files. One shipped bundle, one source of truth. */
+const NATIVE = typeof window!=='undefined' && !!(window.Capacitor && window.Capacitor.isNativePlatform
+  ? window.Capacitor.isNativePlatform() : window.Capacitor);
+if('serviceWorker' in navigator && !NATIVE){
   addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 }
+/* A worker registered by an earlier web visit does not disappear on its own,
+   and a bundled build that finds one would be served its own old files. This
+   only ever runs inside the store build. */
+if(NATIVE && 'serviceWorker' in navigator){
+  navigator.serviceWorker.getRegistrations()
+    .then(rs=>rs.forEach(r=>r.unregister())).catch(()=>{});
+  if(window.caches) caches.keys().then(ks=>ks.forEach(k=>caches.delete(k))).catch(()=>{});
+}
+if(NATIVE) document.documentElement.classList.add('native');
 </script>

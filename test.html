@@ -57,6 +57,8 @@ const frame=document.getElementById('app');
   try{ ['astrarium_ring','astrarium_orbs','astrarium_partner'].forEach(k=>localStorage.removeItem(k)); }catch(e){}
   /* Read once here, because the runner below is synchronous. */
   try{ SW_SRC=await (await fetch('./sw.js?notacache='+Date.now())).text(); }catch(e){}
+  /* The golden ChartFacts, fetched here because t() is synchronous. */
+  try{ PARITY_GOLD=await (await fetch('./parity.txt?notacache='+Date.now())).text(); }catch(e){}
   /* The city atlas is fetched after first paint, so the run waits for it -
      otherwise the atlas tests would silently check the inline seed instead and
      pass on the wrong data. Capped, because a failed fetch must still let the
@@ -129,7 +131,7 @@ const frame=document.getElementById('app');
   },220));
   frame.src='./index.html?notacache='+Date.now();
 })();
-let SW_SRC='', ATLAS_REAL_BYTES=null, ATLAS_BAR=null, ATLAS_FAIL=null, DEFAULT_RING=null;
+let SW_SRC='', PARITY_GOLD='', ATLAS_REAL_BYTES=null, ATLAS_BAR=null, ATLAS_FAIL=null, DEFAULT_RING=null;
 
 function run(){
   const W=frame.contentWindow, D=frame.contentDocument;
@@ -366,6 +368,47 @@ function run(){
       }
       return out.slice(0,5);})()`);
     return bad.length===0||bad.join('; ');
+  });
+  t('движок совпадает с золотым эталоном из parity.txt',()=>{
+    /* Этот файл и есть контракт между веб-сборкой и магазинной: те же шесть
+       карт обязаны дать тот же текст в обеих. Если они разойдутся, обёртка
+       поменяла ОТВЕТ, а не только способ доставки, и без такой проверки это
+       не видно вообще никак.
+
+       Здесь же он ловит и непреднамеренный сдвиг в самом движке: любое
+       изменение диспозиторов, достоинств, рецепций, секты, угловости или
+       солнечного состояния всплывёт как различие в ревью, а не тихо. */
+    if(!PARITY_GOLD) return 'parity.txt не загрузился';
+    const gold=PARITY_GOLD.split('\n').filter(l=>!l.startsWith('#')).join('\n').trim();
+    const live=ev('parityDigest()').trim();
+    if(live===gold) return true;
+    const g=gold.split('\n'), l=live.split('\n');
+    for(let i=0;i<Math.max(g.length,l.length);i++)
+      if(g[i]!==l[i]) return `строка ${i+1}: эталон "${(g[i]||'нет').slice(0,90)}" против "${(l[i]||'нет').slice(0,90)}"`;
+    return 'длина различается: эталон '+g.length+', живой '+l.length;
+  });
+  t('кармические точки считаются как тела, но не как планеты',()=>{
+    /* Полноправность точки не означает, что ей выдали достоинства. У узла есть
+       знак, дом, диспозитор и цепочка, его можно принять по обители или
+       экзальтации - но своего достоинства у него нет и домами он не
+       управляет. Оба списка точек должны совпадать: один живёт в слое фактов,
+       другой в движке аспектов, и разойтись им нельзя. */
+    const r=ev(`(()=>{const c=computeChart(1985,3,20,6.5,3,55.7558,37.6173,false);
+      const F=chartFacts(c);
+      const bad=[];
+      FACT_POINTS.forEach(p=>{
+        const f=F.planets[p];
+        if(!f){bad.push(p+': нет в слое фактов'); return;}
+        if(f.dignity!==null) bad.push(p+': достоинство '+f.dignity);
+        if(f.rulesHouses.length) bad.push(p+': управляет '+f.rulesHouses.join(','));
+        if(!f.dispositor&&!f.terminal) bad.push(p+': ни диспозитора, ни конца цепочки');
+      });
+      F.houses.forEach(h=>{if(FACT_POINTS.includes(h.ruler)) bad.push('дом '+h.house+' управляется точкой');});
+      return {bad, same:JSON.stringify(FACT_POINTS)===JSON.stringify(ASPECT_POINTS),
+        received:F.receptions.some(x=>FACT_POINTS.includes(x.to))};})()`);
+    if(!r.same) return 'FACT_POINTS и ASPECT_POINTS разошлись';
+    if(r.bad.length) return r.bad.join('; ');
+    return r.received||'точку никто не принимает ни по обители, ни по экзальтации';
   });
   t('современные управители не протекают в традиционный слой',()=>{
     /* Найдено сравнением с чужой реализацией, а не рассуждением: слой считал
@@ -1738,7 +1781,7 @@ function run(){
         clipped:[...document.querySelectorAll('.orbrow .nm')]
           .filter(e=>e.scrollWidth>e.clientWidth+1).map(e=>e.textContent),
         short:rows.filter(r=>r.getBoundingClientRect().height<44).length};})()`);
-    if(r.rows!==11) return `строк ${r.rows}`;
+    if(r.rows!==12) return `строк ${r.rows}`;   // одиннадцать аспектов плюс орбис точек
     if(r.clipped.length) return `обрезано: ${r.clipped.join(', ')}`;
     return r.short===0||`${r.short} строк ниже 44 px`;
   });
@@ -2158,11 +2201,51 @@ function run(){
       return {off,on};})()`);
     return (r.off===0&&r.on===1)||`выключен ${r.off}, включён ${r.on}`;
   });
-  t('углы и узлы в фигуры не входят',()=>{
-    /* Асцендент и MC почти всегда стоят около девяноста друг к другу, а узлы
-       всегда строго напротив: любая такая фигура была бы свойством рамки. */
-    const r=ev(`CONF_BODIES.filter(b=>['ASC','MC','NNode','SNode'].includes(b)).length`);
-    return r===0||`в набор попали углы или узлы: ${r}`;
+  t('углы в фигуры не входят, а узлы входят',()=>{
+    /* Асцендент и MC почти всегда стоят около девяноста друг к другу, так что
+       фигура из них была бы свойством рамки, а не карты. С узлами иначе, и
+       прежнее решение исключало их по ошибочной причине: определением задана
+       не их способность участвовать, а только их взаимная оппозиция. Она и
+       исключена отдельно, точечно. Поправлено по замечанию Дафы 22 сен 2026. */
+    const r=ev(`(()=>{const angles=CONF_BODIES.filter(b=>['ASC','MC'].includes(b)).length;
+      const pts=CONF_BODIES.filter(b=>['NNode','SNode','Lilith','Selena'].includes(b)).length;
+      const c=computeChart(1985,3,20,6.5,3,55.7558,37.6173,false);
+      const pairReported=findAspects(c.pos).some(a=>
+        (a.p1==='NNode'&&a.p2==='SNode')||(a.p1==='SNode'&&a.p2==='NNode'));
+      return {angles,pts,pairReported};})()`);
+    if(r.angles) return `в набор попали углы: ${r.angles}`;
+    if(r.pts!==4) return `точек в наборе ${r.pts}, ждём 4`;
+    return !r.pairReported||'оппозиция узлов друг к другу всё ещё считается аспектом';
+  });
+  t('узлы, Лилит и Селена действительно получают аспекты',()=>{
+    /* Прямая проверка того, что было сломано: глиф стоял на кольце, а аспектов
+       у него не было ни на колесе, ни в панели, ни в таблице, ни в фигурах. */
+    const r=ev(`(()=>{let charts=0, withPoint=0;
+      for(let i=0;i<CHART_LIBRARY.length;i+=17){
+        const e=CHART_LIBRARY[i], hh=e.t==null?12:e.t;
+        const c=computeChart(e.y,e.mo,e.d,hh,libTz(e),e.lat,e.lon,false);
+        charts++;
+        const P=['NNode','SNode','Lilith','Selena'];
+        if(findAspects(c.pos).some(a=>P.includes(a.p1)||P.includes(a.p2))) withPoint++;
+      }
+      return {charts,withPoint};})()`);
+    return r.withPoint>r.charts*0.8
+      ||`аспекты к точкам нашлись только в ${r.withPoint} из ${r.charts} карт`;
+  });
+  t('орбис точек уже орбиса планет и настраивается',()=>{
+    /* Измерено на 60 картах библиотеки: на полном орбисе карта идёт с 14,4
+       аспекта до 27,5, худшая с 25 до 39. На трёх градусах 21,4 и 32. */
+    const r=ev(`(()=>{const keep=POINT_ORB;
+      const count=()=>{let n=0;
+        for(let i=0;i<CHART_LIBRARY.length;i+=17){
+          const e=CHART_LIBRARY[i], hh=e.t==null?12:e.t;
+          n+=findAspects(computeChart(e.y,e.mo,e.d,hh,libTz(e),e.lat,e.lon,false).pos).length;
+        } return n;};
+      POINT_ORB=1; const tight=count();
+      POINT_ORB=8; const wide=count();
+      POINT_ORB=keep; return {tight,wide,keep};})()`);
+    if(r.keep!==3) return `орбис точек по умолчанию ${r.keep}, ждём 3`;
+    return r.wide>r.tight||`узкий орбис дал ${r.tight}, широкий ${r.wide}`;
   });
   t('частоты фигур по библиотеке правдоподобны',()=>{
     /* Внешняя проверка здравого смысла: тау-квадрат частый, большой крест
@@ -2227,8 +2310,9 @@ function run(){
       const blank=cells.filter(c=>c.classList.contains('blank')).length;
       RING_MODE=keep; renderRingSwitch(); renderTransits(CURRENT);
       return {cols, cells:cells.length, on:upper, self, blank};})()`);
-    /* 14 столбцов: угол, десять планет, Хирон, Asc и MC. */
-    return (r.self===13&&r.blank>0&&r.cols===14)
+    /* 18 столбцов: угол, десять планет, Хирон, четыре кармические точки, Asc
+       и MC. Это шире телефона, и сетка для того и прокручивается вбок. */
+    return (r.self===17&&r.blank>0&&r.cols===18)
       ||`столбцов ${r.cols}, диагональных ${r.self}, пустых ${r.blank}`;
   });
   t('таблица находит ровно те же аспекты, что и колесо',()=>{
@@ -2267,8 +2351,8 @@ function run(){
         self:cells.filter(c=>c.classList.contains('self')).length};
       RING_MODE=keep; renderRingSwitch(); renderTransits(CURRENT);
       return out;})()`);
-    /* 11 строк внешних тел плюс шапка, 13 столбцов внутренних плюс угол. */
-    return (r.cols===14&&r.cells===168&&r.self===0)
+    /* 12 строк внешних тел плюс шапка, 17 столбцов внутренних плюс угол. */
+    return (r.cols===18&&r.cells===216&&r.self===0)
       ||`столбцов ${r.cols}, клеток ${r.cells}, диагональных ${r.self}`;
   });
   t('включение минорных добавляет клетки в таблицу',()=>{

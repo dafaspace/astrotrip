@@ -41,6 +41,24 @@ places on purpose: the element and modality tally, which counts the ten planets 
 the two angles because that is the one weighting no school argues with, and the
 interpretation corpus, which has no text written for it.
 
+### The karmic points are participants
+
+The nodes, Lilith and Selena are drawn on the ring, and until v3.5.0 that was all they
+did: `findAspects` looped over the planets, so a Moon exactly conjunct the North Node
+had no chord on the wheel, no line in the detail panel, no cell in the grid and no part
+in any configuration. Drawn but inert is the worst of the three states, because it reads
+as an answer. Reported by Dafa.
+
+They now aspect, form configurations, receive and are received, and carry a dispositor
+chain of their own. They still have no essential dignity and rule no house, because they
+are outside that scheme rather than missing from it.
+
+They come in on a tighter orb, which is both the usual convention and a measured
+necessity: across 60 library charts, letting them use the planets' orbs takes a chart
+from 14.4 aspects to 27.5 and the worst case from 25 to 39. Capped at 3 degrees it is
+21.4 and 32. The cap is one number and it sits with the other orbs, because it is
+exactly the kind of number astrologers disagree about.
+
 ### The structural layer
 
 `chartFacts()` computes everything about a chart that follows from a rule and that
@@ -58,6 +76,12 @@ beside it where they differ. Receptions are by domicile and exaltation only, bec
 triplicity, term and face each have competing tables and picking one silently would be a
 decision dressed as a calculation. House rulership comes from the cusp sign, so the
 layer lists which signs are intercepted instead of noting the gap in the abstract.
+
+`parity.txt` holds a golden serialisation of the whole structural layer across six
+charts chosen for the paths they exercise. It is the contract between the web build and
+the store build: the same six must produce the same text in both, and if they do not,
+the wrapper has changed an answer rather than only the way it is delivered. Not a hash,
+on purpose - when it differs you want to see where.
 
 Derived facts carry `derivedFrom`. "Moon in Capricorn" and "the Moon's dispositor is
 Saturn" are one fact written twice, and anything that later weighs evidence has to be
@@ -519,7 +543,7 @@ mattered: before it did, a deliberately broken app passed every check. The runne
 for the city atlas to finish loading, or the atlas tests would silently check the inline
 seed instead.
 
-**252 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
+**256 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
 library, robustness over 1550-2250 and at polar latitudes, house systems (angles land
 on the cusps, cusps run round the circle without crossing, quadrant systems coincide at
 the equator, zero-latitude bodies get the same house from both methods), library data
