@@ -394,6 +394,13 @@ html.native #printBtn{display:none}
 .learn-line b{color:var(--accent);font-weight:500}
 .pill{display:inline-block;font-size:11px;padding:2px 7px;border-radius:999px;background:var(--paper3);color:var(--ink2);margin-left:6px}
 .foot{max-width:760px;margin:20px auto;padding:0 20px;color:var(--ink3);font-size:12px}
+.foot h2{font-size:14px;color:var(--ink3);font-weight:500}
+.foot summary{padding:6px 0}
+/* The tagline answers "what is this" for someone who lands on the web page
+   cold. In the store build the listing has already answered it, and by the
+   time the app opens it is a paragraph of vertical space above the fold on a
+   phone, spent on something the reader already knows. */
+html.native header p[data-i="tagline"]{display:none}
 a{color:var(--accent)}
 .citywrap{position:relative}
 .citylist{position:absolute;left:0;right:0;top:100%;margin-top:4px;background:var(--paper);border:1px solid var(--line);border-radius:10px;max-height:220px;overflow:auto;z-index:20;box-shadow:0 8px 20px rgba(0,0,0,.14);display:none}
@@ -767,7 +774,17 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
 </div>
 
-<div class="foot" data-i="foot"></div>
+<!-- The claims and the credits, folded. Two of the three lines belong in the
+     store listing rather than on every screen: the agreement with JPL and the
+     promise that nothing leaves the device are things you read once and then
+     never again. The third cannot simply move, because GeoNames is CC BY 4.0
+     and attribution is a condition of the licence, not a courtesy - so it has
+     to stay reachable inside the app, and folding is the only way to have both.
+     The summary line is what a curious reader opens; nobody else pays for it. -->
+<details class="card fold foot" id="aboutCard">
+  <summary><h2 data-i="aboutTitle"></h2></summary>
+  <div class="tiny" data-i="foot"></div>
+</details>
 
 <script src="./ephemeris.js"></script>
 <script>
@@ -778,7 +795,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
 /* Bump together with CACHE in sw.js: the two are the same release, and the
    number on screen is how you tell from a phone which one you are looking at. */
-const APP_VERSION='3.6.0';
+const APP_VERSION='3.6.1';
 document.getElementById('ver').textContent=APP_VERSION;
 
 /* ---------- feature flags ----------
@@ -931,6 +948,7 @@ const STR = {
   sfPlacement:{ru:'Положение',en:'Placement'},
   sfAspects:{ru:'Аспекты',en:'Aspects'},
   pointOrb:{ru:'Узлы, Лилит, Селена',en:'Nodes, Lilith, Selena'},
+  aboutTitle:{ru:'Источники и точность',en:'Sources and accuracy'},
   copy:{ru:'Копировать',en:'Copy'},
   copied:{ru:'Скопировано',en:'Copied'},
   copyFail:{ru:'Не удалось скопировать',en:'Copy failed'},

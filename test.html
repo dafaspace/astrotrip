@@ -602,6 +602,41 @@ function run(){
     return bad.length===0||bad.join('; ');
   });
 
+  /* ---------- источники и точность ---------- */
+  group('Источники и точность');
+  t('атрибуция GeoNames никуда не делась',()=>{
+    /* Единственная строка из трёх, которую нельзя просто перенести в описание
+       в магазине: GeoNames под CC BY 4.0, и указание авторства это условие
+       лицензии, а не вежливость. Обещание про JPL и про отсутствие сети можно
+       было свернуть, эту строку нужно было сохранить достижимой. */
+    const el=D.getElementById('aboutCard');
+    if(!el) return 'карточки источников нет';
+    const txt=el.textContent;
+    if(!/GeoNames/.test(txt)) return 'нет упоминания GeoNames';
+    return /CC BY 4\.0/.test(txt)||'нет названия лицензии';
+  });
+  t('карточка источников свёрнута и не занимает экран',()=>{
+    const el=D.getElementById('aboutCard');
+    if(el.open) return 'карточка раскрыта по умолчанию';
+    return el.getBoundingClientRect().height<60
+      ||`свёрнутая высота ${Math.round(el.getBoundingClientRect().height)} px`;
+  });
+  t('слоган виден в вебе и скрыт в магазинной сборке',()=>{
+    /* На вебе человек приходит холодным, и строка отвечает "что это такое".
+       В магазине на этот вопрос уже ответило описание, и к моменту запуска
+       это абзац вертикального места над сгибом, потраченный на известное. */
+    const r=ev(`(()=>{const tag=document.querySelector('header p[data-i="tagline"]');
+      if(!tag) return {missing:true};
+      const web=tag.offsetHeight>0;
+      document.documentElement.classList.add('native');
+      const native=tag.offsetHeight>0;
+      document.documentElement.classList.remove('native');
+      return {web,native};})()`);
+    if(r.missing) return 'слогана нет в разметке';
+    if(!r.web) return 'слоган скрыт и в вебе';
+    return !r.native||'слоган виден в магазинной сборке';
+  });
+
   /* ---------- экспорт карты ---------- */
   group('Экспорт карты');
   const EXP=`(()=>{const keep=LANG; LANG='ru';
@@ -660,8 +695,12 @@ function run(){
     /* Через именованные производители, а не через селекторы разметки: первая
        версия читала innerText карточки, и у аспектной таблицы он выглядит как
        "down ☉ ☽ ☿ ♀ ♂" - ни одной пары и ни одного аспекта в нём нет. Кнопка,
-       копирующая бессмыслицу, хуже отсутствующей кнопки. */
-    const r=ev(`(()=>{const out=[], unknown=[];
+       копирующая бессмыслицу, хуже отсутствующей кнопки.
+
+       Карта своя, а не оставленная предыдущим тестом: зависимость на чужой
+       CURRENT уже роняла этот набор один раз. */
+    const r=ev(`(()=>{const keep=CURRENT, out=[], unknown=[];
+      CURRENT=computeChart(1985,3,20,6.5,3,55.7558,37.6173);
       showDetail('Moon',CURRENT);
       document.querySelectorAll('[data-copy]').forEach(b=>{
         const src=b.getAttribute('data-copy');
@@ -669,7 +708,8 @@ function run(){
         if(!fn){ unknown.push(src); return; }
         if(!String(fn()||'').trim()) out.push(src);
       });
-      return {empty:out, unknown, count:document.querySelectorAll('[data-copy]').length};})()`);
+      const n=document.querySelectorAll('[data-copy]').length;
+      CURRENT=keep; return {empty:out, unknown, count:n};})()`);
     if(r.unknown.length) return 'кнопка без производителя: '+r.unknown.join(', ');
     if(r.count<5) return 'кнопок копирования '+r.count+', ждём не меньше пяти';
     return r.empty.length===0||'пустой источник: '+r.empty.join(', ');
@@ -677,11 +717,12 @@ function run(){
   t('сырое суточное движение убрано, а стационарность названа словом',()=>{
     /* Знак ретроградности уже говорит направление, так что число несло только
        «тело почти не движется» - и говорило это в форме, которую не читают. */
-    const r=ev(`(()=>{const keep=LANG; LANG='ru';
-      showDetail('Moon',CURRENT);
+    const r=ev(`(()=>{const keepL=LANG, keepC=CURRENT; LANG='ru';
+      const c=computeChart(1985,3,20,6.5,3,55.7558,37.6173);
+      showDetail('Moon',c);
       const txt=document.getElementById('detail').innerText;
       const stat=isStationary('Saturn',0.001), moving=isStationary('Saturn',0.03);
-      LANG=keep; return {txt,stat,moving};})()`);
+      LANG=keepL; CURRENT=keepC; return {txt,stat,moving};})()`);
     if(/за сутки|per day/.test(r.txt)) return 'суточное движение всё ещё в карточке';
     if(!r.stat) return 'почти стоящий Сатурн не признан стационарным';
     return !r.moving||'Сатурн на обычной скорости признан стационарным';
