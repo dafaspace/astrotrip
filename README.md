@@ -59,6 +59,26 @@ from 14.4 aspects to 27.5 and the worst case from 25 to 39. Capped at 3 degrees 
 21.4 and 32. The cap is one number and it sits with the other orbs, because it is
 exactly the kind of number astrologers disagree about.
 
+### The whole chart as one block of text
+
+A folded card carries every computed fact in one plain-text block with a copy button:
+placements with dignity, dispositor chain, houses ruled and where each theme lands,
+receptions, every aspect with its orb and whether it applies or separates,
+configurations, and the balance. It is meant to be pasted into a language model.
+
+The reason is a real complaint about how astrology is published. Sites give a page per
+element, so "Moon in Scorpio" is read on its own and comes out sounding far harsher than
+it is in a chart where its dispositor is well placed, where it is received, and where
+three other factors pull the other way. The reader is then left to weigh the
+contradictions, which is the hard part and the part nobody hands over. Giving a model
+the whole evidence set at once is what makes weighing possible; the block opens by
+asking for exactly that. What it cannot do is force the model to weigh rather than list.
+
+Copy controls resolve a **named producer**, not a CSS selector. Reading `innerText` off
+the rendered card was the first idea and it was wrong: the aspect grid's text form is
+"down ☉ ☽ ☿ ♀ ♂ ..." with no pairs and no aspects in it at all. A control that copies
+something useless is worse than no control.
+
 ### The structural layer
 
 `chartFacts()` computes everything about a chart that follows from a rule and that
@@ -543,7 +563,7 @@ mattered: before it did, a deliberately broken app passed every check. The runne
 for the city atlas to finish loading, or the atlas tests would silently check the inline
 seed instead.
 
-**256 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
+**263 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
 library, robustness over 1550-2250 and at polar latitudes, house systems (angles land
 on the cusps, cusps run round the circle without crossing, quadrant systems coincide at
 the equator, zero-latitude bodies get the same house from both methods), library data

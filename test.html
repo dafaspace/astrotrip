@@ -602,6 +602,91 @@ function run(){
     return bad.length===0||bad.join('; ');
   });
 
+  /* ---------- экспорт карты ---------- */
+  group('Экспорт карты');
+  const EXP=`(()=>{const keep=LANG; LANG='ru';
+    const c=computeChart(1985,3,20,6.5,3,55.7558,37.6173);
+    const ru=chartExportText(c);
+    LANG='en'; const en=chartExportText(c);
+    LANG=keep; return {ru,en};})()`;
+  t('в блок попадает каждое тело, включая точки',()=>{
+    const r=ev(EXP);
+    const miss=ev(`(()=>{const keep=LANG; LANG='ru';
+      const c=computeChart(1985,3,20,6.5,3,55.7558,37.6173);
+      const txt=chartExportText(c);
+      const out=WHEEL_BODIES.concat(FACT_POINTS).filter(p=>c.pos[p]&&!txt.includes(PN(p)));
+      LANG=keep; return out;})()`);
+    return miss.length===0||'нет в блоке: '+miss.join(', ');
+  });
+  t('в блоке есть все аспекты, конфигурации и баланс',()=>{
+    const r=ev(`(()=>{const keep=LANG; LANG='ru';
+      const c=computeChart(1985,3,20,6.5,3,55.7558,37.6173);
+      const txt=chartExportText(c);
+      const n=findAspects(c.pos).length;
+      /* Ожидаемые строки строятся ДО восстановления языка. В первой версии
+         LANG=keep стоял выше, и русский текст сравнивался с английскими
+         именами планет: тест кричал на исправное приложение. */
+      const cfgNames=findConfigurations(c.pos).map(f=>f.bodies.map(PN).join(', '));
+      const res={claims:(new RegExp('АСПЕКТЫ \\\\('+n+'\\\\)')).test(txt),
+        lines:(txt.match(/орбис \\d/g)||[]).length, n,
+        cfgIn:cfgNames.every(nm=>txt.includes(nm)),
+        balance:/БАЛАНС/.test(txt)&&/Огонь \\d/.test(txt)};
+      LANG=keep; return res;})()`);
+    if(!r.claims) return 'заголовок аспектов не назвал их число';
+    if(r.lines!==r.n) return `строк аспектов ${r.lines}, а найдено ${r.n}`;
+    if(!r.cfgIn) return 'не все конфигурации попали в блок';
+    return r.balance||'нет баланса';
+  });
+  t('блок это текст, а не разметка',()=>{
+    /* Его вставляют в чужое поле ввода. Любой тег там будет показан как есть. */
+    const r=ev(EXP);
+    const bad=['ru','en'].filter(k=>/<[a-z/]/i.test(r[k]));
+    return bad.length===0||'разметка в: '+bad.join(', ');
+  });
+  t('блок следует языку приложения',()=>{
+    const r=ev(EXP);
+    if(!/ПОЛОЖЕНИЯ И СВЯЗИ/.test(r.ru)) return 'русский заголовок не найден';
+    if(!/PLACEMENTS AND LINKS/.test(r.en)) return 'английский заголовок не найден';
+    return !/ПОЛОЖЕНИЯ/.test(r.en)||'русский текст протёк в английский блок';
+  });
+  t('система домов названа один раз, а не дважды',()=>{
+    /* Первая версия печатала её и в строке шапки, и отдельной строкой - это
+       первое, что бросалось в глаза при чтении. */
+    const r=ev(EXP);
+    return (r.ru.match(/Плацидус/g)||[]).length<=1
+      ||'система домов названа '+(r.ru.match(/Плацидус/g)||[]).length+' раза';
+  });
+  t('каждая кнопка копирования находит непустой текст',()=>{
+    /* Через именованные производители, а не через селекторы разметки: первая
+       версия читала innerText карточки, и у аспектной таблицы он выглядит как
+       "down ☉ ☽ ☿ ♀ ♂" - ни одной пары и ни одного аспекта в нём нет. Кнопка,
+       копирующая бессмыслицу, хуже отсутствующей кнопки. */
+    const r=ev(`(()=>{const out=[], unknown=[];
+      showDetail('Moon',CURRENT);
+      document.querySelectorAll('[data-copy]').forEach(b=>{
+        const src=b.getAttribute('data-copy');
+        const fn=COPY_SOURCES[src];
+        if(!fn){ unknown.push(src); return; }
+        if(!String(fn()||'').trim()) out.push(src);
+      });
+      return {empty:out, unknown, count:document.querySelectorAll('[data-copy]').length};})()`);
+    if(r.unknown.length) return 'кнопка без производителя: '+r.unknown.join(', ');
+    if(r.count<5) return 'кнопок копирования '+r.count+', ждём не меньше пяти';
+    return r.empty.length===0||'пустой источник: '+r.empty.join(', ');
+  });
+  t('сырое суточное движение убрано, а стационарность названа словом',()=>{
+    /* Знак ретроградности уже говорит направление, так что число несло только
+       «тело почти не движется» - и говорило это в форме, которую не читают. */
+    const r=ev(`(()=>{const keep=LANG; LANG='ru';
+      showDetail('Moon',CURRENT);
+      const txt=document.getElementById('detail').innerText;
+      const stat=isStationary('Saturn',0.001), moving=isStationary('Saturn',0.03);
+      LANG=keep; return {txt,stat,moving};})()`);
+    if(/за сутки|per day/.test(r.txt)) return 'суточное движение всё ещё в карточке';
+    if(!r.stat) return 'почти стоящий Сатурн не признан стационарным';
+    return !r.moving||'Сатурн на обычной скорости признан стационарным';
+  });
+
   /* ---------- печатный лист ---------- */
   group('Печатный лист');
   const SHEET=`(()=>{const el=document.getElementById('printFacts');

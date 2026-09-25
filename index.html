@@ -375,6 +375,12 @@ button.ico:disabled{opacity:.4;cursor:default}
 /* WKWebView ignores window.print() silently, so inside the store build the
    button is removed rather than left there doing nothing. */
 html.native #printBtn{display:none}
+/* One press, and it says so afterwards. A copy control that gives no feedback
+   leaves you pressing it twice and still not knowing. */
+.copybtn{font-size:12px;padding:.45em .8em;min-height:32px}
+.copybtn.done{border-color:var(--accent);color:var(--accent)}
+.cardhead{display:flex;align-items:center;gap:8px;margin:0 0 8px}
+.cardhead .sp{flex:1}
 #printFactsCard{display:none}
 .pf-top{font-size:9pt;color:var(--ink2);margin-bottom:3mm}
 .pf-body{break-inside:avoid;page-break-inside:avoid;margin:0 0 3.5mm}
@@ -650,6 +656,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
     <details class="card fold" id="positionsCard">
       <summary><h2 data-i="positions"></h2></summary>
       <div id="positions"></div>
+      <div class="cardhead" style="margin-top:8px"><button type="button" class="copybtn noprint" data-i="copy" data-copy="placements"></button><span class="sp"></span></div>
       <div class="tiny" style="margin-top:8px" data-i="posnote"></div>
     </details>
 
@@ -672,6 +679,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
     <details class="card fold" id="confCard">
       <summary><h2 data-i="conf"></h2><span class="tiny" id="confBrief"></span></summary>
       <div id="confList"></div>
+      <div class="cardhead" style="margin-top:8px"><button type="button" class="copybtn noprint" data-i="copy" data-copy="configurations"></button><span class="sp"></span></div>
       <div class="tiny" style="margin-top:8px" data-i="confNote"></div>
     </details>
 
@@ -682,6 +690,16 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
       <div class="gridwrap"><div id="aspGrid"></div></div>
       <div class="tiny" id="gridPick"></div>
       <div class="tiny" style="margin-top:8px" data-i="gridNote"></div>
+      <div class="cardhead" style="margin-top:8px"><button type="button" class="copybtn noprint" data-i="copy" data-copy="aspects"></button><span class="sp"></span></div>
+    </details>
+
+    <!-- The whole chart as text, for pasting into a language model. Folded,
+         because it is a tool rather than something to read on the way past. -->
+    <details class="card fold" id="exportCard">
+      <summary><h2 data-i="exportTitle"></h2><span class="tiny" data-i="exportBrief"></span></summary>
+      <div class="tiny" data-i="exportNote" style="margin-bottom:10px"></div>
+      <div class="cardhead"><button type="button" class="copybtn noprint" data-i="copy" data-copy="export"></button><span class="sp"></span></div>
+      <pre id="exportText" style="white-space:pre-wrap;word-break:break-word;font:12px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--paper3);border-radius:10px;padding:10px;margin:0;max-height:50vh;overflow:auto"></pre>
     </details>
 
     <!-- Paper only. Every body under the same headings, so the whole
@@ -760,7 +778,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
 /* Bump together with CACHE in sw.js: the two are the same release, and the
    number on screen is how you tell from a phone which one you are looking at. */
-const APP_VERSION='3.5.0';
+const APP_VERSION='3.6.0';
 document.getElementById('ver').textContent=APP_VERSION;
 
 /* ---------- feature flags ----------
@@ -913,6 +931,16 @@ const STR = {
   sfPlacement:{ru:'Положение',en:'Placement'},
   sfAspects:{ru:'Аспекты',en:'Aspects'},
   pointOrb:{ru:'Узлы, Лилит, Селена',en:'Nodes, Lilith, Selena'},
+  copy:{ru:'Копировать',en:'Copy'},
+  copied:{ru:'Скопировано',en:'Copied'},
+  copyFail:{ru:'Не удалось скопировать',en:'Copy failed'},
+  exportTitle:{ru:'Карта целиком, для ИИ',en:'The whole chart, for an AI'},
+  exportBrief:{ru:'скопировать и вставить',en:'copy and paste'},
+  exportNote:{ru:'Один блок со всем, что приложение посчитало: положения, достоинства, цепочки диспозиторов, рецепции, аспекты с орбисами, конфигурации и баланс. Скопируйте его и вставьте в любой ИИ. Смысл в том, что разбор делается по всей совокупности сразу, а не по элементам поодиночке: отдельно взятый показатель почти всегда читается резче, чем он есть в карте, где его уравновешивают другие.',
+    en:'One block with everything the app computed: placements, dignities, dispositor chains, receptions, aspects with orbs, configurations and balance. Copy it and paste it into any AI. The point is that the reading is made from the whole set at once rather than element by element: a single factor on its own almost always reads harsher than it is in a chart where other factors balance it.'},
+  stationary:{ru:'стационарна',en:'stationary'},
+  applying:{ru:'сходится',en:'applying'},
+  separating:{ru:'расходится',en:'separating'},
   sheetTitle:{ru:'Структура карты',en:'Chart structure'},
   sheetDay:{ru:'карта дневная',en:'day chart'},
   sheetNight:{ru:'карта ночная',en:'night chart'},
@@ -4966,11 +4994,223 @@ function structureBlock(ch,p){
 /* Filled on the way to paper, not on every render: nothing on screen reads it,
    and the browser's own print command bypasses the button entirely, so both
    doors lead here. */
+/* The block is built when its fold is opened and after every recast, not on
+   every render: nobody reads it on the way past, and it is the most expensive
+   text the app produces. */
+function fillExport(){
+  const el=document.getElementById('exportText'); if(!el) return;
+  const card=document.getElementById('exportCard');
+  if(card&&!card.open) return;
+  el.textContent=(typeof CURRENT!=='undefined'&&CURRENT)?chartExportText(CURRENT):'';
+}
 function fillPrintSheet(){
   const el=document.getElementById('printFacts'); if(!el) return;
   el.innerHTML=(typeof CURRENT!=='undefined'&&CURRENT)?printFactsSheet(CURRENT):'';
 }
 if(typeof window!=='undefined') window.addEventListener('beforeprint',fillPrintSheet);
+
+/* ---------- one press to copy ----------
+   navigator.clipboard needs a secure context, which https and capacitor://
+   both are and file:// is not, so the textarea fallback is not decoration.
+   The button reports what happened either way: a copy control that stays
+   silent leaves you pressing it twice and still not knowing. */
+async function copyText(txt,btn){
+  let ok=false;
+  try{ await navigator.clipboard.writeText(txt); ok=true; }
+  catch(e){
+    try{
+      const ta=document.createElement('textarea');
+      ta.value=txt; ta.style.cssText='position:fixed;left:-9999px;top:0';
+      document.body.appendChild(ta); ta.select();
+      ok=document.execCommand('copy'); ta.remove();
+    }catch(e2){}
+  }
+  if(btn){
+    const was=btn.textContent;
+    btn.textContent=ok?t('copied'):t('copyFail');
+    btn.classList.toggle('done',ok);
+    setTimeout(()=>{btn.textContent=was;btn.classList.remove('done');},1600);
+  }
+  return ok;
+}
+/* Delegated once, so any control marked data-copy works, including the ones
+   rendered after this runs. The source is named by selector rather than by a
+   closure, which is what lets a redrawn card keep its button. */
+/* Named producers, not selectors. The detail panel is the one place where the
+   rendered text IS the text - it is already one fact per line - so it is read
+   from the DOM; everything else is generated. */
+const COPY_SOURCES={
+  export:()=>chartExportText(CURRENT),
+  placements:()=>placementLines(CURRENT).join('\n'),
+  aspects:()=>aspectLines(CURRENT).join('\n'),
+  configurations:()=>configurationLines(CURRENT).join('\n'),
+  detail:()=>document.getElementById('detail').innerText
+};
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-copy]'); if(!b) return;
+  const fn=COPY_SOURCES[b.getAttribute('data-copy')]; if(!fn) return;
+  if(typeof CURRENT==='undefined'||!CURRENT) return;
+  const txt=fn()||'';
+  if(txt.trim()) copyText(txt,b);
+});
+const copyBtnHTML=(src,label)=>
+  `<button type="button" class="copybtn noprint" data-copy="${src}">${label||t('copy')}</button>`;
+
+/* ---------- the whole chart as text ----------
+   Everything the engine knows, in one block, meant to be copied and pasted
+   into a language model. The reason it exists is a real complaint about how
+   astrology is published online: sites give a page per element, so "Moon in
+   Scorpio" is read on its own and comes out sounding far harsher than it is in
+   a chart where its dispositor is well placed, where it is received, and where
+   three other factors pull the other way. A reader then has to weigh the
+   contradictions themselves, which is the hard part and the part nobody hands
+   over. Giving a model the whole evidence set at once is what makes weighing
+   possible at all.
+
+   Plain words rather than the terse form parityDigest uses: that one is a
+   contract between two builds and is read by a diff, this one is read by a
+   model and by a person, and it should not need a key. In the app's language,
+   like everything else.
+
+   What it cannot do is force the model to weigh rather than list. The header
+   asks for it, and asking is all a block of text can do. */
+const MEAN_MOTION={Sun:0.9856,Moon:13.176,Mercury:1.383,Venus:1.602,Mars:0.524,
+  Jupiter:0.0831,Saturn:0.0335,Uranus:0.0117,Neptune:0.006,Pluto:0.004,
+  Chiron:0.0195,NNode:0.0529,SNode:0.0529,Lilith:0.1114,Selena:0.1408};
+/* Stationary is a real and strong condition and it is the only thing the raw
+   daily figure was carrying that the retrograde mark does not already say.
+   A tenth of mean motion is roughly the couple of days either side of a
+   station, which is when practice calls a body stationary. */
+const isStationary=(p,spd)=>spd!=null&&MEAN_MOTION[p]!=null
+  &&Math.abs(spd)<MEAN_MOTION[p]*0.1;
+
+/* Applying or separating, from the two speeds rather than from a table: the
+   same aspect is one or the other depending on where in its loop each body is.
+   Absent when the chart was cast without speed. */
+function aspectDirection(ch,a,b,asp){
+  const sa=ch.pos[a]&&ch.pos[a].spd, sb=ch.pos[b]&&ch.pos[b].spd;
+  if(sa==null||sb==null) return null;
+  const now=Math.abs(arcBetween(ch.pos[a].lon,ch.pos[b].lon)-asp.angle);
+  const h=0.05;
+  const later=Math.abs(arcBetween(ch.pos[a].lon+sa*h,ch.pos[b].lon+sb*h)-asp.angle);
+  return later<now?'applying':'separating';
+}
+
+function chartExportText(ch){
+  if(!ch) return '';
+  const ru=LANG==='ru';
+  const F=ch.__facts||(ch.__facts=chartFacts(ch));
+  const S=n=>LX(SIGN_NAME)[n];
+  const deg=lon=>{const d=rev(lon)%30;
+    return `${Math.floor(d)}°${String(Math.floor((d-Math.floor(d))*60)).padStart(2,'0')}′`;};
+  const place=lon=>`${deg(lon)} ${S(signOfLon(lon))}`;
+  const L=[];
+
+  L.push(ru
+    ? 'Ниже вычисленные данные натальной карты. Здесь только факты, ни одной трактовки. Прошу разбор, в котором факторы взвешены друг против друга, а не перечислены по отдельности: где один показатель уравновешивается другим, скажите об этом прямо, и скажите, какой из них в этой карте весит больше и почему.'
+    : 'Below are the computed data of a natal chart. Facts only, no interpretation. Please give a reading in which the factors are weighed against one another rather than listed separately: where one indication is balanced by another, say so plainly, and say which of them carries more weight in this chart and why.');
+  L.push('');
+
+  const meta=document.getElementById('chartMeta');
+  L.push((ru?'КАРТА':'CHART').toUpperCase());
+  if(meta&&meta.innerText.trim()) L.push(meta.innerText.trim());
+  /* The house system is already in the meta line above; repeating it was the
+     first thing a reader noticed. */
+  L.push(t(F.sect.chart==='day'?'sheetDay':'sheetNight')
+    +(F.intercepted.length?` · ${t('sheetIntercepted')}: ${F.intercepted.map(S).join(', ')}`:''));
+  L.push('');
+
+  L.push(ru?'УГЛЫ И КУСПИДЫ':'ANGLES AND CUSPS');
+  L.push(`ASC ${place(ch.asc)}   MC ${place(ch.mc)}`);
+  L.push(F.houses.map(h=>`${h.house} ${place(h.cuspLon)}`).join(' · '));
+  L.push('');
+
+  L.push(ru?'ПОЛОЖЕНИЯ И СВЯЗИ':'PLACEMENTS AND LINKS');
+  L.push(...placementLines(ch));
+  L.push('');
+
+  const asps=findAspects(ch.pos).sort((a,b)=>a.orb-b.orb);
+  L.push((ru?'АСПЕКТЫ':'ASPECTS')+` (${asps.length})`);
+  L.push(...aspectLines(ch));
+  L.push('');
+
+  const cfgL=configurationLines(ch);
+  if(cfgL.length){ L.push(ru?'КОНФИГУРАЦИИ':'CONFIGURATIONS'); L.push(...cfgL); L.push(''); }
+
+  const bal=chartBalance(ch);
+  L.push(ru?'БАЛАНС':'BALANCE');
+  L.push(ELEM_KEYS.map((k,i)=>`${t(k)} ${bal.el[i]}`).join(' · '));
+  L.push(MODE_KEYS.map((k,i)=>`${t(k)} ${bal.mo[i]}`).join(' · '));
+  L.push([['hemi_e',bal.hemi.e],['hemi_w',bal.hemi.w],['hemi_n',bal.hemi.n],['hemi_s',bal.hemi.s]]
+    .map(([k,n])=>`${t(k)} ${n}`).join(' · '));
+  L.push('');
+  L.push(ru
+    ? 'Достоинства и диспозиторы считаются по классическим управителям. Рецепции только по обители и экзальтации. Орбис для узлов, Лилит и Селены сужен.'
+    : 'Dignities and dispositors use the classical rulers. Receptions are by domicile and exaltation only. The orb for the nodes, Lilith and Selena is narrowed.');
+  return L.join('\n');
+}
+
+/* The three blocks that are worth copying on their own, each generated rather
+   than scraped. Reading innerText off the rendered card was the first idea and
+   it was wrong: the aspect grid's text form is "down ☉ ☽ ☿ ♀ ♂ ..." with no
+   pairs and no aspects in it at all, and the positions list comes out one span
+   per line. A control that copies something useless is worse than no control,
+   so the grid has none and the reason is here rather than in a bug report. */
+function placementLines(ch){
+  const ru=LANG==='ru';
+  const F=ch.__facts||(ch.__facts=chartFacts(ch));
+  const S=n=>LX(SIGN_NAME)[n];
+  const deg=lon=>{const d=rev(lon)%30;
+    return `${Math.floor(d)}°${String(Math.floor((d-Math.floor(d))*60)).padStart(2,'0')}′`;};
+  const place=lon=>`${deg(lon)} ${S(signOfLon(lon))}`;
+  const L=[];
+  WHEEL_BODIES.concat(FACT_POINTS).filter(p=>ch.pos[p]).forEach(p=>{
+    const f=F.planets[p], b=ch.pos[p];
+    const head=[`${PN(p)} ${place(b.lon)}`,
+      ru?`дом ${f.house}`:`house ${f.house}`];
+    if(b.retro) head.push(t('retrograde'));
+    if(isStationary(p,b.spd)) head.push(t('stationary'));
+    if(f.dignity) head.push(t(DIG_KEY[f.dignity]));
+    if(f.angularity) head.push(t(ANG_KEY[f.angularity]));
+    if(f.sect.status!=='neutral') head.push(t(f.sect.status==='inSect'?'sectIn':'sectContrary'));
+    if(f.solar.condition&&f.solar.condition!=='free') head.push(t(SOL_KEY[f.solar.condition]));
+    L.push(head.join(', '));
+    if(f.dispositor==null) L.push('  '+t('sfOwnSign'));
+    else{
+      let d='  '+t('sfDispositor').toLowerCase()+': '+[p,...f.dispositorChain].map(PN).join(' -> ');
+      if(f.loop) d+=`, ${t('sfCycle').toLowerCase()} ${f.loop.map(PN).join(' <-> ')}, ${t('sfNoFinal').toLowerCase()}`;
+      else if(f.terminal) d+=`, ${t('sfFinal').toLowerCase()}: ${PN(f.terminal)}`;
+      L.push(d);
+    }
+    if(f.rulesHouses.length){
+      const hs=f.rulesHouses.slice().sort((a,b2)=>a-b2);
+      const rHead=ru
+        ? (hs.length===1?`управляет ${hs[0]} домом`
+           :`управляет ${hs.slice(0,-1).join(', ')} и ${hs[hs.length-1]} домами`)
+        : `rules house${hs.length>1?'s':''} ${hs.join(', ')}`;
+      L.push('  '+rHead
+        +(f.carries.length?', '+f.carries.map(c=>ru?`тема ${c.from} дома проявляется в ${c.into}`
+          :`theme of house ${c.from} lands in ${c.into}`).join('; '):''));
+    }
+    const rec=F.receptions.filter(r=>r.to===p).slice().sort((a,b2)=>
+      (REC_ORDER[a.type]-REC_ORDER[b2.type])||PN(a.from).localeCompare(PN(b2.from)));
+    if(rec.length) L.push('  '+(ru?'принимают':'received by')+': '+rec.map(r=>{
+      const mut=F.mutualReceptions.some(m=>(m.a===r.from&&m.b===p)||(m.a===p&&m.b===r.from));
+      return `${PN(r.from)} ${t(REC_KEY[r.type])}${mut?' ('+t('sfMutual')+')':''}`;}).join(', '));
+  });
+  return L;
+}
+function aspectLines(ch){
+  return findAspects(ch.pos).sort((a,b)=>a.orb-b.orb).map(a=>{
+    const dir=aspectDirection(ch,a.p1,a.p2,a.asp);
+    return `${PN(a.p1)} ${LX(ASPECT_NAME)[a.asp.name]} ${PN(a.p2)}, ${t('orb')} ${a.orb.toFixed(1)}°`
+      +(dir?', '+t(dir):'');
+  });
+}
+function configurationLines(ch){
+  return findConfigurations(ch.pos)
+    .map(c=>`${t('conf_'+c.kind)}: ${c.bodies.map(PN).join(', ')}`);
+}
 
 /* ---------- golden parity ----------
    One string that stands for the whole structural layer on a fixed set of
@@ -5043,7 +5283,11 @@ function showDetail(p,ch){
   const asps=findAspects(ch.pos).filter(a=>a.p1===p||a.p2===p);
   const sp=ch.pos[p].spd;
   const rx=ch.pos[p].retro?` <span class="rx">\u211e</span> ${t('retrograde')}`:'';
-  const spd=sp==null?'':` · ${t('dailymotion')} ${sp>=0?'+':'\u2212'}${Math.abs(sp).toFixed(3)}\u00b0`;
+  /* The raw daily figure is gone. The retrograde mark already says the sign of
+     it, so the only thing the number carried on its own was "this body is
+     barely moving" - which is a real and strong condition, and which a number
+     states in a form nobody reads. It is said in words instead. */
+  const spd=isStationary(p,sp)?` · ${t('stationary')}`:'';
   let html=`<div style="font-size:16px"><span class="af">${GLYPH[p]}</span> <b>${PN(p)}</b> - <span class="deg">${f.html}</span>${rx}, ${t('house')} ${hs}${spd}</div>`;
   if(LX(PLANET_FN)[p]) html+=`<div class="tiny" style="margin:4px 0 8px">${LX(PLANET_FN)[p]}</div>`;
   html+=structureBlock(ch,p);
@@ -5052,6 +5296,9 @@ function showDetail(p,ch){
       const other=a.p1===p?a.p2:a.p1;
       return `<div style="padding:3px 0"><span style="color:${a.asp.color}"><span class="af">${ASPECT_GLYPH[a.asp.name]}</span> ${LX(ASPECT_NAME)[a.asp.name]}</span> <span class="af">${GLYPH[other]}</span> ${PN(other)} <span class="tiny">${t('orb')} ${a.orb.toFixed(1)}°</span></div>`;
     }).join('') : `<div class="tiny">${t('noaspects')}</div>`;
+  html+=`<div class="cardhead" style="margin-top:10px">`
+    +`<button type="button" class="copybtn noprint" data-copy="detail">${t('copy')}</button>`
+    +`<span class="sp"></span></div>`;
   el.innerHTML=html;
 }
 
@@ -6188,6 +6435,7 @@ function run(){
   document.getElementById('charttitle').textContent=
     `${t('natal')} · ${(hs?LX(hs):CURRENT.houses.system)}`;
   renderPositions(CURRENT); renderBalance(CURRENT); renderChartMeta(CURRENT,y,mo,da,hh,mi,tz);
+  fillExport();
   saveForm();
   renderRelocBrief();
   if(FEATURES.interpretation) document.getElementById('reading').innerHTML=natalReading(CURRENT);
@@ -6789,6 +7037,7 @@ document.getElementById('libSort').addEventListener('change',function(){
 });
 fillLibSort();
 renderLibrary();
+document.getElementById('exportCard').addEventListener('toggle',fillExport);
 
 /* Last, after every control exists and the atlas hook is in place: put the
    form back and recast. Recast rather than restore a stored chart, because the
