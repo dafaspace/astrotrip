@@ -9,6 +9,10 @@
 # Not a hash on purpose: when it differs you want to see where, and a digest
 # tells you only that it does.
 #
+# Regenerated 26 Sep 2026 when the house rule changed from latitude-aware to
+# longitude-only. The file caught that change on the first run, which is what
+# it is for.
+#
 # The six are chosen for the paths they exercise, not for being interesting:
 # a two-body dispositor cycle and two intercepted signs (1985), a four-body
 # cycle (2000), three separate final dispositors at once (2001, which also
@@ -17,15 +21,15 @@
 # end of the ephemeris in the southern hemisphere (2200).
 1985-3-20 placidus night int:AriLib term:- loop:Mars+Venus
 Sun Psc29 h1 peregrine d:Jupiter r:6 angular contraryToSect -
-Moon Psc14 h1 peregrine d:Jupiter r:5 angular inSect underBeams
+Moon Psc14 h12 peregrine d:Jupiter r:5 cadent inSect underBeams
 Mercury Ari17 h1 peregrine d:Mars r:3,4,7 angular inSect free
-Venus Ari21 h12 detriment d:Mars r:2 cadent inSect free
+Venus Ari21 h1 detriment d:Mars r:2 angular inSect free
 Mars Tau3 h1 detriment d:Venus r:8 angular inSect free
 Jupiter Aqr8 h12 peregrine d:Saturn r:1,9,10 cadent contraryToSect free
 Saturn Sco27 h8 peregrine d:Mars r:11,12 succedent contraryToSect free
 Uranus Sgr17 h9 - d:Jupiter r:- cadent neutral free
 Neptune Cap3 h10 - d:Saturn r:- angular neutral free
-Pluto Sco4 h8 - d:Mars r:- succedent neutral free
+Pluto Sco4 h7 - d:Mars r:- angular neutral free
 Chiron Gem4 h2 - d:Mercury r:- succedent neutral free
 rec Jupiter>Moon:d Jupiter>Sun:d Jupiter>Uranus:d Mars>Lilith:d Mars>Mercury:d Mars>Neptune:e Mars>Pluto:d Mars>SNode:d Mars>Saturn:d Mars>Venus:d Mercury>Chiron:d Moon>Mars:e Moon>NNode:e Saturn>Jupiter:d Saturn>Neptune:d Saturn>Selena:e Sun>Lilith:e Sun>Mercury:e Sun>Venus:e Venus>Mars:d Venus>Moon:e Venus>NNode:d Venus>Selena:d Venus>Sun:e
 --
@@ -39,7 +43,7 @@ Jupiter Cnc5 h4 exalt d:Moon r:9 angular inSect free
 Saturn Cap15 h10 ruler d:self r:10,11,12 angular inSect combust
 Uranus Cap5 h10 - d:Saturn r:- angular neutral combust
 Neptune Cap12 h10 - d:Saturn r:- angular neutral combust
-Pluto Sco17 h8 - d:Mars r:- succedent neutral free
+Pluto Sco17 h7 - d:Mars r:- angular neutral free
 Chiron Cnc13 h4 - d:Moon r:- angular neutral free
 rec Jupiter>Chiron:e Jupiter>Mars:d Jupiter>Moon:d Mars>Lilith:d Mars>Mercury:e Mars>Neptune:e Mars>Pluto:d Mars>Saturn:e Mars>Sun:e Mars>Uranus:e Mercury>Selena:d Moon>Chiron:d Moon>Jupiter:d Saturn>Mercury:d Saturn>NNode:d Saturn>Neptune:d Saturn>Sun:d Saturn>Uranus:d Saturn>Venus:d Sun>SNode:d Venus>Moon:e
 --
@@ -53,7 +57,7 @@ Jupiter Ari25 h7 peregrine d:Mars r:3,6 angular contraryToSect free
 Saturn Tau10 h7 peregrine d:Venus r:4,5 angular contraryToSect free
 Uranus Aqr14 h5 - d:Saturn r:- succedent neutral free
 Neptune Aqr3 h4 - d:Saturn r:- angular neutral free
-Pluto Sgr11 h3 - d:Jupiter r:- cadent neutral free
+Pluto Sgr11 h2 - d:Jupiter r:- succedent neutral free
 Chiron Sgr11 h3 - d:Jupiter r:- cadent neutral free
 rec Jupiter>Chiron:d Jupiter>Lilith:d Jupiter>Pluto:d Jupiter>Selena:d Jupiter>Venus:d Mars>Jupiter:d Mars>Mercury:e Mars>Moon:d Mars>Sun:e Moon>Saturn:e Saturn>Mars:d Saturn>Mercury:d Saturn>Neptune:d Saturn>SNode:d Saturn>Sun:d Saturn>Uranus:d Sun>Jupiter:e Sun>NNode:d Venus>Saturn:d
 --

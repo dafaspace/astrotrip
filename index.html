@@ -561,6 +561,10 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
     <label style="display:flex;align-items:center;gap:7px;margin-top:10px;text-transform:none;font-size:13px;color:var(--ink2);cursor:pointer">
       <input id="showSeconds" type="checkbox" style="width:auto"><span data-i="secondsLabel"></span>
     </label>
+    <label class="chk" style="display:flex;align-items:center;gap:8px;min-height:44px">
+      <input id="house3d" type="checkbox" style="width:auto"><span data-i="house3d"></span>
+    </label>
+    <div class="tiny" data-i="house3dNote" style="margin:-4px 0 4px"></div>
     <div class="grid" style="margin-top:10px">
       <div><label data-i="hsysLabel"></label><select id="hsys"></select></div>
       <div><label data-i="lilLabel"></label><select id="lilmode"></select></div>
@@ -795,7 +799,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
 /* Bump together with CACHE in sw.js: the two are the same release, and the
    number on screen is how you tell from a phone which one you are looking at. */
-const APP_VERSION='3.6.1';
+const APP_VERSION='3.7.0';
 document.getElementById('ver').textContent=APP_VERSION;
 
 /* ---------- feature flags ----------
@@ -947,6 +951,11 @@ const STR = {
   sfReceptions:{ru:'Рецепции',en:'Receptions'},
   sfPlacement:{ru:'Положение',en:'Placement'},
   sfAspects:{ru:'Аспекты',en:'Aspects'},
+  house3d:{ru:'Дом с учётом широты (3D, только Плацидус)',
+    en:'House by latitude as well (3D, Placidus only)'},
+  house3dNote:{ru:'Обычные программы ставят тело в дом только по долготе, и колесо рисует его так же. Включённая опция учитывает ещё и эклиптическую широту: на 4% положений ответ меняется, чаще всего у Плутона. Тогда глиф на колесе и номер дома в тексте могут разойтись.',
+    en:'Ordinary programs place a body by longitude alone, and the wheel draws it that way. With this on, ecliptic latitude counts too: about 4% of placements change, most often Pluto. The glyph on the wheel and the house number in the text can then disagree.'},
+  house3dOn:{ru:'дома с учётом широты',en:'houses by latitude'},
   pointOrb:{ru:'Узлы, Лилит, Селена',en:'Nodes, Lilith, Selena'},
   aboutTitle:{ru:'Источники и точность',en:'Sources and accuracy'},
   copy:{ru:'Копировать',en:'Copy'},
@@ -2129,10 +2138,41 @@ function computeChart(y,mo,day,localH,tzOff,lat,lng,withSpeed){
   else pos.Lilith={lon:lilithLon(d)};
   const sel=selenaLon(d); if(sel!=null) pos.Selena={lon:sel};
   const ramc=rev(gastDeg(jdUT,Tc,dpsi,eps)+lng);
-  const mc=atan2d(sind(ramc),cosd(ramc)*cosd(ecl));
-  let asc=atan2d(cosd(ramc),-(sind(ramc)*cosd(ecl)+tand(lat)*sind(ecl)));
-  if(rev(asc-mc)>180) asc=rev(asc+180);
+  let mc=atan2d(sind(ramc),cosd(ramc)*cosd(ecl));
+  const ascRaw=atan2d(cosd(ramc),-(sind(ramc)*cosd(ecl)+tand(lat)*sind(ecl)));
+  let asc=ascRaw;
+  /* Inside the polar circle the meridian point can sink below the horizon and
+     the raw ascendant land in the western half. Swiss Ephemeris turns the whole
+     figure round there - both angles and every intermediate cusp gain 180
+     degrees, and the houses then run clockwise - but ONLY for the quadrant
+     systems that still have a definition there. Porphyry, equal and whole sign
+     keep the meridian point as computed, and Placidus and Koch it refuses
+     outright, which is why we fall back for those two.
+
+     Until v3.7.0 we instead flipped the ascendant whenever it sat more than
+     half a circle from the MC. That agreed with the reference at every ordinary
+     latitude and put the MC 180 degrees out at Tromso, taking eight of the
+     twelve cusps with it. Caught by comparing against Swiss Ephemeris. */
+  const polar=Math.abs(lat)>=90-ecl;
+  const QUAD_FLIP=['regiomontanus','campanus','topocentric'];
+  const flipQuadrant=polar&&QUAD_FLIP.includes(HSYS)
+    &&(((ascRaw-mc+540)%360)-180)<0;
+  /* Order matters and cost an attempt: the turn is applied AFTER the cusps are
+     built, from the raw angles, exactly as swehouse.c does it. Flipping the
+     angles first and the array afterwards turns cusps 1, 7 and 10 twice, since
+     those are built out of the angles that were already turned. */
+  if(!flipQuadrant&&rev(ascRaw-mc)>180) asc=rev(ascRaw+180);
   const houses=HOUSE_SYSTEMS[HSYS].fn(ramc,lat,ecl,asc,mc);
+  if(flipQuadrant&&QUAD_FLIP.includes(houses.system)){
+    asc=rev(asc+180); mc=rev(mc+180);
+    /* All twelve, not the six swehouse.c names. Its loop skips cusps 4 to 9
+       because its array is filled cusp by cusp from the raw angles; ours is
+       built as four computed points plus their four opposites, so the same
+       turn reaches every entry. Two wrong guesses at which six to move, and
+       the oracle answered cusp by cusp both times: every one was out by 180,
+       so every one turns. */
+    houses.cusps=houses.cusps.map(c=>rev(c+180));
+  }
   if(withSpeed!==false){
     const h=6/24;
     const A=computeChart(y,mo,day,localH-h*24,tzOff,lat,lng,false).pos;
@@ -2178,8 +2218,21 @@ function ascUnderPole(ramc,pole,ecl,H){
   const R=rev(ramc+H-90);
   return rev(atan2d(cosd(R), -(sind(R)*cosd(ecl)+tand(pole)*sind(ecl))));
 }
-function quadrantCusps(ramc,lat,ecl,asc,mc,poleOf,name){
-  const q=[30,60,120,150].map(H=>ascUnderPole(ramc,poleOf(H,lat),ecl,H));
+/* Two numbers vary between the quadrant systems and they are NOT the same
+   number: the pole the Ascendant is taken under, and the offset added to the
+   RAMC. Until v3.7.0 this helper assumed the offset was always H, which is
+   true for Regiomontanus and false for Campanus, and Campanus was wired into
+   it anyway. Its poles were right and its offsets were Regiomontanus's.
+
+   The failure hid because at the equator the two agree exactly: Campanus wants
+   90 - atan(tan H / cos φ), and at φ = 0 that is 90 - atan(tan H) = 90 - H,
+   which for H = 30 and 60 is the same set as {30, 60}. So the one test case
+   with a latitude of zero passed while Moscow was out by 20 degrees. Found by
+   comparing against Swiss Ephemeris, not by reading the code, and that is the
+   argument for having an external oracle at all. */
+function quadrantCusps(ramc,lat,ecl,asc,mc,poleOf,name,offsetOf){
+  const off=offsetOf||((H)=>H);
+  const q=[30,60,120,150].map(H=>ascUnderPole(ramc,poleOf(H,lat),ecl,off(H,lat)));
   const [c11,c12,c2,c3]=q;
   return {cusps:[asc,c2,c3,rev(mc+180),rev(c11+180),rev(c12+180),
                  rev(asc+180),rev(c2+180),rev(c3+180),mc,c11,c12],system:name};
@@ -2206,7 +2259,12 @@ function placidusCusps(ramc,lat,ecl,asc,mc){
   function raToLon(ra){ return atan2d(sind(ra), cosd(ra)*cosd(ecl)); }
   function iterCusp(start,f,nocturnal){
     let ra=rev(ramc+start);
-    for(let i=0;i<14;i++){
+    /* Fourteen passes were enough everywhere the suite looked and not enough
+       at Reykjavik, where the reference and we parted by 6.3 arcseconds: the
+       nearer the polar circle, the slower this converges. The loop exits on
+       the tolerance, so a higher cap costs nothing on the ordinary charts that
+       already stop after three or four. */
+    for(let i=0;i<200;i++){
       const dec=Math.atan(tand(ecl)*sind(ra))*R2D;
       let x=tand(lat)*tand(dec); x=Math.max(-0.999999,Math.min(0.999999,x));
       const ad=asind(x);
@@ -3280,8 +3338,23 @@ const HOUSE_SYSTEMS={
   placidus:{ru:'Плацидус',en:'Placidus',fn:(ramc,lat,ecl,asc,mc)=>placidusCusps(ramc,lat,ecl,asc,mc)},
   regiomontanus:{ru:'Региомонтан',en:'Regiomontanus',fn:(ramc,lat,ecl,asc,mc)=>
     Math.abs(lat)>88?equalCusps(asc):quadrantCusps(ramc,lat,ecl,asc,mc,(H,la)=>Math.atan(tand(la)*sind(H))*R2D,'regiomontanus')},
+  /* Campanus divides the PRIME VERTICAL into twelve, not the equator, so its
+     RAMC offset is the equatorial arc that corresponds to an arc of H on the
+     prime vertical: 90 - atan(tan H / cos φ). Transcribed from swehouse.c
+     case 'C', where the same thing is written as xh1 = atan(√3 / cos φ) for
+     the 30-degree points and xh2 = atan((1/√3) / cos φ) for the 60-degree
+     ones. The poles were already right: asin(sin φ · sin H). */
   campanus:{ru:'Кампанус',en:'Campanus',fn:(ramc,lat,ecl,asc,mc)=>
-    Math.abs(lat)>88?equalCusps(asc):quadrantCusps(ramc,lat,ecl,asc,mc,(H,la)=>asind(Math.max(-1,Math.min(1,sind(la)*sind(H)))),'campanus')},
+    Math.abs(lat)>88?equalCusps(asc):quadrantCusps(ramc,lat,ecl,asc,mc,
+      (H,la)=>asind(Math.max(-1,Math.min(1,sind(la)*sind(H)))),'campanus',
+      /* The arc is measured on the prime vertical from the east point, so the
+         complement of H is what goes into the tangent: swehouse.c writes the
+         30-degree points with tan 60 and the 60-degree ones with tan 30. At
+         the equator this collapses to 90 - (90 - H) = H, which is why the
+         equator case passed while every other latitude did not. */
+      (H,la)=>{const c=cosd(la);
+        if(Math.abs(c)<1e-12) return la>0?90:270;
+        return 90-Math.atan(tand(90-H)/c)*R2D;})},
   /* Koch, transcribed from the Swiss Ephemeris reference implementation
      (swehouse.c, case 'K') rather than from a description of it. Koch does not
      vary the pole the way Regiomontanus and Campanus do: the pole stays the
@@ -3358,10 +3431,29 @@ function placidusHousePos(lon,lat,ramc,geolat,ecl){
   else                   p=4-3*((180+ha)/nsa);    // below, east of the IC
   return ((p-1)%12+12)%12+1;
 }
-/* Every place that asks "which house is this body in" goes through here. */
+/* Every place that asks "which house is this body in" goes through here.
+
+   The rule is longitude against the cusps, which is what every other program
+   does and, more importantly, what THIS program draws. Until v3.7.0 Placidus
+   silently used the latitude-aware position instead, and that produced a
+   contradiction inside one screen: on Pieter de Hooch's chart the wheel drew
+   Venus at 7°58′ Aquarius, plainly before the twelfth cusp at 10°53′ Aquarius,
+   and the text beside it said house 12. Reported by a reader checking our own
+   printed cusps against our own printed house numbers, which is exactly the
+   check the export block invites. Measured across 340 library charts: 4.12% of
+   placements differed, Pluto worst at 82 of 210 because of its inclination.
+
+   The latitude-aware form is a real technique and the code for it is kept, but
+   it is an option and it is off. Astrolog, which offers it, calls it "3D
+   houses" and says plainly it is not a standard system of house division. A
+   technique nobody else applies by default must not be applied by us silently,
+   because the astrologer comparing us with Solar Fire concludes we cannot
+   count rather than that we chose differently. */
+const HOUSE3D_KEY='astrarium_house3d';
+let HOUSE_3D=localStorage.getItem(HOUSE3D_KEY)==='1';
 function bodyHouse(ch,name){
   const b=ch.pos[name]; if(!b) return null;
-  if(ch.houses.system==='placidus' && b.lat){
+  if(HOUSE_3D && ch.houses.system==='placidus' && b.lat){
     const p=placidusHousePos(b.lon,b.lat,ch.ramc,ch.geolat,ch.ecl);
     if(p!=null) return Math.floor(p);
   }
@@ -7061,6 +7153,16 @@ document.getElementById('exportCard').addEventListener('toggle',fillExport);
    form back and recast. Recast rather than restore a stored chart, because the
    engine is deterministic and a saved result would be a second version of the
    truth that a later build could disagree with. */
+{
+  const h3=document.getElementById('house3d');
+  if(h3){ h3.checked=HOUSE_3D;
+    h3.addEventListener('change',()=>{
+      HOUSE_3D=h3.checked;
+      localStorage.setItem(HOUSE3D_KEY,HOUSE_3D?'1':'0');
+      if(CURRENT){ CURRENT.__facts=null; renderPositions(CURRENT); renderBalance(CURRENT);
+        renderTransits(CURRENT); fillExport(); if(ISO) showDetail(ISO,CURRENT); }
+    }); }
+}
 if(restoreForm()) run();
 /* iOS does not reload the page when the app returns from the background, so
    nothing else would write the form back; and when it does reclaim the app,

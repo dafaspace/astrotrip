@@ -59,6 +59,7 @@ const frame=document.getElementById('app');
   try{ SW_SRC=await (await fetch('./sw.js?notacache='+Date.now())).text(); }catch(e){}
   /* The golden ChartFacts, fetched here because t() is synchronous. */
   try{ PARITY_GOLD=await (await fetch('./parity.txt?notacache='+Date.now())).text(); }catch(e){}
+  try{ SWE_REF=await (await fetch('./swe_reference.json?notacache='+Date.now())).json(); }catch(e){}
   /* The city atlas is fetched after first paint, so the run waits for it -
      otherwise the atlas tests would silently check the inline seed instead and
      pass on the wrong data. Capped, because a failed fetch must still let the
@@ -131,7 +132,7 @@ const frame=document.getElementById('app');
   },220));
   frame.src='./index.html?notacache='+Date.now();
 })();
-let SW_SRC='', PARITY_GOLD='', ATLAS_REAL_BYTES=null, ATLAS_BAR=null, ATLAS_FAIL=null, DEFAULT_RING=null;
+let SW_SRC='', PARITY_GOLD='', SWE_REF=null, ATLAS_REAL_BYTES=null, ATLAS_BAR=null, ATLAS_FAIL=null, DEFAULT_RING=null;
 
 function run(){
   const W=frame.contentWindow, D=frame.contentDocument;
@@ -294,6 +295,70 @@ function run(){
       const hits=aspectOrbs(c,t2.pos); RING_MODE=old;
       return hits.some(h=>h.np==='Chiron');})()`);
     return ok||'транзиты к натальному Хирону не считаются';
+  });
+
+  /* ---------- сверка домов со Swiss Ephemeris ---------- */
+  /* Swiss Ephemeris - та самая библиотека, на которой построены и astro.com, и
+     конкуренты. Она не поставляется с приложением и не связывается с ним: она
+     запускалась здесь, на этой машине, а в репозиторий легли числа, которые
+     она выдала. Числа - это факты, и запуск программы ради чтения её вывода не
+     делает нашу программу производной от неё. Та же схема, что уже есть с JPL
+     Horizons для положений планет, с одной разницей: Horizons ничего не знает
+     о домах, а дома до сих пор не сверялись ни с чем за пределами репозитория.
+
+     За первый же прогон эта сверка нашла три настоящие ошибки: Кампанус брал
+     смещение RAMC от Региомонтана и расходился на 20 градусов на любой широте
+     кроме нулевой; за полярным кругом вся фигура стояла на 180 градусов не
+     так; Плацидус на 64 северной не досчитывал 6 секунд дуги за четырнадцать
+     итераций. */
+  group('Дома против Swiss Ephemeris');
+  t('все восемь систем домов совпадают с эталоном до 2 секунд дуги',()=>{
+    if(!SWE_REF) return 'swe_reference.json не загрузился';
+    const bad=[]; let worst=0, where='';
+    for(const c of SWE_REF.cases){
+      for(const [sys,r] of Object.entries(c.systems)){
+        if(r.error) continue;
+        const got=ev(`(()=>{const k=HSYS; HSYS=${JSON.stringify(sys)};
+          const ch=computeChart(${c.y},${c.mo},${c.d},${c.utHours},0,${c.lat},${c.lon},false);
+          HSYS=k; return {cusps:ch.houses.cusps, asc:ch.asc, mc:ch.mc, sys:ch.houses.system};})()`);
+        if(got.sys!==sys){ bad.push(`${c.name} ${sys}: откат на ${got.sys}`); continue; }
+        const d=(a,b)=>{let x=Math.abs(a-b); if(x>180)x=360-x; return x*3600;};
+        let m=Math.max(d(got.asc,r.asc), d(got.mc,r.mc));
+        for(let i=0;i<12;i++) m=Math.max(m, d(got.cusps[i], r.cusps[i]));
+        if(m>worst){worst=m; where=`${c.name} / ${sys}`;}
+        if(m>2) bad.push(`${c.name} ${sys}: ${m.toFixed(2)}″`);
+      }
+    }
+    return bad.length===0||`${bad.length} расхождений, худшее ${worst.toFixed(1)}″ на ${where}: ${bad.slice(0,3).join('; ')}`;
+  });
+  t('Кампанус не повторяет Региомонтан вне экватора',()=>{
+    /* Именно так выглядела ошибка: полюса были верные, а смещение RAMC взято
+       от соседней системы. На экваторе формулы совпадают, поэтому единственный
+       нулевой по широте случай проходил, а Москва расходилась на 20 градусов. */
+    const r=ev(`(()=>{const k=HSYS;
+      HSYS='campanus'; const cam=computeChart(1985,3,20,3.5,0,55.7558,37.6173,false).houses.cusps;
+      HSYS='regiomontanus'; const reg=computeChart(1985,3,20,3.5,0,55.7558,37.6173,false).houses.cusps;
+      HSYS=k;
+      let mx=0; for(let i=0;i<12;i++){let d=Math.abs(cam[i]-reg[i]); if(d>180)d=360-d; if(d>mx)mx=d;}
+      return +mx.toFixed(3);})()`);
+    return r>1||`Кампанус и Региомонтан расходятся лишь на ${r}°, значит формулы совпали`;
+  });
+  t('за полярным кругом дом тела остаётся внутри 1..12',()=>{
+    /* Разворот фигуры на 180 легко делает номер дома нулевым или
+       тринадцатым, если куспиды и углы разойдутся. */
+    const bad=ev(`(()=>{const k=HSYS, out=[];
+      for(const sys of ['regiomontanus','campanus','topocentric']){
+        HSYS=sys;
+        const c=computeChart(2001,6,21,21.75,0,69.6492,18.9553,false);
+        WHEEL_BODIES.filter(p=>c.pos[p]).forEach(p=>{
+          const h=bodyHouse(c,p);
+          if(!(h>=1&&h<=12)) out.push(sys+'/'+p+': дом '+h);
+        });
+        const cu=c.houses.cusps;
+        for(let i=0;i<12;i++) if(!isFinite(cu[i])) out.push(sys+': куспид '+(i+1)+' не число');
+      }
+      HSYS=k; return out;})()`);
+    return bad.length===0||bad.join('; ');
   });
 
   /* ---------- структурные факты ---------- */
@@ -574,7 +639,7 @@ function run(){
        незаметно в трактовку. */
     const r=ev(CARD);
     const m=/title="([^"]*)"/.exec(r.moonRu.html);
-    return (m&&/управляет 5 домом и находится в 1 доме/.test(m[1]))
+    return (m&&/управляет \d+ домом и находится в \d+ доме/.test(m[1]))
       ||'нет расшифровки: '+(m?m[1]:'title отсутствует');
   });
   t('структурный блок есть у каждого нарисованного тела',()=>{
@@ -927,19 +992,46 @@ function run(){
     }
     return worst<0.01||`худшая ошибка ${worst.toFixed(3)} дома`;
   });
-  t('широта тела влияет на дом: Плутон расходится с проекцией',()=>{
-    ev('HSYS="placidus"');
-    let chg=0,n=0;
-    ev('CHART_LIBRARY').slice(0,120).forEach(e=>{
-      W.__e=e;
-      const c=ev(`computeChart(${e.y},${e.mo},${e.d},${e.t==null?12:e.t},libTz(window.__e),${e.lat},${e.lon})`);
-      if(c.houses.system!=='placidus') return;
-      W.__c=c; n++;
-      if(ev("houseOf(window.__c.pos.Pluto.lon,window.__c.houses.cusps)")!==ev("bodyHouse(window.__c,'Pluto')")) chg++;
-    });
-    if(!n) return 'ни одной карты с Плацидусом';
-    const pct=chg/n*100;
-    return (pct>5)||`Плутон расходится лишь у ${pct.toFixed(1)}% — похоже, широта не учитывается`;
+  t('дом берётся по долготе, а широта - выключенная опция',()=>{
+    /* Этот тест раньше утверждал обратное: что широта ВЛИЯЕТ на дом по
+       умолчанию. Так и было до v3.7.0, и это противоречило нашей же картинке -
+       колесо рисует тело по долготе, а текст рядом называл другой дом. На
+       карте Питера де Хоха Венера в 7°58′ Водолея стояла явно до куспида 12
+       дома в 10°53′ Водолея, а подпись говорила «дом 12». Замерено на 340
+       картах: расходились 4,12% размещений, у Плутона хуже всех из-за наклона
+       орбиты. Astrolog, который такую опцию предлагает, называет её «3D
+       houses» и прямо пишет, что это не стандартная система деления домов. */
+    const r=ev(`(()=>{const k=HSYS, k3=HOUSE_3D; HSYS='placidus';
+      let off=0, on=0, n=0;
+      for(let i=0;i<CHART_LIBRARY.length;i+=3){
+        const e=CHART_LIBRARY[i], hh=e.t==null?12:e.t;
+        const c=computeChart(e.y,e.mo,e.d,hh,libTz(e),e.lat,e.lon,false);
+        if(c.houses.system!=='placidus') continue;
+        n++;
+        const lonHouse=houseOf(c.pos.Pluto.lon,c.houses.cusps);
+        HOUSE_3D=false; if(bodyHouse(c,'Pluto')!==lonHouse) off++;
+        HOUSE_3D=true;  if(bodyHouse(c,'Pluto')!==lonHouse) on++;
+      }
+      HSYS=k; HOUSE_3D=k3; return {off,on,n};})()`);
+    if(!r.n) return 'ни одной карты с Плацидусом';
+    if(r.off!==0) return `с выключенной опцией дом разошёлся с долготой у ${r.off} из ${r.n}`;
+    return r.on>r.n*0.05||`с включённой опцией Плутон сдвинулся лишь у ${r.on} из ${r.n}, значит опция ничего не делает`;
+  });
+  t('колесо и текст называют один и тот же дом',()=>{
+    /* Тот самый дефект, из-за которого всё это началось: глиф на колесе
+       рисуется по долготе, и подпись обязана говорить о том же доме. */
+    const bad=ev(`(()=>{const k=HSYS, k3=HOUSE_3D; HOUSE_3D=false; HSYS='placidus';
+      const out=[];
+      for(let i=0;i<CHART_LIBRARY.length;i+=7){
+        const e=CHART_LIBRARY[i], hh=e.t==null?12:e.t;
+        const c=computeChart(e.y,e.mo,e.d,hh,libTz(e),e.lat,e.lon,false);
+        WHEEL_BODIES.concat(FACT_POINTS).filter(p=>c.pos[p]).forEach(p=>{
+          if(bodyHouse(c,p)!==houseOf(c.pos[p].lon,c.houses.cusps))
+            out.push(e.id+'/'+p);
+        });
+      }
+      HSYS=k; HOUSE_3D=k3; return out.slice(0,5);})()`);
+    return bad.length===0||'картинка спорит с текстом: '+bad.join(', ');
   });
   t('за полярным кругом Плацидус отступает на равнодомную',()=>{
     ev('HSYS="placidus"');

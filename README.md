@@ -563,7 +563,7 @@ mattered: before it did, a deliberately broken app passed every check. The runne
 for the city atlas to finish loading, or the atlas tests would silently check the inline
 seed instead.
 
-**266 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
+**270 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
 library, robustness over 1550-2250 and at polar latitudes, house systems (angles land
 on the cusps, cusps run round the circle without crossing, quadrant systems coincide at
 the equator, zero-latitude bodies get the same house from both methods), library data
