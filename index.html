@@ -799,7 +799,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
 /* Bump together with CACHE in sw.js: the two are the same release, and the
    number on screen is how you tell from a phone which one you are looking at. */
-const APP_VERSION='3.7.0';
+const APP_VERSION='3.8.0';
 document.getElementById('ver').textContent=APP_VERSION;
 
 /* ---------- feature flags ----------
@@ -889,6 +889,9 @@ const STR = {
      Natal; "empty" describes our implementation rather than the thing chosen. */
   ring_none:{ru:'Натальная карта',en:'Natal'},
   note_none:{ru:'Натальная карта сама по себе. Она же остаётся внутренним колесом, когда выбран другой тип: так делают Solar Fire, Astro Gold и LUNA - неподвижная рамка внутри, движущееся снаружи.',en:'The natal chart on its own. It stays the inner wheel under every other type too, the way Solar Fire, Astro Gold and LUNA all do it: the fixed frame inside, what moves against it outside.'},
+  ring_solar:{ru:'Соляр',en:'Solar return'},
+  ring_lunar:{ru:'Лунар',en:'Lunar return'},
+  ring_composite:{ru:'Композит',en:'Composite'},
   ring_synastry:{ru:'Синастрия',en:'Synastry'},
   note_synastry:{ru:'Карта другого человека поверх вашей. Внутреннее колесо и дома остаются вашими, аспекты считаются от его планет к вашим.',en:'Another person\u2019s chart over yours. The inner wheel and the houses stay yours; the aspects run from their planets to yours.'},
   synaFind:{ru:'Кого сравниваем? Имя, город или год',en:'Compare with whom? Name, city or year'},
@@ -951,6 +954,8 @@ const STR = {
   sfReceptions:{ru:'Рецепции',en:'Receptions'},
   sfPlacement:{ru:'Положение',en:'Placement'},
   sfAspects:{ru:'Аспекты',en:'Aspects'},
+  sfMidpoints:{ru:'На средних точках',en:'On midpoints'},
+  midOrb:{ru:'Средние точки',en:'Midpoints'},
   house3d:{ru:'Дом с учётом широты (3D, только Плацидус)',
     en:'House by latitude as well (3D, Placidus only)'},
   house3dNote:{ru:'Обычные программы ставят тело в дом только по долготе, и колесо рисует его так же. Включённая опция учитывает ещё и эклиптическую широту: на 4% положений ответ меняется, чаще всего у Плутона. Тогда глиф на колесе и номер дома в тексте могут разойтись.',
@@ -1674,7 +1679,7 @@ const BODIES=['Sun','Moon','Mercury','Venus','Mars','Jupiter','Saturn','Uranus',
    planets plus the two angles, which is the one weighting no school argues
    with; a thirteenth body in that count would quietly change every chart's
    balance to a figure no book matches. */
-const POINTS=['Chiron','NNode','SNode','Lilith','Selena'];
+const POINTS=['Chiron','NNode','SNode','Lilith','Selena','Fortune'];
 /* The ten planets and Chiron: everything the app treats as a body rather than
    as a point. One list, because these are one set and were briefly three -
    Chiron reached the aspect grid while findAspects still looped over BODIES,
@@ -1689,7 +1694,7 @@ const POINTS=['Chiron','NNode','SNode','Lilith','Selena'];
    1600 and the rest carries on. */
 const WHEEL_BODIES=[...BODIES,'Chiron'];
 const GLYPH={Sun:'☉',Moon:'☽',Mercury:'☿',Venus:'♀',Mars:'♂',Jupiter:'♃',Saturn:'♄',Uranus:'♅',Neptune:'♆',Pluto:'♇',
-  Chiron:'⚷',NNode:'☊',SNode:'☋',Lilith:'⚸',Selena:'⯝',ASC:'Asc',MC:'MC'};
+  Chiron:'⚷',NNode:'☊',SNode:'☋',Lilith:'⚸',Selena:'⯝',Fortune:'⊗',ASC:'Asc',MC:'MC'};
 const SIGN_GLYPH=['♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓'];
 const ASPECT_GLYPH={conjunction:'☌',semisextile:'⚺',semisquare:'∠',sextile:'⚹',
   quintile:'Q',square:'□',trine:'△',sesquiquadrate:'⚼',biquintile:'bQ',
@@ -1697,9 +1702,9 @@ const ASPECT_GLYPH={conjunction:'☌',semisextile:'⚺',semisquare:'∠',sextile
 
 const PLANET_NAME={
   ru:{Sun:'Солнце',Moon:'Луна',Mercury:'Меркурий',Venus:'Венера',Mars:'Марс',Jupiter:'Юпитер',Saturn:'Сатурн',Uranus:'Уран',Neptune:'Нептун',Pluto:'Плутон',Chiron:'Хирон',
-      NNode:'Северный узел',SNode:'Южный узел',Lilith:'Лилит (Чёрная Луна)',Selena:'Селена (Белая Луна)',ASC:'Асцендент',MC:'MC'},
+      NNode:'Северный узел',SNode:'Южный узел',Lilith:'Лилит (Чёрная Луна)',Selena:'Селена (Белая Луна)',Fortune:'Колесо Фортуны',ASC:'Асцендент',MC:'MC'},
   en:{Sun:'Sun',Moon:'Moon',Mercury:'Mercury',Venus:'Venus',Mars:'Mars',Jupiter:'Jupiter',Saturn:'Saturn',Uranus:'Uranus',Neptune:'Neptune',Pluto:'Pluto',Chiron:'Chiron',
-      NNode:'North Node',SNode:'South Node',Lilith:'Lilith (Black Moon)',Selena:'Selena (White Moon)',ASC:'Ascendant',MC:'MC'}
+      NNode:'North Node',SNode:'South Node',Lilith:'Lilith (Black Moon)',Selena:'Selena (White Moon)',Fortune:'Lot of Fortune',ASC:'Ascendant',MC:'MC'}
 };
 const PN=n=>LX(PLANET_NAME)[n]||n;
 const SIGN_NAME={
@@ -2184,6 +2189,15 @@ function computeChart(y,mo,day,localH,tzOff,lat,lng,withSpeed){
       pos[k].spd=dl/(2*h);                      // degrees per day
       pos[k].retro=dl<0;
     });
+  }
+  /* Last, because it is built from the angles and from two of the bodies, and
+     both have to exist first. Sect is read from the Sun's house, which needs
+     the cusps, which is why this cannot move earlier. */
+  {
+    const ch0={pos,asc,mc,ecl,houses,ramc,geolat:lat};
+    const sunH=bodyHouse(ch0,'Sun');
+    pos.Fortune={lon:rev(sunH>=7 ? asc+pos.Moon.lon-pos.Sun.lon
+                                 : asc+pos.Sun.lon-pos.Moon.lon)};
   }
   return {pos,asc,mc,ecl,houses,d,ramc,geolat:lat,geolon:lng,jdUT};
 }
@@ -3510,7 +3524,7 @@ const SOLAR_LIMITS={cazimi:17/60, combust:8.5, underBeams:15};
 /* Named separately from ASPECT_POINTS, which is defined much further down with
    the aspect engine. The two lists are the same four and must stay so; the
    test suite compares them rather than trusting this comment. */
-const FACT_POINTS=['NNode','SNode','Lilith','Selena'];
+const FACT_POINTS=['NNode','SNode','Lilith','Selena','Fortune'];
 
 /* Essential dignity on the classical tables, and NOT the app's dignity(),
    which is shared with the interpretation corpus and reads the modern rulers:
@@ -3708,6 +3722,16 @@ function fmtPos(lon){
 /* The single place that answers "do these two degrees aspect, and by how
    much". findAspects and the grid both go through it, so a change to the
    active set or an orb cannot reach one and miss the other. */
+/* ---------- the Lot of Fortune ----------
+   Sect-sensitive, which is the traditional form and the one that makes the Lot
+   mean anything: by day Asc + Moon - Sun, by night Asc + Sun - Moon. The
+   single formula that ignores sect is a modern simplification and it makes
+   every night chart's Lot the mirror of what the tradition computes.
+
+   It is a point, not a body: no dignity, no dispositor of its own, and it does
+   not rule a house. It aspects on the same narrowed orb as the other points,
+   because it is exactly as sensitive to a minute of birth time as the
+   Ascendant it is built from. */
 /* ---------- the karmic points aspect too ----------
    Until now they did not. findAspects looped over WHEEL_BODIES, so a Moon
    exactly conjunct the North Node had no chord on the wheel, no line in the
@@ -3721,7 +3745,7 @@ function fmtPos(lon){
    39 - nearly double, on a 300 px wheel. Capped at 3 degrees it is 21.4 and
    32. The cap is one number and it is exactly the kind of number astrologers
    disagree about, so it lives with the other orbs and not buried in here. */
-const ASPECT_POINTS=['NNode','SNode','Lilith','Selena'];
+const ASPECT_POINTS=['NNode','SNode','Lilith','Selena','Fortune'];
 const POINT_ORB_KEY='astrarium_pointorb';
 let POINT_ORB=(()=>{const v=parseFloat(localStorage.getItem(POINT_ORB_KEY));
   return isFinite(v)&&v>0&&v<=10?v:3;})();
@@ -5076,6 +5100,15 @@ function structureLines(ch,p){
   }
 
   {
+    /* Which pairs this body stands on the midpoint of. Only this body's own,
+       because the full list runs to thirty a chart and the card answers about
+       one. */
+    const mine=midpointHits(ch).filter(h=>h.body===p).slice(0,6);
+    if(mine.length) out.push([t('sfMidpoints'),
+      mine.map(h=>`${PN(h.a)}/${PN(h.b)} <span class="dim">${h.orb.toFixed(1)}°</span>`).join('<br>')]);
+  }
+
+  {
     const bits=[];
     if(f.angularity) bits.push(t(ANG_KEY[f.angularity]));
     if(f.sect.status!=='neutral') bits.push(t(f.sect.status==='inSect'?'sectIn':'sectContrary'));
@@ -5154,6 +5187,8 @@ const COPY_SOURCES={
   placements:()=>placementLines(CURRENT).join('\n'),
   aspects:()=>aspectLines(CURRENT).join('\n'),
   configurations:()=>configurationLines(CURRENT).join('\n'),
+  midpoints:()=>midpointHits(CURRENT)
+    .map(h=>`${PN(h.body)} = ${PN(h.a)}/${PN(h.b)}, ${t('orb')} ${h.orb.toFixed(2)}°`).join('\n'),
   detail:()=>document.getElementById('detail').innerText
 };
 document.addEventListener('click',e=>{
@@ -5165,6 +5200,36 @@ document.addEventListener('click',e=>{
 });
 const copyBtnHTML=(src,label)=>
   `<button type="button" class="copybtn noprint" data-copy="${src}">${label||t('copy')}</button>`;
+
+/* ---------- midpoints ----------
+   Not a list of 120 midpoints, which nobody reads, but the answer to the
+   question the technique is actually used for: WHICH body sits on the midpoint
+   of which pair. Ebertin's school reads a midpoint as occupied when a body
+   stands on it, on its opposition or on either square, which is the same thing
+   as being within orb on a 90-degree dial, so that is the test.
+
+   The orb is narrow and separate from the aspect orbs, because a midpoint is a
+   point rather than a body and the whole method depends on tightness: at three
+   degrees every chart has a hundred of them and the technique says nothing. */
+const MIDPOINT_ORB_KEY='astrarium_midorb';
+let MIDPOINT_ORB=(()=>{const v=parseFloat(localStorage.getItem(MIDPOINT_ORB_KEY));
+  return isFinite(v)&&v>0&&v<=5?v:1.5;})();
+function midpointHits(ch){
+  const src=WHEEL_BODIES.filter(p=>ch.pos[p]).concat(['ASC','MC']);
+  const lonOf=p=>p==='ASC'?ch.asc:p==='MC'?ch.mc:ch.pos[p].lon;
+  const out=[];
+  for(let i=0;i<src.length;i++)for(let j=i+1;j<src.length;j++){
+    const a=src[i], b=src[j];
+    const m=rev(lonOf(a)+(((lonOf(b)-lonOf(a)+540)%360)-180)/2);
+    src.forEach(p=>{
+      if(p===a||p===b) return;
+      const d=((lonOf(p)-m)%90+90)%90;
+      const orb=Math.min(d,90-d);
+      if(orb<=MIDPOINT_ORB) out.push({a,b,body:p,orb});
+    });
+  }
+  return out.sort((x,y)=>x.orb-y.orb);
+}
 
 /* ---------- the whole chart as text ----------
    Everything the engine knows, in one block, meant to be copied and pasted
@@ -5243,6 +5308,17 @@ function chartExportText(ch){
   L.push((ru?'АСПЕКТЫ':'ASPECTS')+` (${asps.length})`);
   L.push(...aspectLines(ch));
   L.push('');
+
+  const mid=midpointHits(ch).slice(0,14);
+  if(mid.length){
+    /* The heading says the limit without using the word the data lines use:
+       a test counts aspect lines by that word, and a heading that borrowed it
+       made the count one too many. */
+    L.push((ru?'СРЕДНИЕ ТОЧКИ':'MIDPOINTS')+` (${ru?'до':'within'} ${MIDPOINT_ORB}°, `
+      +(ru?'по 90-градусному диску, самые тесные':'on the 90-degree dial, the tightest')+`)`);
+    mid.forEach(h=>L.push(`${PN(h.body)} = ${PN(h.a)}/${PN(h.b)}, ${t('orb')} ${h.orb.toFixed(2)}°`));
+    L.push('');
+  }
 
   const cfgL=configurationLines(ch);
   if(cfgL.length){ L.push(ru?'КОНФИГУРАЦИИ':'CONFIGURATIONS'); L.push(...cfgL); L.push(''); }
@@ -5460,7 +5536,14 @@ function learnedVal(o,k){const f=featStat(o,k);return (0+f.vSum)/(2+f.vN);}
    A list rather than a row of buttons because four labels in eight languages
    do not fit across 375 px, and because the list has to hold synastry later
    without the control changing shape. */
-const RING_MODES=['none','transit','progressed','directed','synastry'];
+const RING_MODES=['none','transit','progressed','directed','solar','lunar','synastry','composite'];
+/* Modes whose outer chart does not move once it is cast. Applying and
+   separating mean nothing in any of them, and none of them may have its orb
+   squeezed to a degree the way a progression is. A return needs the slider to
+   choose WHICH return, so it is static without being slider-less; synastry and
+   the composite have no moment at all. */
+const STATIC_RING=['synastry','composite','solar','lunar'];
+const PARTNER_RING=['synastry','composite'];
 let RING_MODE=RING_MODES.includes(localStorage.getItem('astrarium_ring'))
   ? localStorage.getItem('astrarium_ring') : 'none';
 const TROPICAL_YEAR=365.242190;
@@ -5494,9 +5577,88 @@ function anglesFromMC(mc,lat,ecl){
   return {ramc,asc,houses:HOUSE_SYSTEMS[HSYS].fn(ramc,lat,ecl,asc,mc)};
 }
 /* Positions for the outer ring, plus its own angles. */
+/* ---------- returns ----------
+   A return is the instant a body comes back to the degree it held at birth.
+   Found by bisection rather than by a table: the app already casts a chart in
+   a fifth of a millisecond, so forty passes cost less than drawing the wheel,
+   and bisection cannot diverge the way a Newton step can when the body is near
+   a station. The bracket is a window around the anniversary wide enough to
+   contain exactly one crossing.
+
+   Cast for the place the SLIDER is set to, not the birthplace, because that is
+   what a return is read for: where you will be when the year turns. The
+   relocation card already moves the place, and this follows it. */
+function returnChart(ch,ms,body){
+  const target=ch.pos[body].lon;
+  const lonAt=t=>{
+    const dt=new Date(t);
+    const c=computeChart(dt.getUTCFullYear(),dt.getUTCMonth()+1,dt.getUTCDate(),
+      dt.getUTCHours()+dt.getUTCMinutes()/60+dt.getUTCSeconds()/3600,0,
+      RELOC?RELOC.lat:ch.geolat, RELOC?RELOC.lon:ch.geolon, false);
+    return {c, d:((c.pos[body].lon-target+540)%360)-180};
+  };
+  /* A solar return happens once a year, a lunar one about every 27.3 days, so
+     the search window is the body's own period. */
+  const period=body==='Moon'?27.32166:365.2422;
+  const step=period*0.02*86400000;
+  /* A sign change is not enough. The difference is wrapped into -180..180, so
+     it also flips sign at the OPPOSITION, where it jumps from +180 to -180.
+     That discontinuity looks exactly like a zero crossing to a bisection, and
+     the first lunar return it found was the opposition, 180 degrees out. A
+     real crossing is continuous, so the two samples must differ by less than
+     half a circle. */
+  const crossing=(a,b)=>((a<=0&&b>0)||(a>=0&&b<0))&&Math.abs(b-a)<180;
+  let f=lonAt(ms).d;
+  let lo=null,hi=null;
+  for(let k=1;k<=60;k++){
+    const t2=ms+k*step, f2=lonAt(t2).d;
+    if(crossing(f,f2)){ lo=t2-step; hi=t2; break; }
+    f=f2;
+  }
+  if(lo==null){
+    f=lonAt(ms).d;
+    for(let k=1;k<=60;k++){
+      const t2=ms-k*step, f2=lonAt(t2).d;
+      if(crossing(f2,f)){ lo=t2; hi=t2+step; break; }
+      f=f2;
+    }
+  }
+  if(lo==null) return null;
+  let fl=lonAt(lo).d;
+  for(let i=0;i<40;i++){
+    const mid=(lo+hi)/2, fm=lonAt(mid).d;
+    if((fl<=0)===(fm<=0)){ lo=mid; fl=fm; } else hi=mid;
+  }
+  const at=(lo+hi)/2, r=lonAt(at);
+  return {...r.c, returnMs:at, returnBody:body};
+}
+
+/* ---------- the composite ----------
+   Midpoint composite: every body sits at the nearer midpoint of the two
+   charts' positions, and the angles are the midpoint of the two sets. The
+   nearer one matters - taking the plain average of two longitudes puts a pair
+   straddling 0 Aries on the opposite side of the wheel from where both of them
+   are, which is the classic way this is got wrong.
+
+   The derived-space composite (a chart cast for the midpoint in time and
+   place) is a different technique and not this one; it is named here so that
+   nobody has to guess which is on offer. */
+function compositeChart(ch){
+  const p=partnerChart(ch); if(!p) return null;
+  const mid=(a,b)=>{const m=rev(a+(((b-a+540)%360)-180)/2); return m;};
+  const pos={};
+  Object.keys(ch.pos).forEach(k=>{ if(p.pos[k]) pos[k]={lon:mid(ch.pos[k].lon,p.pos[k].lon)}; });
+  const mc=mid(ch.mc,p.mc);
+  const a=anglesFromMC(mc,(ch.geolat+p.geolat)/2,ch.ecl);
+  return {...ch, pos, mc, asc:a.asc, ramc:a.ramc, houses:a.houses, composite:true};
+}
+
 function outerChart(ch,ms){
   if(RING_MODE==='none') return null;
   if(RING_MODE==='synastry') return partnerChart(ch);
+  if(RING_MODE==='composite') return compositeChart(ch);
+  if(RING_MODE==='solar') return returnChart(ch,ms,'Sun');
+  if(RING_MODE==='lunar') return returnChart(ch,ms,'Moon');
   if(RING_MODE==='transit') return transitChartAt(ch,ms);
   const pr=transitChartAt(ch,progressedMs(ch,ms));
   const arc=rev(pr.pos.Sun.lon-ch.pos.Sun.lon);
@@ -5514,7 +5676,12 @@ const RING_MOVERS={
   directed:['Moon','Sun','Mercury','Venus','Mars','Jupiter','Saturn','Uranus','Neptune','Pluto','Chiron'],
   /* Everything, Moon included: in synastry the Moon is half the reading, and
      nothing here is moving fast enough to swamp a list. */
-  synastry:['Moon','Sun','Mercury','Venus','Mars','Jupiter','Saturn','Uranus','Neptune','Pluto','Chiron']
+  synastry:['Moon','Sun','Mercury','Venus','Mars','Jupiter','Saturn','Uranus','Neptune','Pluto','Chiron'],
+  /* A return and a composite are both whole charts standing still against the
+     natal one, so everything in them is read, exactly as in synastry. */
+  solar:['Moon','Sun','Mercury','Venus','Mars','Jupiter','Saturn','Uranus','Neptune','Pluto','Chiron'],
+  lunar:['Moon','Sun','Mercury','Venus','Mars','Jupiter','Saturn','Uranus','Neptune','Pluto','Chiron'],
+  composite:['Moon','Sun','Mercury','Venus','Mars','Jupiter','Saturn','Uranus','Neptune','Pluto','Chiron']
 };
 
 /* ---------- the second person ----------
@@ -5565,7 +5732,7 @@ function aspectOrbs(ch,tp){
          and the list would never change. Synastry is not moving at all: neither
          chart advances, so nothing needs narrowing and the orb you configured
          is the orb you get. */
-      let cap=RING_MODE==='transit'?SPEED_ORB[T]+2:(RING_MODE==='synastry'?99:1);
+      let cap=RING_MODE==='transit'?SPEED_ORB[T]+2:(STATIC_RING.includes(RING_MODE)?99:1);
       /* A karmic point on either side narrows the orb the same way it does in
          the natal chart, so the two halves of the app cannot disagree about
          how much weight a node carries. */
@@ -5811,13 +5978,13 @@ function renderRingSwitch(){
   /* The slider drives a moment, and synastry has no moment to drive: both
      charts are fixed. So it goes away there too, and only the aspect list
      stays. */
-  const syn=RING_MODE==='synastry';
+  const syn=PARTNER_RING.includes(RING_MODE);
   const bare=RING_MODE==='none';
   document.getElementById('chartCard').classList.toggle('bare',bare||syn);
   document.querySelector('.scrub').hidden=bare||syn;
   document.getElementById('transitsCard').hidden=bare;
   document.getElementById('synaPick').hidden=!syn;
-  document.getElementById('synaSwapRow').hidden=!(syn&&partnerEntry());
+  document.getElementById('synaSwapRow').hidden=!(RING_MODE==='synastry'&&partnerEntry());
   document.getElementById('synaFind').placeholder=t('synaFind');
   if(syn) renderPartnerLine();
   if(META_ARGS) renderChartMeta(...META_ARGS);
@@ -5852,6 +6019,7 @@ function renderTransits(ch){
   const tr=outerChart(ch,TR_MS);
   TR_CHART=tr;
   if(!tr){ TR_HITS=[]; drawWheel(ch,null); renderGrid(ch,null); renderConfigurations(ch); renderLearned(); return; }
+  const stat=STATIC_RING.includes(RING_MODE);
   const syn=RING_MODE==='synastry';
   /* Swapped, the partner's chart supplies the frame and the houses, and the
      aspects run the other way. Only the wheel, the hit list and the grid
@@ -5860,7 +6028,7 @@ function renderTransits(ch){
      drawn in. */
   const swapped=syn&&RING_SWAP;
   const inner=swapped?tr:ch, outer=swapped?ch:tr;
-  if(!syn) renderMoment();
+  if(!stat) renderMoment();
   /* Outer-planet-to-outer-planet hits are dropped for transits because they
      are generational: everyone born that decade has them. In a progressed or
      directed chart they are personal again, since the arc is this person's. */
@@ -5870,7 +6038,7 @@ function renderTransits(ch){
   /* Applying and separating mean nothing in synastry: neither chart is going
      anywhere. Left unset so the label simply does not appear, rather than
      printed as "separating" because two identical orbs compared equal. */
-  if(!syn) markApplying(ch,tr.pos,outerChart(ch,TR_MS+PROBE_MS[RING_MODE]).pos,hits);
+  if(!stat) markApplying(ch,tr.pos,outerChart(ch,TR_MS+PROBE_MS[RING_MODE]).pos,hits);
   TR_HITS=hits;
   drawWheel(inner,outer);
   renderGrid(inner,outer);
@@ -6080,6 +6248,20 @@ function renderOrbs(){
       <span class="ang"></span>
       <input class="orb" type="number" min="0.1" max="10" step="0.5" value="${POINT_ORB}" data-pointorb aria-label="${t('pointOrb')}">
     </div>`);
+  box.insertAdjacentHTML('beforeend',
+    `<div class="orbrow">
+      <span class="g af" style="color:var(--ink3);grid-column:span 2">/</span>
+      <span class="nm">${t('midOrb')}</span>
+      <span class="ang"></span>
+      <input class="orb" type="number" min="0.1" max="5" step="0.5" value="${MIDPOINT_ORB}" data-midorb aria-label="${t('midOrb')}">
+    </div>`);
+  const mo2=box.querySelector('input[data-midorb]');
+  mo2.addEventListener('change',()=>{
+    const v=parseFloat(mo2.value);
+    if(!isFinite(v)||v<=0||v>5){ mo2.value=MIDPOINT_ORB; return; }
+    MIDPOINT_ORB=v; localStorage.setItem(MIDPOINT_ORB_KEY,String(v));
+    redrawAspects(); fillExport(); if(ISO&&CURRENT) showDetail(ISO,CURRENT);
+  });
   const po=box.querySelector('input[data-pointorb]');
   po.addEventListener('change',()=>{
     const v=parseFloat(po.value);

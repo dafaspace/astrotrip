@@ -31,7 +31,7 @@ Uranus Sgr17 h9 - d:Jupiter r:- cadent neutral free
 Neptune Cap3 h10 - d:Saturn r:- angular neutral free
 Pluto Sco4 h7 - d:Mars r:- angular neutral free
 Chiron Gem4 h2 - d:Mercury r:- succedent neutral free
-rec Jupiter>Moon:d Jupiter>Sun:d Jupiter>Uranus:d Mars>Lilith:d Mars>Mercury:d Mars>Neptune:e Mars>Pluto:d Mars>SNode:d Mars>Saturn:d Mars>Venus:d Mercury>Chiron:d Moon>Mars:e Moon>NNode:e Saturn>Jupiter:d Saturn>Neptune:d Saturn>Selena:e Sun>Lilith:e Sun>Mercury:e Sun>Venus:e Venus>Mars:d Venus>Moon:e Venus>NNode:d Venus>Selena:d Venus>Sun:e
+rec Jupiter>Moon:d Jupiter>Sun:d Jupiter>Uranus:d Mars>Fortune:d Mars>Lilith:d Mars>Mercury:d Mars>Neptune:e Mars>Pluto:d Mars>SNode:d Mars>Saturn:d Mars>Venus:d Mercury>Chiron:d Moon>Mars:e Moon>NNode:e Saturn>Jupiter:d Saturn>Neptune:d Saturn>Selena:e Sun>Fortune:e Sun>Lilith:e Sun>Mercury:e Sun>Venus:e Venus>Mars:d Venus>Moon:e Venus>NNode:d Venus>Selena:d Venus>Sun:e
 --
 1990-1-1 placidus day int:VirPsc term:Saturn loop:Moon+Jupiter
 Sun Cap10 h10 peregrine d:Saturn r:6 angular inSect -
@@ -45,7 +45,7 @@ Uranus Cap5 h10 - d:Saturn r:- angular neutral combust
 Neptune Cap12 h10 - d:Saturn r:- angular neutral combust
 Pluto Sco17 h7 - d:Mars r:- angular neutral free
 Chiron Cnc13 h4 - d:Moon r:- angular neutral free
-rec Jupiter>Chiron:e Jupiter>Mars:d Jupiter>Moon:d Mars>Lilith:d Mars>Mercury:e Mars>Neptune:e Mars>Pluto:d Mars>Saturn:e Mars>Sun:e Mars>Uranus:e Mercury>Selena:d Moon>Chiron:d Moon>Jupiter:d Saturn>Mercury:d Saturn>NNode:d Saturn>Neptune:d Saturn>Sun:d Saturn>Uranus:d Saturn>Venus:d Sun>SNode:d Venus>Moon:e
+rec Jupiter>Chiron:e Jupiter>Mars:d Jupiter>Moon:d Mars>Lilith:d Mars>Mercury:e Mars>Neptune:e Mars>Pluto:d Mars>Saturn:e Mars>Sun:e Mars>Uranus:e Mercury>Fortune:d Mercury>Selena:d Moon>Chiron:d Moon>Jupiter:d Saturn>Mercury:d Saturn>NNode:d Saturn>Neptune:d Saturn>Sun:d Saturn>Uranus:d Saturn>Venus:d Sun>SNode:d Venus>Moon:e
 --
 2000-1-1 placidus night int:- term:- loop:Saturn+Venus+Jupiter+Mars
 Sun Cap9 h4 peregrine d:Saturn r:11 angular contraryToSect -
@@ -59,7 +59,7 @@ Uranus Aqr14 h5 - d:Saturn r:- succedent neutral free
 Neptune Aqr3 h4 - d:Saturn r:- angular neutral free
 Pluto Sgr11 h2 - d:Jupiter r:- succedent neutral free
 Chiron Sgr11 h3 - d:Jupiter r:- cadent neutral free
-rec Jupiter>Chiron:d Jupiter>Lilith:d Jupiter>Pluto:d Jupiter>Selena:d Jupiter>Venus:d Mars>Jupiter:d Mars>Mercury:e Mars>Moon:d Mars>Sun:e Moon>Saturn:e Saturn>Mars:d Saturn>Mercury:d Saturn>Neptune:d Saturn>SNode:d Saturn>Sun:d Saturn>Uranus:d Sun>Jupiter:e Sun>NNode:d Venus>Saturn:d
+rec Jupiter>Chiron:d Jupiter>Fortune:d Jupiter>Lilith:d Jupiter>Pluto:d Jupiter>Selena:d Jupiter>Venus:d Mars>Jupiter:d Mars>Mercury:e Mars>Moon:d Mars>Sun:e Moon>Saturn:e Saturn>Mars:d Saturn>Mercury:d Saturn>Neptune:d Saturn>SNode:d Saturn>Sun:d Saturn>Uranus:d Sun>Jupiter:e Sun>NNode:d Venus>Saturn:d
 --
 1650-6-15 placidus night int:AriLib term:- loop:Moon+Saturn
 Sun Gem23 h3 peregrine d:Mercury r:6 cadent contraryToSect -
@@ -73,7 +73,7 @@ Uranus Sgr15 h9 - d:Jupiter r:- cadent neutral free
 Neptune Sgr15 h9 - d:Jupiter r:- cadent neutral free
 Pluto Gem10 h3 - d:Mercury r:- cadent neutral underBeams
 Chiron Leo28 h6 - d:Sun r:- cadent neutral free
-rec Jupiter>Mercury:e Jupiter>Neptune:d Jupiter>Saturn:e Jupiter>Selena:d Jupiter>Uranus:d Jupiter>Venus:e Mars>Moon:e Mars>SNode:d Mercury>Lilith:d Mercury>Mars:d Mercury>Pluto:d Mercury>Sun:d Moon>Mercury:d Moon>NNode:e Moon>Saturn:d Moon>Venus:d Saturn>Jupiter:e Saturn>Moon:d Sun>Chiron:d Venus>Jupiter:d Venus>NNode:d
+rec Jupiter>Mercury:e Jupiter>Neptune:d Jupiter>Saturn:e Jupiter>Selena:d Jupiter>Uranus:d Jupiter>Venus:e Mars>Moon:e Mars>SNode:d Mercury>Fortune:d Mercury>Fortune:e Mercury>Lilith:d Mercury>Mars:d Mercury>Pluto:d Mercury>Sun:d Moon>Mercury:d Moon>NNode:e Moon>Saturn:d Moon>Venus:d Saturn>Jupiter:e Saturn>Moon:d Sun>Chiron:d Venus>Jupiter:d Venus>NNode:d
 --
 2001-6-21 equal night int:- term:Moon/Mercury/Venus loop:-
 Sun Cnc0 h2 peregrine d:Moon r:4 succedent contraryToSect -
@@ -87,7 +87,7 @@ Uranus Aqr24 h10 - d:Saturn r:- angular neutral free
 Neptune Aqr8 h9 - d:Saturn r:- cadent neutral free
 Pluto Sgr13 h7 - d:Jupiter r:- angular neutral free
 Chiron Sgr25 h8 - d:Jupiter r:- succedent neutral free
-rec Jupiter>Chiron:d Jupiter>Mars:d Jupiter>Moon:e Jupiter>NNode:e Jupiter>Pluto:d Jupiter>Sun:e Mars>SNode:e Mercury>Jupiter:d Mercury>Saturn:d Moon>NNode:d Moon>Sun:d Moon>Venus:e Saturn>Lilith:d Saturn>Neptune:d Saturn>SNode:d Saturn>Selena:d Saturn>Uranus:d
+rec Jupiter>Chiron:d Jupiter>Mars:d Jupiter>Moon:e Jupiter>NNode:e Jupiter>Pluto:d Jupiter>Sun:e Mars>SNode:e Mercury>Jupiter:d Mercury>Saturn:d Moon>Fortune:e Moon>NNode:d Moon>Sun:d Moon>Venus:e Saturn>Lilith:d Saturn>Neptune:d Saturn>SNode:d Saturn>Selena:d Saturn>Uranus:d Venus>Fortune:d
 --
 2200-3-1 placidus day int:- term:Jupiter loop:-
 Sun Psc10 h11 peregrine d:Jupiter r:4 succedent inSect -
@@ -101,4 +101,4 @@ Uranus Gem25 h2 - d:Mercury r:- succedent neutral free
 Neptune Ari23 h12 - d:Mars r:- cadent neutral free
 Pluto Leo23 h4 - d:Sun r:- angular neutral free
 Chiron Sgr23 h8 - d:Jupiter r:- succedent neutral free
-rec Jupiter>Chiron:d Jupiter>Saturn:d Jupiter>Selena:e Jupiter>Sun:d Mars>NNode:d Mars>Neptune:d Mercury>Uranus:d Moon>SNode:e Moon>Selena:d Saturn>Mercury:d Saturn>Venus:d Sun>Lilith:d Sun>Mars:d Sun>Moon:d Sun>Neptune:e Sun>Pluto:d Venus>Jupiter:e Venus>SNode:d Venus>Saturn:e Venus>Sun:e
+rec Jupiter>Chiron:d Jupiter>Saturn:d Jupiter>Selena:e Jupiter>Sun:d Mars>NNode:d Mars>Neptune:d Mercury>Uranus:d Moon>SNode:e Moon>Selena:d Saturn>Fortune:e Saturn>Mercury:d Saturn>Venus:d Sun>Lilith:d Sun>Mars:d Sun>Moon:d Sun>Neptune:e Sun>Pluto:d Venus>Fortune:d Venus>Jupiter:e Venus>SNode:d Venus>Saturn:e Venus>Sun:e

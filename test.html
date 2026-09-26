@@ -702,6 +702,101 @@ function run(){
     return !r.native||'слоган виден в магазинной сборке';
   });
 
+  /* ---------- соляр, лунар, композит, Фортуна, средние точки ---------- */
+  group('Возвращения и точки');
+  t('соляр возвращает Солнце в его натальный градус',()=>{
+    /* Единственная проверка, которая здесь что-то значит: долгота Солнца в
+       найденный момент обязана совпасть с натальной. Бисекция, а не Ньютон,
+       потому что у станции производная обращается в ноль. */
+    const r=ev(`(()=>{const c=computeChart(1985,3,20,6.5,3,55.7558,37.6173);
+      const sr=returnChart(c,Date.UTC(2026,2,1),'Sun');
+      if(!sr) return {none:true};
+      return {err:Math.abs((((sr.pos.Sun.lon-c.pos.Sun.lon+540)%360)-180))*3600,
+        when:new Date(sr.returnMs).toISOString().slice(0,10),
+        withinYear:Math.abs(sr.returnMs-Date.UTC(2026,2,1))<200*86400000};})()`);
+    if(r.none) return 'соляр не найден';
+    if(!r.withinYear) return 'найденный соляр далеко от запрошенного года: '+r.when;
+    return r.err<1||`Солнце вернулось с ошибкой ${r.err.toFixed(2)}″`;
+  });
+  t('лунар возвращает Луну и попадает в свой месяц',()=>{
+    const r=ev(`(()=>{const c=computeChart(1985,3,20,6.5,3,55.7558,37.6173);
+      const lr=returnChart(c,Date.UTC(2026,2,1),'Moon');
+      if(!lr) return {none:true};
+      return {err:Math.abs((((lr.pos.Moon.lon-c.pos.Moon.lon+540)%360)-180))*3600,
+        days:Math.abs(lr.returnMs-Date.UTC(2026,2,1))/86400000};})()`);
+    if(r.none) return 'лунар не найден';
+    if(r.days>28) return `найденный лунар в ${r.days.toFixed(0)} днях от запроса`;
+    return r.err<2||`Луна вернулась с ошибкой ${r.err.toFixed(2)}″`;
+  });
+  t('соляр находится для любого года в диапазоне движка',()=>{
+    const bad=ev(`(()=>{const c=computeChart(1985,3,20,6.5,3,55.7558,37.6173), out=[];
+      for(const y of [1986,1999,2000,2024,2026,2049,2100]){
+        const sr=returnChart(c,Date.UTC(y,2,1),'Sun');
+        if(!sr){ out.push(y+': не найден'); continue; }
+        const e=Math.abs((((sr.pos.Sun.lon-c.pos.Sun.lon+540)%360)-180))*3600;
+        if(e>1) out.push(y+': '+e.toFixed(2)+'″');
+      }
+      return out;})()`);
+    return bad.length===0||bad.join('; ');
+  });
+  t('композит берёт ближнюю среднюю точку, а не среднее арифметическое',()=>{
+    /* Пара, стоящая по разные стороны от 0 Овна, при простом усреднении
+       уезжает на противоположную сторону круга. Это классический способ
+       сделать композит неверным. */
+    const r=ev(`(()=>{const mid=(a,b)=>rev(a+((((b-a+540)%360)-180)/2));
+      return {near:+mid(350,10).toFixed(3), naive:+((350+10)/2).toFixed(3)};})()`);
+    if(Math.abs(r.near-0)>0.001&&Math.abs(r.near-360)>0.001)
+      return `средняя точка 350° и 10° вышла ${r.near}, ждём 0`;
+    return r.naive===180||'контроль сломан';
+  });
+  t('Колесо Фортуны считается по секте и переворачивается ночью',()=>{
+    /* Формула без учёта секты - современное упрощение, и оно делает Фортуну
+       каждой ночной карты зеркалом того, что считает традиция. */
+    const r=ev(`(()=>{const c=computeChart(1985,3,20,6.5,3,55.7558,37.6173);
+      const day=bodyHouse(c,'Sun')>=7;
+      const byDay=rev(c.asc+c.pos.Moon.lon-c.pos.Sun.lon);
+      const byNight=rev(c.asc+c.pos.Sun.lon-c.pos.Moon.lon);
+      const got=c.pos.Fortune.lon;
+      return {day, got:+got.toFixed(4), byDay:+byDay.toFixed(4), byNight:+byNight.toFixed(4),
+        differ:Math.abs((((byDay-byNight+540)%360)-180))>1};})()`);
+    if(!r.differ) return 'дневная и ночная формулы совпали, проверка бессмысленна';
+    const want=r.day?r.byDay:r.byNight;
+    return Math.abs(r.got-want)<0.001||`Фортуна ${r.got}, ждём ${want} (карта ${r.day?'дневная':'ночная'})`;
+  });
+  t('Фортуна это точка: ни достоинства, ни управления домом',()=>{
+    const r=ev(`(()=>{const c=computeChart(1985,3,20,6.5,3,55.7558,37.6173);
+      const F=chartFacts(c), f=F.planets.Fortune;
+      return {present:!!f, dignity:f&&f.dignity, rules:f?f.rulesHouses.length:-1,
+        ruledByPoint:F.houses.some(h=>h.ruler==='Fortune'),
+        aspects:findAspects(c.pos).some(a=>a.p1==='Fortune'||a.p2==='Fortune')};})()`);
+    if(!r.present) return 'Фортуны нет в слое фактов';
+    if(r.dignity!==null) return 'у Фортуны достоинство '+r.dignity;
+    if(r.rules!==0||r.ruledByPoint) return 'Фортуна управляет домом';
+    return r.aspects||'Фортуна не участвует в аспектах';
+  });
+  t('средняя точка занята только в пределах своего орбиса',()=>{
+    /* Орбис средних точек отдельный и узкий: на трёх градусах их сотня в
+       каждой карте и метод перестаёт что-либо утверждать. Замерено на 60
+       картах: при полутора градусах медиана 28. */
+    const r=ev(`(()=>{const k=MIDPOINT_ORB;
+      MIDPOINT_ORB=1.5; const c=computeChart(1985,3,20,6.5,3,55.7558,37.6173,false);
+      const tight=midpointHits(c);
+      MIDPOINT_ORB=0.2; const tighter=midpointHits(c);
+      MIDPOINT_ORB=k;
+      return {tight:tight.length, tighter:tighter.length,
+        overOrb:tight.filter(h=>h.orb>1.5).length,
+        selfPair:tight.filter(h=>h.body===h.a||h.body===h.b).length};})()`);
+    if(r.overOrb) return r.overOrb+' попаданий шире заданного орбиса';
+    if(r.selfPair) return 'тело стоит на средней точке пары, в которую само входит';
+    return r.tighter<r.tight||'сужение орбиса ничего не изменило';
+  });
+  t('статичные кольца не помечают аспекты сходящимися',()=>{
+    /* Ни соляр, ни лунар, ни композит, ни синастрия никуда не движутся, и
+       метка "расходится" там была бы не приблизительной, а бессмысленной. */
+    const r=ev(`STATIC_RING.slice().sort().join(',')`);
+    return r==='composite,lunar,solar,synastry'||'состав статичных колец: '+r;
+  });
+
   /* ---------- экспорт карты ---------- */
   group('Экспорт карты');
   const EXP=`(()=>{const keep=LANG; LANG='ru';
@@ -728,7 +823,10 @@ function run(){
          именами планет: тест кричал на исправное приложение. */
       const cfgNames=findConfigurations(c.pos).map(f=>f.bodies.map(PN).join(', '));
       const res={claims:(new RegExp('АСПЕКТЫ \\\\('+n+'\\\\)')).test(txt),
-        lines:(txt.match(/орбис \\d/g)||[]).length, n,
+        /* Строки аспектов, а не средних точек: у средней точки в строке есть
+           знак равенства, у аспекта его нет. Нарезка по секции оказалась
+           хрупкой внутри шаблонной строки и сломала набор целиком. */
+        lines:txt.split('\\n').filter(x=>/орбис \\d/.test(x)&&!x.includes(' = ')).length, n,
         cfgIn:cfgNames.every(nm=>txt.includes(nm)),
         balance:/БАЛАНС/.test(txt)&&/Огонь \\d/.test(txt)};
       LANG=keep; return res;})()`);
@@ -1999,7 +2097,7 @@ function run(){
         clipped:[...document.querySelectorAll('.orbrow .nm')]
           .filter(e=>e.scrollWidth>e.clientWidth+1).map(e=>e.textContent),
         short:rows.filter(r=>r.getBoundingClientRect().height<44).length};})()`);
-    if(r.rows!==12) return `строк ${r.rows}`;   // одиннадцать аспектов плюс орбис точек
+    if(r.rows!==13) return `строк ${r.rows}`;   // аспекты, орбис точек, орбис средних точек
     if(r.clipped.length) return `обрезано: ${r.clipped.join(', ')}`;
     return r.short===0||`${r.short} строк ниже 44 px`;
   });
@@ -2029,12 +2127,16 @@ function run(){
       RING_MODE=keep; renderRingSwitch(); renderTransits(CURRENT);
       return bare;})()`);
     /* 15 = десять планет, Хирон и четыре точки. */
-    return (r.scrub&&r.list&&r.outerGlyphs===0&&r.natalGlyphs===15&&r.drawn)
+    return (r.scrub&&r.list&&r.outerGlyphs===0&&r.natalGlyphs===16&&r.drawn)
       ||JSON.stringify(r);
+  });
+  t('у каждого режима кольца есть имя на обоих языках',()=>{
+    const miss=ev(`RING_MODES.filter(m=>!STR['ring_'+m]||!STR['ring_'+m].ru||!STR['ring_'+m].en)`);
+    return miss.length===0||'без имени: '+miss.join(', ');
   });
   t('список режимов начинается с пустого и держит все пять',()=>{
     const r=ev(`[...document.getElementById('ringSel').options].map(o=>o.value).join(',')`);
-    return r==='none,transit,progressed,directed,synastry'||`получилось ${r}`;
+    return r==='none,transit,progressed,directed,solar,lunar,synastry,composite'||`получилось ${r}`;
   });
   t('прогрессии без построенной карты не выбираются',()=>{
     /* Они отсчитываются от момента рождения, которого ещё нет. Раньше кнопка
@@ -2530,7 +2632,7 @@ function run(){
       return {cols, cells:cells.length, on:upper, self, blank};})()`);
     /* 18 столбцов: угол, десять планет, Хирон, четыре кармические точки, Asc
        и MC. Это шире телефона, и сетка для того и прокручивается вбок. */
-    return (r.self===17&&r.blank>0&&r.cols===18)
+    return (r.self===18&&r.blank>0&&r.cols===19)
       ||`столбцов ${r.cols}, диагональных ${r.self}, пустых ${r.blank}`;
   });
   t('таблица находит ровно те же аспекты, что и колесо',()=>{
@@ -2570,7 +2672,7 @@ function run(){
       RING_MODE=keep; renderRingSwitch(); renderTransits(CURRENT);
       return out;})()`);
     /* 12 строк внешних тел плюс шапка, 17 столбцов внутренних плюс угол. */
-    return (r.cols===18&&r.cells===216&&r.self===0)
+    return (r.cols===19&&r.cells===228&&r.self===0)
       ||`столбцов ${r.cols}, клеток ${r.cells}, диагональных ${r.self}`;
   });
   t('включение минорных добавляет клетки в таблицу',()=>{

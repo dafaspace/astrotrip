@@ -1,0 +1,28 @@
+<!doctype html><meta charset="utf-8"><title>parity dump</title>
+<!-- Regenerates parity.txt without a human in the loop. Loads the real app in
+     an iframe, calls its own parityDigest(), and prints the result into the
+     page so headless Chrome can dump it:
+
+       ./tools-parity.sh
+
+     It exists because the alternative was copying six kilobytes through a chat
+     window by hand, which is both expensive and a place for a typo to hide in
+     the one file whose entire job is to be exact. -->
+<pre id="out">working</pre>
+<iframe id="f" src="./index.html" style="width:1px;height:1px;opacity:0"></iframe>
+<script>
+const f=document.getElementById('f');
+f.addEventListener('load',()=>{
+  let n=0;
+  const tick=setInterval(()=>{
+    n++;
+    try{
+      const d=f.contentWindow.parityDigest();
+      if(d&&d.length>1000){
+        clearInterval(tick);
+        document.getElementById('out').textContent='BEGIN\n'+d+'\nEND';
+      }
+    }catch(e){ if(n>120){clearInterval(tick);document.getElementById('out').textContent='FAILED '+e.message;} }
+  },100);
+});
+</script>
