@@ -395,6 +395,9 @@ html.native #printBtn{display:none}
 .pill{display:inline-block;font-size:11px;padding:2px 7px;border-radius:999px;background:var(--paper3);color:var(--ink2);margin-left:6px}
 .foot{max-width:760px;margin:20px auto;padding:0 20px;color:var(--ink3);font-size:12px}
 .foot h2{font-size:14px;color:var(--ink3);font-weight:500}
+/* The note sits under its row rather than inside it: the row is already a
+   grid of five things on a 375 px phone, and a sixth would squeeze the name. */
+.libnote{width:100%;font-size:12px;min-height:34px;margin:-4px 0 8px;padding:4px 8px}
 .foot summary{padding:6px 0}
 /* The tagline answers "what is this" for someone who lands on the web page
    cold. In the store build the listing has already answered it, and by the
@@ -580,6 +583,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
        unreachable on a fresh open. -->
   <details class="card fold" id="libCard">
     <summary><h2 data-i="libTitle"></h2><span class="tiny" id="libCount"></span></summary>
+    <div class="tiny" id="backupLine" style="margin:0 0 10px"></div>
     <!-- The name gets its own line: beside the button its placeholder was cut
          off mid-word on a phone. -->
     <input id="chartName" style="margin-bottom:10px">
@@ -799,7 +803,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
 /* Bump together with CACHE in sw.js: the two are the same release, and the
    number on screen is how you tell from a phone which one you are looking at. */
-const APP_VERSION='3.8.0';
+const APP_VERSION='3.9.0';
 document.getElementById('ver').textContent=APP_VERSION;
 
 /* ---------- feature flags ----------
@@ -964,6 +968,15 @@ const STR = {
   pointOrb:{ru:'Узлы, Лилит, Селена',en:'Nodes, Lilith, Selena'},
   aboutTitle:{ru:'Источники и точность',en:'Sources and accuracy'},
   copy:{ru:'Копировать',en:'Copy'},
+  bkNever:{ru:'Карты ни разу не выгружались. Браузер может стереть их без предупреждения.',
+    en:'These charts have never been exported. A browser can clear them without warning.'},
+  /* Two phrases, not one with a word substituted into it: "сегодня дн. назад"
+     is what one template produced, and the same trap exists in English. */
+  bkLast:{ru:'Последняя выгрузка: {d} дн. назад',en:'Last export: {d} days ago'},
+  bkToday:{ru:'Последняя выгрузка: сегодня',en:'Last export: today'},
+  bkNotPersisted:{ru:'браузер не гарантирует сохранность этого хранилища',
+    en:'the browser does not guarantee this storage'},
+  chartNote:{ru:'Заметка к карте',en:'Chart note'},
   copied:{ru:'Скопировано',en:'Copied'},
   copyFail:{ru:'Не удалось скопировать',en:'Copy failed'},
   exportTitle:{ru:'Карта целиком, для ИИ',en:'The whole chart, for an AI'},
@@ -6918,6 +6931,45 @@ else setTimeout(atlasLoad,1200);
    cast for noon and labelled, since its Ascendant, houses and Moon degree carry
    no information. */
 const LKEY_CHARTS='astrarium_charts';
+/* ---------- keeping the charts ----------
+   localStorage is not a filing cabinet. A browser may evict it under pressure,
+   "clear site data" takes it without a second dialog, and Safari discards it
+   for a site nobody has opened in seven days. For an astrologer with a hundred
+   clients in here that is not an inconvenience, it is the database gone.
+
+   Three things, in the order they matter. Ask the browser to make the storage
+   persistent, which is the only real defence and costs two lines. Record when
+   the library was last exported, and say so where the library is, loudly once
+   it has drifted. And keep the export working, which it already does.
+
+   What is deliberately NOT done: syncing to a server. That would mean an
+   account, a backend and somebody else holding the charts, and the whole point
+   of this app is that nothing leaves the device. */
+const LKEY_EXPORTED='astrarium_exported';
+let STORAGE_PERSISTED=null;
+function askPersistence(){
+  if(!navigator.storage||!navigator.storage.persist) return;
+  navigator.storage.persisted().then(p=>{
+    STORAGE_PERSISTED=p;
+    if(!p) navigator.storage.persist().then(ok=>{STORAGE_PERSISTED=ok; renderBackupLine();});
+    else renderBackupLine();
+  }).catch(()=>{});
+}
+function markExported(){ localStorage.setItem(LKEY_EXPORTED,String(Date.now())); renderBackupLine(); }
+function renderBackupLine(){
+  const el=document.getElementById('backupLine'); if(!el) return;
+  const n=savedCharts().length;
+  if(!n){ el.textContent=''; el.className='tiny'; return; }
+  const last=parseInt(localStorage.getItem(LKEY_EXPORTED)||'0',10);
+  const days=last?Math.floor((Date.now()-last)/86400000):null;
+  const bits=[];
+  if(days==null) bits.push(t('bkNever'));
+  else bits.push(days===0?t('bkToday'):t('bkLast').replace('{d}',days));
+  if(STORAGE_PERSISTED===false) bits.push(t('bkNotPersisted'));
+  el.textContent=bits.join(' · ');
+  /* Loud only when it is actually at risk: never exported, or a month stale. */
+  el.className='tiny'+((days==null||days>30||STORAGE_PERSISTED===false)?' libwarn':'');
+}
 function savedCharts(){ try{ return JSON.parse(localStorage.getItem(LKEY_CHARTS))||[] }catch(e){ return [] } }
 function libRow(e,own){
   const nm=e._n!==undefined?e._n:(own?e.name:LX(e.name));
@@ -6928,10 +6980,12 @@ function libRow(e,own){
     : `<span class="libmeta">${String(Math.floor(e.t)).padStart(2,'0')}:${String(Math.round((e.t%1)*60)).padStart(2,'0')}</span>`
       + (e.rr==='AA'?` <span class="libwarn">${t('rrKnown')}</span>`:'');
   const del=own?`<button class="libdel" data-del="${e.id}">${t('delChart')}</button>`:'';
+  const note=own?`<input class="libnote" data-note="${e.id}" value="${(e.note||'').replace(/"/g,'&quot;')}" placeholder="${t('chartNote')}">`:'';
   /* City is dropped when it repeats the name, which it does whenever a chart was
      saved without one and fell back to the city. */
   const place=(city&&city!==nm)?` · ${city}`:'';
-  return `<div class="libitem" data-id="${e.id}" data-own="${own?1:0}" title="${own?'':(e.src||'')}"><span class="libname">${nm}</span><span class="libmeta">${date}${place}</span>${time}${del}</div>`;
+  return `<div class="libitem" data-id="${e.id}" data-own="${own?1:0}" title="${own?'':(e.src||'')}"><span class="libname">${nm}</span><span class="libmeta">${date}${place}</span>${time}${del}</div>`
+    +note;
 }
 /* Russian needs three forms where English needs two, so the count cannot be
    a single STR entry. */
@@ -7183,7 +7237,7 @@ document.getElementById('saveChart').addEventListener('click',function(){
     tz:parseOffset(document.getElementById('tz').value), city:cityV, rr:'A', src:''});
   nameEl.value='';
   localStorage.setItem(LKEY_CHARTS,JSON.stringify(list.slice(0,LIB_CAP)));
-  renderLibrary();
+  renderLibrary(); renderBackupLine(); askPersistence();
 });
 
 /* ---------- CSV exchange ----------
@@ -7196,7 +7250,10 @@ document.getElementById('saveChart').addEventListener('click',function(){
    Reading is more forgiving than writing: the header decides the column order,
    so a file with the columns rearranged or with extra columns still loads. */
 const LIB_CAP=2000;
-const CSV_COLS=['name','date','time','utc_offset','latitude','longitude','city','rodden','source'];
+/* 'note' is last on purpose: a reader that knows only the old nine columns
+   ignores a tenth, while inserting it in the middle would shift every field
+   after it for anyone with an older export open in a spreadsheet. */
+const CSV_COLS=['name','date','time','utc_offset','latitude','longitude','city','rodden','source','note'];
 const csvCell=v=>{ const s=v==null?'':String(v);
   return /[",\n\r]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; };
 function csvParse(text){
@@ -7221,7 +7278,7 @@ function libToCsv(){
   savedCharts().forEach(e=>lines.push([
     e.name, `${String(e.y).padStart(4,'0')}-${pad2(e.mo)}-${pad2(e.d)}`,
     e.t==null?'':hhmm(e.t), e.tz==null?'':formatOffset(e.tz),
-    e.lat, e.lon, e.city||'', e.rr||'', e.src||''
+    e.lat, e.lon, e.city||'', e.rr||'', e.src||'', e.note||''
   ].map(csvCell).join(',')));
   return lines.join('\r\n')+'\r\n';
 }
@@ -7245,7 +7302,8 @@ function csvToLib(text){
     have.add(key);
     list.unshift({id:'u'+Date.now()+'_'+n, name:g('name')||g('city')||g('date'),
       y:+dm[1], mo:+dm[2], d:+dm[3], t, lat, lon,
-      tz:parseOffset(g('utc_offset')), city:g('city'), rr:g('rodden')||'', src:g('source')||''});
+      tz:parseOffset(g('utc_offset')), city:g('city'), rr:g('rodden')||'', src:g('source')||'',
+      note:g('note')||''});
     n++;
   }
   localStorage.setItem(LKEY_CHARTS,JSON.stringify(list.slice(0,LIB_CAP)));
@@ -7258,6 +7316,7 @@ document.getElementById('expCsv').addEventListener('click',()=>{
   a.download=`astrotrip-charts-${todayStr()}.csv`;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  markExported();
 });
 {
   const f=document.getElementById('relocFind'), box=document.getElementById('relocList');
@@ -7323,12 +7382,24 @@ document.getElementById('impFile').addEventListener('change',function(){
 });
 /* Живой поиск: перерисовка списка из 150 строк занимает доли миллисекунды,
    поэтому откладывать её нечем и незачем. */
+/* Typing in a note writes it straight through. No save button, because a note
+   people forget to save is worse than no note. */
+document.getElementById('libList').addEventListener('change',e=>{
+  const el=e.target.closest('[data-note]'); if(!el) return;
+  const list=savedCharts(), row=list.find(x=>x.id===el.dataset.note);
+  if(!row) return;
+  row.note=el.value.trim();
+  localStorage.setItem(LKEY_CHARTS,JSON.stringify(list));
+  renderBackupLine();
+});
 document.getElementById('libFind').addEventListener('input',renderLibrary);
 document.getElementById('libSort').addEventListener('change',function(){
   LIB_SORT=this.value; localStorage.setItem('astrarium_libsort',LIB_SORT); renderLibrary();
 });
 fillLibSort();
 renderLibrary();
+renderBackupLine();
+if(savedCharts().length) askPersistence();
 document.getElementById('exportCard').addEventListener('toggle',fillExport);
 
 /* Last, after every control exists and the atlas hook is in place: put the

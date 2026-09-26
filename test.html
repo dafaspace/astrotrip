@@ -797,6 +797,66 @@ function run(){
     return r==='composite,lunar,solar,synastry'||'состав статичных колец: '+r;
   });
 
+  /* ---------- сохранность карт ---------- */
+  group('Сохранность карт');
+  t('заметка к карте пишется насквозь и переживает выгрузку',()=>{
+    /* Без кнопки сохранения: заметка, которую забыли сохранить, хуже, чем
+       её отсутствие. */
+    const r=ev(`(()=>{const keep=localStorage.getItem('astrarium_charts');
+      localStorage.setItem('astrarium_charts',JSON.stringify([{id:'tst1',name:'T',
+        y:1985,mo:3,d:20,t:6.5,lat:55.75,lon:37.62,tz:3,city:'M',rr:'A',src:'',note:''}]));
+      renderLibrary();
+      const inp=document.querySelector('[data-note="tst1"]');
+      let saved=null, csv=null;
+      if(inp){ inp.value='клиент Петров';
+        inp.dispatchEvent(new Event('change',{bubbles:true}));
+        saved=JSON.parse(localStorage.getItem('astrarium_charts'))[0].note;
+        csv=libToCsv(); }
+      if(keep==null) localStorage.removeItem('astrarium_charts');
+      else localStorage.setItem('astrarium_charts',keep);
+      renderLibrary();
+      return {field:!!inp, saved, csv};})()`);
+    if(!r.field) return 'поля заметки нет в строке библиотеки';
+    if(r.saved!=='клиент Петров') return 'заметка не сохранилась: '+r.saved;
+    if(!/,note\r?\n/.test(r.csv)) return 'в заголовке CSV нет колонки note';
+    return /клиент Петров/.test(r.csv)||'заметка не попала в выгрузку';
+  });
+  t('колонка note стоит последней, чтобы не сдвинуть старые выгрузки',()=>{
+    const cols=ev('CSV_COLS');
+    return cols[cols.length-1]==='note'
+      ||`порядок колонок ${cols.join(',')}`;
+  });
+  t('строка о резервной копии предупреждает и замолкает после выгрузки',()=>{
+    const r=ev(`(()=>{const keepC=localStorage.getItem('astrarium_charts');
+      const keepE=localStorage.getItem('astrarium_exported');
+      localStorage.removeItem('astrarium_exported');
+      localStorage.setItem('astrarium_charts',JSON.stringify([{id:'tst2',name:'T',
+        y:1985,mo:3,d:20,t:6.5,lat:55.75,lon:37.62,tz:3,city:'M',rr:'A',src:''}]));
+      renderLibrary(); renderBackupLine();
+      const el=document.getElementById('backupLine');
+      const never={text:el.textContent, warn:el.className.includes('libwarn')};
+      markExported();
+      const after={text:el.textContent, warn:el.className.includes('libwarn')};
+      localStorage.removeItem('astrarium_charts');
+      if(keepC!=null) localStorage.setItem('astrarium_charts',keepC);
+      if(keepE!=null) localStorage.setItem('astrarium_exported',keepE);
+      else localStorage.removeItem('astrarium_exported');
+      renderLibrary(); renderBackupLine();
+      const empty=document.getElementById('backupLine').textContent;
+      return {never, after, empty};})()`);
+    if(!r.never.text||!r.never.warn) return 'без выгрузки строка молчит или не предупреждает';
+    if(r.after.warn) return 'после выгрузки строка всё ещё тревожная';
+    if(/дн\. назад|days ago/.test(r.after.text)) return 'сразу после выгрузки сказано «дней назад»: '+r.after.text;
+    return r.empty===''||'на пустой библиотеке строка что-то говорит: '+r.empty;
+  });
+  t('приложение просит браузер не вытеснять хранилище',()=>{
+    /* Единственная настоящая защита от «очистить данные сайта» и от
+       семидневного вытеснения в Safari, и стоит она двух строк. */
+    const src=ev('askPersistence.toString()');
+    return (/navigator\.storage/.test(src)&&/\.persist\(\)/.test(src))
+      ||'askPersistence не обращается к navigator.storage.persist';
+  });
+
   /* ---------- экспорт карты ---------- */
   group('Экспорт карты');
   const EXP=`(()=>{const keep=LANG; LANG='ru';
@@ -3293,7 +3353,10 @@ function run(){
   });
   t('в CSV есть строка заголовка и она объявляет колонки',()=>{
     const h=ev('libToCsv().split("\\r\\n")[0]');
-    return h==='name,date,time,utc_offset,latitude,longitude,city,rodden,source'||`заголовок "${h}"`;
+    /* Сверяется с самим CSV_COLS, а не с переписанным от руки списком: при
+       добавлении колонки note этот тест провалился на приложении, которое было
+       исправно, и это ровно тот случай, когда тест дублирует данные. */
+    return h===ev('CSV_COLS.join(",")')||`заголовок "${h}"`;
   });
   t('повторная загрузка того же файла не удваивает библиотеку',()=>{
     const r=ev(`(()=>{const keep=localStorage.getItem('astrarium_charts');
