@@ -12,7 +12,7 @@
    Bump CACHE on every deploy that changes a precached file, and keep it equal
    to APP_VERSION in index.html: the number shown next to the title is how a
    stale install is spotted, so it has to name the same release as this cache. */
-const CACHE = 'astrotrip-v3.9.0';
+const CACHE = 'astrotrip-v3.10.0';
 const ASSETS = [
   './',
   './index.html',
@@ -36,6 +36,10 @@ const ASSETS = [
   './inter-400.woff2',
   './inter-500.woff2',
   './literata-500.woff2'
+  // asteroids.js is deliberately absent. It is 867 KB for four bodies most
+  // people never switch on, so it is fetched the first time the switch is
+  // turned on and kept by the cache-first handler from then on. Precaching it
+  // would put a third of a megabyte on every install to serve a minority.
 ];
 
 /* Split by criticality: CRITICAL must all land or the install fails, so the

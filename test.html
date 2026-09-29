@@ -54,7 +54,8 @@ const frame=document.getElementById('app');
      last switched on by hand. Cleared before the iframe loads so the suite
      tests a fresh install: the ring mode, the orbs and the chosen partner have
      each already made a run behave differently from a real first launch. */
-  try{ ['astrarium_ring','astrarium_orbs','astrarium_partner'].forEach(k=>localStorage.removeItem(k)); }catch(e){}
+  try{ ['astrarium_ring','astrarium_orbs','astrarium_partner','astrarium_asteroids','astrarium_house3d']
+         .forEach(k=>localStorage.removeItem(k)); }catch(e){}
   /* Read once here, because the runner below is synchronous. */
   try{ SW_SRC=await (await fetch('./sw.js?notacache='+Date.now())).text(); }catch(e){}
   /* The golden ChartFacts, fetched here because t() is synchronous. */
@@ -119,6 +120,12 @@ const frame=document.getElementById('app');
        recorded here, before anything touches it, and the ring is then filled so
        the rest of the checks have two rings to measure. */
     try{ DEFAULT_RING=await W.eval('RING_MODE'); }catch(e){}
+    /* The asteroid file is a third of a megabyte and is fetched only when the
+       switch is turned on, so nothing has loaded it by this point and the
+       synchronous runner cannot wait for it. Loaded here, with the switch left
+       off: the suite checks both that the numbers are right when it is on and
+       that nothing is computed while it is off. */
+    try{ await W.eval('loadAsteroids()'); }catch(e){}
     /* The app persists the orb settings, and this browser may carry whatever
        was last switched on by hand. The suite tests the shipped default, so it
        is set explicitly here; the aspect tests flip things themselves and put
@@ -795,6 +802,89 @@ function run(){
        метка "расходится" там была бы не приблизительной, а бессмысленной. */
     const r=ev(`STATIC_RING.slice().sort().join(',')`);
     return r==='composite,lunar,solar,synastry'||'состав статичных колец: '+r;
+  });
+
+  /* ---------- астероиды ---------- */
+  group('Астероиды');
+  t('четыре астероида совпадают с JPL Horizons до 1 секунды дуги',()=>{
+    /* Сверено сквозь весь конвейер, а не только против подгонки: видимые
+       геоцентрические долготы на эклиптику даты, QUANTITIES=31, тот же момент
+       что и у планет выше. */
+    const REF={Ceres:150.929334,Pallas:97.809876,Juno:219.829006,Vesta:256.972072};
+    const got=ev(`(()=>{const k=ASTEROIDS; ASTEROIDS=true;
+      const c=computeChart(1985,11,3,13+37/60,3,59.9343,30.3351,false);
+      ASTEROIDS=k;
+      const o={loaded:AST_LOADED};
+      ['Ceres','Pallas','Juno','Vesta'].forEach(a=>o[a]=c.pos[a]?c.pos[a].lon:null);
+      return o;})()`);
+    if(!got.loaded) return 'файл астероидов не загружен, сверять нечего';
+    const bad=Object.entries(REF).map(([p,v])=>{
+      if(got[p]==null) return p+': нет в карте';
+      const e=Math.abs(((got[p]-v+540)%360)-180)*3600;
+      return e>1?`${p} на ${e.toFixed(2)}″`:null;
+    }).filter(Boolean);
+    return bad.length===0||bad.join(', ');
+  });
+  t('без переключателя астероидов в карте нет',()=>{
+    /* Они стоят третью мегабайта и нужны не всем. Выключено значит выключено,
+       а не «посчитано и спрятано». */
+    const r=ev(`(()=>{const k=ASTEROIDS; ASTEROIDS=false;
+      const c=computeChart(1985,11,3,13.6,3,59.93,30.33,false);
+      ASTEROIDS=k;
+      return ['Ceres','Pallas','Juno','Vesta'].filter(a=>c.pos[a]);})()`);
+    return r.length===0||'посчитаны при выключенном переключателе: '+r.join(', ');
+  });
+  t('у каждого астероида есть предел орбиса и имя',()=>{
+    /* Пропущенная строка в SPEED_ORB делает предел NaN, и тогда каждый транзит
+       этого тела молча исчезает. */
+    const bad=ev(`(()=>{const out=[];
+      ['Ceres','Pallas','Juno','Vesta'].forEach(a=>{
+        if(!isFinite(SPEED_ORB[a])) out.push(a+': нет предела орбиса');
+        if(!GLYPH[a]) out.push(a+': нет глифа');
+        if(!PLANET_NAME.ru[a]||!PLANET_NAME.en[a]) out.push(a+': нет имени');
+        if(!WHEEL_BODIES.includes(a)) out.push(a+': не среди тел колеса');
+      });
+      return out;})()`);
+    return bad.length===0||bad.join('; ');
+  });
+  t('файл астероидов не лежит в обязательном кеше',()=>{
+    /* 867 КБ, которые большинству не нужны. Он кладётся в кеш при первом
+       включении, а не при установке. */
+    /* Список, а не весь файл: первая версия этой проверки искала имя во всём
+       тексте и упала на комментарии, который объясняет, почему файла тут нет. */
+    const m=/const ASSETS\s*=\s*\[([\s\S]*?)\n\];/.exec(SW_SRC);
+    if(!m) return 'ASSETS в sw.js не найден';
+    const list=m[1].split('\n').map(l=>l.replace(/\/\/.*$/,'').trim()).join('');
+    return !/asteroids\.js/.test(list)||'asteroids.js попал в список предзагрузки';
+  });
+
+  /* ---------- как глиф стоит к своему градусу ---------- */
+  group('Глиф и его градус');
+  t('под глифом нет диска',()=>{
+    /* Диск был 19 px в поперечнике, и разводка обязана держать между соседями
+       столько же - из-за чего глиф уезжал до 38 градусов от градуса, который
+       он показывает. Замечено Дафой по карте ZET, которая рисует так же. */
+    const r=ev(`document.querySelectorAll('#wheel .pl circle').length`);
+    return r===0||`осталось ${r} дисков`;
+  });
+  t('глиф не уезжает от своего градуса дальше, чем раньше',()=>{
+    /* Числа измерены на 93 картах библиотеки: было 7,33 в среднем и 38,4
+       в худшем случае, стало 2,37 и 17,5. Порог поставлен между этими парами,
+       чтобы возврат к диску провалил тест. */
+    const r=ev(`(()=>{const sepFor=(r,h)=>2*Math.asin(Math.min(1,h/r))*180/Math.PI;
+      let worst=0,sum=0,n=0;
+      for(let i=0;i<CHART_LIBRARY.length;i+=11){
+        const e=CHART_LIBRARY[i], hh=e.t==null?12:e.t;
+        const c=computeChart(e.y,e.mo,e.d,hh,libTz(e),e.lat,e.lon,false);
+        const shown=WHEEL_BODIES.concat(FACT_POINTS).filter(p=>c.pos[p]);
+        const lons=shown.map(p=>c.pos[p].lon);
+        fanOut(lons,sepFor(89,5.5)).forEach((v,k)=>{
+          const d=Math.abs(((v-lons[k]+540)%360)-180);
+          sum+=d;n++;if(d>worst)worst=d;});
+      }
+      return {avg:+(sum/n).toFixed(2), worst:+worst.toFixed(2)};})()`);
+    if(r.avg>4) return `средний сдвиг ${r.avg}°, ждём меньше 4`;
+    return r.worst<25||`худший сдвиг ${r.worst}°, ждём меньше 25`;
   });
 
   /* ---------- сохранность карт ---------- */
@@ -2186,7 +2276,8 @@ function run(){
         drawn:!!document.querySelector('#wheel svg')};
       RING_MODE=keep; renderRingSwitch(); renderTransits(CURRENT);
       return bare;})()`);
-    /* 15 = десять планет, Хирон и четыре точки. */
+    /* 16 = десять планет, Хирон и пять точек. Астероиды в наборе выключены,
+       и это проверяется отдельно. */
     return (r.scrub&&r.list&&r.outerGlyphs===0&&r.natalGlyphs===16&&r.drawn)
       ||JSON.stringify(r);
   });
@@ -2281,10 +2372,10 @@ function run(){
       const C=190;
       for(const m of ['transit','progressed','directed']){
         RING_MODE=m; renderRingSwitch(); renderTransits(CURRENT);
-        const na=document.querySelector('#wheel .pl circle');
-        const tr=document.querySelector('#wheel .trp circle');
+        const na=document.querySelector('#wheel .pl text[font-family="Astro"]');
+        const tr=document.querySelector('#wheel .trp text[font-family="Astro"]');
         if(!na||!tr){ out[m]=null; continue; }
-        const rad=e=>Math.hypot(+e.getAttribute('cx')-C,+e.getAttribute('cy')-C);
+        const rad=e=>Math.hypot(+e.getAttribute('x')-C,+e.getAttribute('y')-C);
         out[m]=rad(na)<rad(tr);
       }
       RING_MODE=keep; renderRingSwitch(); renderTransits(CURRENT);
@@ -2901,14 +2992,17 @@ function run(){
       const lonOf=(x,y)=>{const a=Math.atan2(C-y,x-C)*180/Math.PI;return ((asc+180-a)%360+360)%360;};
       let worst=0, who='';
       sv.querySelectorAll('.pl').forEach(g=>{
-        const c=g.querySelector('circle');
-        const drawn=lonOf(+c.getAttribute('cx'),+c.getAttribute('cy'));
+        const c=g.querySelector('text[font-family="Astro"]');
+        const drawn=lonOf(+c.getAttribute('x'),+c.getAttribute('y'));
         let d=Math.abs(drawn-rev(CURRENT.pos[g.dataset.p].lon)); if(d>180)d=360-d;
         if(d>worst){worst=d;who=g.dataset.p;}
       });
-      const sep=2*Math.asin(Math.min(1,10.5/(190-104)))*180/Math.PI;
+      const sep=2*Math.asin(Math.min(1,5.5/(190-104)))*180/Math.PI;
       return {worst,who,sep};})()`);
-    return r.worst<=r.sep*2
+    /* Три шага, а не два: разведение стало вчетверо мельче, а тел на колесе
+       теперь до двадцати, так что цепочка из них длиннее в шагах при том, что
+       в градусах она вдвое короче. Абсолютный предел проверяется отдельно. */
+    return r.worst<=r.sep*3
       ||`${r.who} уехал на ${r.worst.toFixed(1)}° при разведении ${r.sep.toFixed(1)}°`;
   });
   t('разведение выдерживает скопление всех тел в пяти градусах',()=>{
@@ -2937,8 +3031,8 @@ function run(){
        рядом - это и было тем, что видно глазом. */
     const r=ev(`(()=>{const sv=document.querySelector('#wheel svg'), C=190, asc=CURRENT.asc;
       const lonOf=(x,y)=>{const a=Math.atan2(C-y,x-C)*180/Math.PI;return ((asc+180-a)%360+360)%360;};
-      const at=n=>{const e=sv.querySelector('.pl[data-p="'+n+'"] circle');
-        return e?lonOf(+e.getAttribute('cx'),+e.getAttribute('cy')):null;};
+      const at=n=>{const e=sv.querySelector('.pl[data-p="'+n+'"] text[font-family="Astro"]');
+        return e?lonOf(+e.getAttribute('x'),+e.getAttribute('y')):null;};
       const dataOpp=Math.abs(rev(CURRENT.pos.SNode.lon-CURRENT.pos.NNode.lon)-180);
       const N=at('NNode'), S=at('SNode');
       return {dataOpp, drawnOpp:N==null||S==null?null:Math.abs(rev(S-N)-180)};})()`);
@@ -2952,8 +3046,9 @@ function run(){
        направляющая указывала на чужую метку, и скопление планет в знаке
        переставало читаться. У внутреннего теперь своя шкала, и отступ тот же. */
     const r=ev(`(()=>{const C=190, sv=document.querySelector('#wheel svg');
-      const rad=e=>Math.hypot(+e.getAttribute('cx')-C,+e.getAttribute('cy')-C);
-      const na=sv.querySelector('.pl circle'), trc=sv.querySelector('.trp circle');
+      const rad=e=>Math.hypot(+e.getAttribute('x')-C,+e.getAttribute('y')-C);
+      const na=sv.querySelector('.pl text[font-family="Astro"]');
+      const trc=sv.querySelector('.trp text[font-family="Astro"]');
       if(!na||!trc) return null;
       const zod=C-52, nat=C-82;
       const scales=[...sv.querySelectorAll('circle')].map(c=>+c.getAttribute('r'));
@@ -2973,14 +3068,14 @@ function run(){
     const ticky=r.filter(n=>n>=360);
     return ticky.length>=2||`шкал с делениями ${ticky.length}, отрезков по путям: ${r.join(', ')}`;
   });
-  t('диски глифов остаются малой долей колеса',()=>{
-    /* Читаемость вперёд нажимаемости: цель это сектор кольца, поэтому диск
-       больше не обязан вмещать палец и может быть мелким. */
-    const r=ev(`(()=>{const rs=[...document.querySelectorAll('#wheel .pl circle')]
-        .map(c=>+c.getAttribute('r'));
-      return {max:Math.max(...rs), wheel:190-3};})()`);
-    const frac=r.max*2/(r.wheel*2);
-    return frac<0.055||`диск занимает ${(frac*100).toFixed(1)}% диаметра колеса`;
+  t('глиф остаётся малой долей колеса',()=>{
+    /* Раньше это мерило диск. Диска нет, и мерить надо сам глиф: он и есть
+       то, что занимает место на кольце и толкает соседей. */
+    const r=ev(`(()=>{const fs=[...document.querySelectorAll('#wheel .pl text[font-family="Astro"]')]
+        .map(c=>+c.getAttribute('font-size'));
+      return {max:Math.max(...fs), wheel:190-3};})()`);
+    const frac=r.max/(r.wheel*2);
+    return frac<0.04||`глиф занимает ${(frac*100).toFixed(1)}% диаметра колеса`;
   });
 
   /* ---------- градусы на колесе ---------- */
@@ -3100,7 +3195,7 @@ function run(){
        заметно в стороне от глифа обязана выбирать его же. */
     const r=ev(`(()=>{
       const centres=[...document.querySelectorAll('#wheel .pl')].map(g=>{
-        const b=g.querySelector('circle').getBoundingClientRect();
+        const b=g.querySelector('text[font-family="Astro"]').getBoundingClientRect();
         return {p:g.dataset.p,cx:b.left+b.width/2,cy:b.top+b.height/2,w:b.width};});
       if(!centres.length||!centres[0].w) return null;
       const probe=(x,y)=>{ISO=null;
@@ -3409,12 +3504,13 @@ function run(){
       /* Told apart by which group they sit in, not by radius: the discs were
          made smaller and a radius range silently stopped matching them, so this
          test reported "no two sets" on a perfectly good wheel. */
-      const na=[...sv.querySelectorAll('.pl circle')];
-      const tr=[...sv.querySelectorAll('.trp circle')];
-      const d=c=>Math.hypot(+c.getAttribute('cx')-190,+c.getAttribute('cy')-190);
+      const na=[...sv.querySelectorAll('.pl text[font-family="Astro"]')];
+      const tr=[...sv.querySelectorAll('.trp text[font-family="Astro"]')];
+      const d=c=>Math.hypot(+c.getAttribute('x')-190,+c.getAttribute('y')-190);
+      const half=c=>+c.getAttribute('font-size')/2;
       if(!tr.length||!na.length) return null;
-      return {natalOuter:Math.max(...na.map(c=>d(c)+ +c.getAttribute('r'))),
-              transitInner:Math.min(...tr.map(c=>d(c)- +c.getAttribute('r'))),
+      return {natalOuter:Math.max(...na.map(c=>d(c)+half(c))),
+              transitInner:Math.min(...tr.map(c=>d(c)-half(c))),
               tr:tr.length, na:na.length};})()`);
     if(!r) return 'на колесе нет двух наборов глифов';
     return (r.transitInner-r.natalOuter>=6)

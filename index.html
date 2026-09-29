@@ -568,6 +568,11 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
       <input id="house3d" type="checkbox" style="width:auto"><span data-i="house3d"></span>
     </label>
     <div class="tiny" data-i="house3dNote" style="margin:-4px 0 4px"></div>
+    <label class="chk" style="display:flex;align-items:center;gap:8px;min-height:44px">
+      <input id="astOn" type="checkbox" style="width:auto"><span data-i="asteroids"></span>
+      <span class="tiny" id="astState"></span>
+    </label>
+    <div class="tiny" data-i="asteroidsNote" style="margin:-4px 0 4px"></div>
     <div class="grid" style="margin-top:10px">
       <div><label data-i="hsysLabel"></label><select id="hsys"></select></div>
       <div><label data-i="lilLabel"></label><select id="lilmode"></select></div>
@@ -803,7 +808,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
 /* Bump together with CACHE in sw.js: the two are the same release, and the
    number on screen is how you tell from a phone which one you are looking at. */
-const APP_VERSION='3.9.0';
+const APP_VERSION='3.10.0';
 document.getElementById('ver').textContent=APP_VERSION;
 
 /* ---------- feature flags ----------
@@ -958,6 +963,12 @@ const STR = {
   sfReceptions:{ru:'Рецепции',en:'Receptions'},
   sfPlacement:{ru:'Положение',en:'Placement'},
   sfAspects:{ru:'Аспекты',en:'Aspects'},
+  asteroids:{ru:'Астероиды: Церера, Паллада, Юнона, Веста',
+    en:'Asteroids: Ceres, Pallas, Juno, Vesta'},
+  asteroidsNote:{ru:'Отдельный файл, около 320 КБ, скачивается один раз при включении и дальше работает офлайн. Подогнано к JPL Horizons, худшее расхождение 0,21 секунды дуги на 1600-2250.',
+    en:'A separate file, about 320 KB, downloaded once when you switch this on and offline after that. Fitted to JPL Horizons, worst residual 0.21 arcseconds over 1600-2250.'},
+  asteroidsLoading:{ru:'загружается…',en:'loading…'},
+  asteroidsFailed:{ru:'не удалось загрузить',en:'could not load'},
   sfMidpoints:{ru:'На средних точках',en:'On midpoints'},
   midOrb:{ru:'Средние точки',en:'Midpoints'},
   house3d:{ru:'Дом с учётом широты (3D, только Плацидус)',
@@ -1418,7 +1429,8 @@ function deltaTsec(y,mo){
 /* VSOP87D series evaluation. VS/VF come from vsop87d.js. */
 /* 'pl' and 'ch' are not VSOP series names - there are none. They are markers
    that send the body to its own Chebyshev fit instead. */
-const VKEY={Sun:'ea',Pluto:'pl',Chiron:'ch',Mercury:'me',Venus:'ve',Mars:'ma',Jupiter:'ju',Saturn:'sa',Uranus:'ur',Neptune:'ne'};
+const VKEY={Sun:'ea',Pluto:'pl',Chiron:'ch',Mercury:'me',Venus:'ve',Mars:'ma',Jupiter:'ju',Saturn:'sa',Uranus:'ur',Neptune:'ne',
+  Ceres:'as',Pallas:'as',Juno:'as',Vesta:'as'};
 function vsSum(a,t){
   let s=0;
   for(let i=0;i<a.length;i+=3){ const f=a[i+2]; s+=a[i]*Math.cos(a[i+1]+(f<0?0:VF[f]*t)); }
@@ -1484,6 +1496,7 @@ function apparent(name,t,dpsi,E,V){
     for(let i=0;i<3;i++){
       const P=k==='pl'?plutoXYZ(t-tau/MIL)
              :k==='ch'?chironXYZ(t-tau/MIL)
+             :k==='as'?asteroidXYZ(name,t-tau/MIL)
              :helioXYZ(k,t-tau/MIL);
       if(!P) return null;                         // Chiron outside its fit
       v=[P[0]-E[0],P[1]-E[1],P[2]-E[2]];
@@ -1612,6 +1625,54 @@ function plutoXYZ(tm){
   return [chebEval(PLC[s][0],u),chebEval(PLC[s][1],u),chebEval(PLC[s][2],u)];
 }
 
+/* ---------- the four asteroids ----------
+   Ceres, Pallas, Juno and Vesta, fitted the same way as Chiron and living in
+   their own file because they are 867 KB of coefficients, 323 KB over the
+   wire. Nothing loads until somebody switches them on, which is the same
+   arrangement cities.txt has and the same one Swiss Ephemeris uses for its own
+   seas_*.se1 files.
+
+   520 segments at degree 12 rather than Chiron's 52, and the reason is
+   eccentricity rather than period. One setting for all four was tried first
+   and gave Ceres 0.57 arcseconds and JUNO 88 - a minute and a half, which this
+   app displays. Juno's eccentricity is 0.256 against Ceres's 0.076, and an
+   eccentric body sweeps through perihelion too fast for a long segment. At 520
+   the worst of the four is 0.21 arcseconds.
+
+   Off by default: they are an addition, most charts are read without them, and
+   nobody should pay a third of a megabyte for a body they did not ask for. */
+const AST_KEY='astrarium_asteroids';
+let ASTEROIDS=localStorage.getItem(AST_KEY)==='1';
+let AST_LOADED=false, AST_LOADING=null;
+const ASTEROID_BODIES=['Ceres','Pallas','Juno','Vesta'];
+function loadAsteroids(){
+  if(AST_LOADED) return Promise.resolve(true);
+  if(AST_LOADING) return AST_LOADING;
+  AST_LOADING=new Promise(res=>{
+    const sc=document.createElement('script');
+    /* Versioned, because the file is regenerated when the fit changes and a
+       service worker that already holds one will otherwise serve it forever. */
+    sc.src='./asteroids.js?v='+APP_VERSION;
+    sc.onload=()=>{ AST_LOADED=true; res(true); };
+    /* A failure is not fatal and must not look like one: the chart is cast
+       without them and the switch goes back off, so the next attempt is the
+       user's rather than a silent retry loop. */
+    sc.onerror=()=>{ ASTEROIDS=false; localStorage.setItem(AST_KEY,'0'); res(false); };
+    document.head.appendChild(sc);
+  });
+  return AST_LOADING;
+}
+function asteroidXYZ(name,tm){
+  const E=AST_LOADED&&window.AST_EPH&&window.AST_EPH[name];
+  if(!E) return null;
+  const jd=2451545.0+tm*365250;
+  if(jd<E.jd0||jd>E.jd0+E.seg*E.nseg) return null;
+  let i=Math.floor((jd-E.jd0)/E.seg);
+  i=Math.max(0,Math.min(E.nseg-1,i));
+  const u=Math.max(-1,Math.min(1,2*(jd-(E.jd0+i*E.seg))/E.seg-1));
+  return [chebEval(E.c[i][0],u),chebEval(E.c[i][1],u),chebEval(E.c[i][2],u)];
+}
+
 /* ---------- Chiron ---------- */
 /* Same construction, one difference that matters: this one returns null off
    the ends instead of clamping. Pluto is one of the ten and a chart without it
@@ -1705,18 +1766,21 @@ const POINTS=['Chiron','NNode','SNode','Lilith','Selena','Fortune'];
    drawn. Not CARD_ORDER either, which is the interpretation corpus and stops
    at the ten. Filtered by presence at each use, so Chiron drops out before
    1600 and the rest carries on. */
-const WHEEL_BODIES=[...BODIES,'Chiron'];
+/* The asteroids join here, and everything downstream already filters this list
+   by presence, so a chart cast with them off simply has fewer entries. */
+const WHEEL_BODIES=[...BODIES,'Chiron','Ceres','Pallas','Juno','Vesta'];
 const GLYPH={Sun:'☉',Moon:'☽',Mercury:'☿',Venus:'♀',Mars:'♂',Jupiter:'♃',Saturn:'♄',Uranus:'♅',Neptune:'♆',Pluto:'♇',
-  Chiron:'⚷',NNode:'☊',SNode:'☋',Lilith:'⚸',Selena:'⯝',Fortune:'⊗',ASC:'Asc',MC:'MC'};
+  Chiron:'⚷',Ceres:'⚳',Pallas:'⚴',Juno:'⚵',Vesta:'⚶',
+  NNode:'☊',SNode:'☋',Lilith:'⚸',Selena:'⯝',Fortune:'⊗',ASC:'Asc',MC:'MC'};
 const SIGN_GLYPH=['♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓'];
 const ASPECT_GLYPH={conjunction:'☌',semisextile:'⚺',semisquare:'∠',sextile:'⚹',
   quintile:'Q',square:'□',trine:'△',sesquiquadrate:'⚼',biquintile:'bQ',
   quincunx:'⚻',opposition:'☍'};
 
 const PLANET_NAME={
-  ru:{Sun:'Солнце',Moon:'Луна',Mercury:'Меркурий',Venus:'Венера',Mars:'Марс',Jupiter:'Юпитер',Saturn:'Сатурн',Uranus:'Уран',Neptune:'Нептун',Pluto:'Плутон',Chiron:'Хирон',
+  ru:{Sun:'Солнце',Moon:'Луна',Mercury:'Меркурий',Venus:'Венера',Mars:'Марс',Jupiter:'Юпитер',Saturn:'Сатурн',Uranus:'Уран',Neptune:'Нептун',Pluto:'Плутон',Chiron:'Хирон',Ceres:'Церера',Pallas:'Паллада',Juno:'Юнона',Vesta:'Веста',
       NNode:'Северный узел',SNode:'Южный узел',Lilith:'Лилит (Чёрная Луна)',Selena:'Селена (Белая Луна)',Fortune:'Колесо Фортуны',ASC:'Асцендент',MC:'MC'},
-  en:{Sun:'Sun',Moon:'Moon',Mercury:'Mercury',Venus:'Venus',Mars:'Mars',Jupiter:'Jupiter',Saturn:'Saturn',Uranus:'Uranus',Neptune:'Neptune',Pluto:'Pluto',Chiron:'Chiron',
+  en:{Sun:'Sun',Moon:'Moon',Mercury:'Mercury',Venus:'Venus',Mars:'Mars',Jupiter:'Jupiter',Saturn:'Saturn',Uranus:'Uranus',Neptune:'Neptune',Pluto:'Pluto',Chiron:'Chiron',Ceres:'Ceres',Pallas:'Pallas',Juno:'Juno',Vesta:'Vesta',
       NNode:'North Node',SNode:'South Node',Lilith:'Lilith (Black Moon)',Selena:'Selena (White Moon)',Fortune:'Lot of Fortune',ASC:'Ascendant',MC:'MC'}
 };
 const PN=n=>LX(PLANET_NAME)[n]||n;
@@ -1747,14 +1811,14 @@ const ASPECT_NAME={
 const AREA_KEYS=['career','love','energy','mind','home'];
 const AREA_NAME={ru:{career:'карьера',love:'любовь',energy:'энергия',mind:'ум',home:'дом'},en:{career:'career',love:'love',energy:'energy',mind:'mind',home:'home'}};
 
-const RECEIVER_RANK={ASC:1.5,MC:1.5,Sun:1.3,Moon:1.3,Mercury:1.0,Venus:1.0,Mars:1.0,Jupiter:0.8,Saturn:0.8,Uranus:0.5,Neptune:0.5,Pluto:0.5,Chiron:0.6,NNode:1.1,SNode:0.9,Lilith:0.9,Selena:0.9};
+const RECEIVER_RANK={ASC:1.5,MC:1.5,Sun:1.3,Moon:1.3,Mercury:1.0,Venus:1.0,Mars:1.0,Jupiter:0.8,Saturn:0.8,Uranus:0.5,Neptune:0.5,Pluto:0.5,Chiron:0.6,Ceres:0.5,Pallas:0.5,Juno:0.5,Vesta:0.5,NNode:1.1,SNode:0.9,Lilith:0.9,Selena:0.9};
 /* Chiron at 1.5, the same cap as Saturn, because its mean motion of 7 degrees
    a year sits between Saturn's 12 and Uranus's 4 and this cap decides how long
    a transit stays listed: at 1.5 a Chiron aspect runs about a year, which is
    the same length Saturn's and Uranus's run. Written out rather than left to
    the lookup, because an absent entry here makes SPEED_ORB[T]+2 a NaN and a
    NaN cap silently drops every transiting Chiron aspect. */
-const SPEED_ORB={Sun:2,Moon:6,Mercury:2,Venus:2,Mars:2,Jupiter:1.5,Saturn:1.5,Uranus:1,Neptune:1,Pluto:1,Chiron:1.5,NNode:1.5,SNode:1.5,Lilith:1.5,Selena:1.5};
+const SPEED_ORB={Sun:2,Moon:6,Mercury:2,Venus:2,Mars:2,Jupiter:1.5,Saturn:1.5,Uranus:1,Neptune:1,Pluto:1,Chiron:1.5,Ceres:1.5,Pallas:1.5,Juno:1.5,Vesta:1.5,NNode:1.5,SNode:1.5,Lilith:1.5,Selena:1.5};
 /* Every aspect the app knows, with the orb it ships with. The five majors are
    on by default and the six minors are off. Measured across sixty charts from
    the library, switching every minor on takes a chart from 11.6 aspects to
@@ -2149,6 +2213,9 @@ function computeChart(y,mo,day,localH,tzOff,lat,lng,withSpeed){
      `ch.pos.Chiron` falsy, which is exactly what every drawing and listing
      already tests for. */
   const chi=apparent('Chiron',tm,dpsi,E,V); if(chi) pos.Chiron=chi;
+  if(ASTEROIDS&&AST_LOADED) ASTEROID_BODIES.forEach(a=>{
+    const p=apparent(a,tm,dpsi,E,V); if(p) pos[a]=p;
+  });
   pos.Moon=moonApparent(Tc,dpsi);
   const nd=meanNode(Tc);
   pos.NNode={lon:nd}; pos.SNode={lon:rev(nd+180)};
@@ -4812,7 +4879,8 @@ function drawWheel(ch,tr){
      the bodies really are. The discs shrank because the tap target is the ring
      wedge now, not the disc, so the drawing no longer has to carry the finger. */
   const sepFor=(R,rad)=>2*Math.asin(Math.min(1,(rad+1)/R))*R2D;
-  const sepPl=sepFor(rPl,9.5), sepTr=tr?sepFor(rTr,8):0;
+  /* Half the glyph's footprint, not half a disc: 5.5 against the old 9.5. */
+  const sepPl=sepFor(rPl,5.5), sepTr=tr?sepFor(rTr,5):0;
   const cusps=ch.houses.cusps;
   function sector(l0,l1,r1,r2,fill,op){
     const [ax,ay]=polar(l0,r2),[bx,by]=polar(l1,r2),[cx,cy]=polar(l1,r1),[dx,dy]=polar(l0,r1);
@@ -4922,30 +4990,50 @@ function drawWheel(ch,tr){
     }
   });
   // --- planets + karmic points ---
-  const shown=BODIES.concat(POINTS.filter(p=>ch.pos[p]));
+  /* WHEEL_BODIES, not BODIES: the asteroids reached the grid, the aspects and
+     the facts but never the drawing, so the chart disagreed with itself about
+     what was in it. One list for every surface. */
+  const shown=WHEEL_BODIES.concat(FACT_POINTS).filter(p=>ch.pos[p]);
   const fanned=fanOut(shown.map(n=>ch.pos[n].lon),sepPl);
   const placed=shown.map((n,i)=>[n,fanned[i]]);      // [name, displayed longitude]
   shown.forEach((n,idx)=>{
     const disp=placed[idx][1];
     const [px,py]=polar(disp,rPl);
-    const isPoint=POINTS.includes(n);
+    const isPoint=!BODIES.includes(n);      // the small size: everything that is not a planet
     const dim=CONF_ISO?!CONF_ISO.includes(n)
       :(ISO&&ISO!==n&&!asps.some(a=>(a.p1===ISO&&a.p2===n)||(a.p2===ISO&&a.p1===n)));
     const hot=CONF_ISO?CONF_ISO.includes(n):ISO===n;
     const [tx,ty]=polar(ch.pos[n].lon,rNatScale-8);
     s+=`<g class="pl" data-p="${n}" style="cursor:pointer" opacity="${dim?0.25:1}">`;
     s+=`<line x1="${tx.toFixed(1)}" y1="${ty.toFixed(1)}" x2="${px.toFixed(1)}" y2="${py.toFixed(1)}" stroke="var(--ink3)" stroke-width="0.7" opacity="0.7"/>`;
-    s+=`<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${isPoint?8:9.5}" fill="var(--paper)" stroke="${hot?'var(--accent)':'var(--line)'}" stroke-width="${hot?2:1}"/>`;
-    s+=`<text x="${px.toFixed(1)}" y="${(py+(isPoint?3.6:4.2)).toFixed(1)}" text-anchor="middle" font-size="${isPoint?10.5:12.5}" font-family="Astro" fill="${isPoint?'var(--ink2)':'var(--ink)'}">${GLYPH[n]}</text>`;
-    /* Degree beside the glyph, ordinal the way an ephemeris prints it, with the
-       retrograde mark after it. Placed on the side of the ring that has room:
-       outward toward the zodiac on a single wheel, inward toward the middle on
-       a bi-wheel, where the transit band takes the outside. Without this you
-       have to tap every planet to read a chart, which is the difference
-       between a picture and an instrument. */
-    const [gx2,gy2]=polar(disp,rDeg);
+    /* No disc. The disc was 19 px across and the fan-out has to keep that much
+       room between neighbours, which is what pushed a glyph up to 38 degrees
+       from the degree it stands on - the thing the drawing exists to show.
+       Measured across 93 library charts, dropping to a bare 11 px glyph takes
+       the average displacement from 7.33 degrees to 2.37 and the worst from
+       38.4 to 17.5. Suggested by Dafa from a ZET chart, which draws the same
+       way and for the same reason.
+
+       A paper-coloured stroke UNDER the fill keeps it legible where an aspect
+       chord passes behind, which is the only job the disc was still doing.
+       paint-order puts the stroke first; without it the halo covers the glyph. */
     const retro=ch.pos[n].retro?'\u211e':'';
-    s+=`<text x="${gx2.toFixed(1)}" y="${(gy2+3).toFixed(1)}" text-anchor="middle" font-size="9.5" fill="var(--ink2)">${Math.floor(rev(ch.pos[n].lon)%30)+1}${retro}</text>`;
+    const deg=Math.floor(rev(ch.pos[n].lon)%30)+1;
+    const fs=isPoint?11:13;
+    s+=`<text x="${px.toFixed(1)}" y="${(py+fs*0.34).toFixed(1)}" text-anchor="middle"`
+      +` font-size="${fs}" font-family="Astro" paint-order="stroke"`
+      +` stroke="var(--paper)" stroke-width="3" stroke-linejoin="round"`
+      +` fill="${hot?'var(--accent)':(isPoint?'var(--ink2)':'var(--ink)')}">${GLYPH[n]}</text>`;
+    /* The degree rides the glyph as a superscript instead of sitting on a ring
+       of its own. It was a second ring at a second radius, which cost the
+       drawing a band it no longer needs and made the pair harder to read as one
+       thing. */
+    /* Inward, not outward. Outward is where the leader line runs and where the
+       scale is, and in a stellium the numbers landed on both. */
+    const [dx2,dy2]=polar(disp,rPl-fs*0.82);
+    s+=`<text x="${dx2.toFixed(1)}" y="${(dy2+3).toFixed(1)}" text-anchor="middle"`
+      +` font-size="8.5" paint-order="stroke" stroke="var(--paper)" stroke-width="2.5"`
+      +` stroke-linejoin="round" fill="var(--ink3)">${deg}${retro}</text>`;
     s+=`</g>`;
   });
   // --- transiting bodies, outer band ---
@@ -4976,8 +5064,21 @@ function drawWheel(ch,tr){
          silently when the drawing changed. */
       s+=`<g class="trp" opacity="0.92">`;
       s+=`<line x1="${tx.toFixed(1)}" y1="${ty.toFixed(1)}" x2="${px.toFixed(1)}" y2="${py.toFixed(1)}" stroke="var(--accent)" stroke-width="0.5" opacity="0.6"/>`;
-      s+=`<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="8.5" fill="var(--paper3)" stroke="var(--accent)" stroke-width="0.9"/>`;
-      s+=`<text x="${px.toFixed(1)}" y="${(py+3.8).toFixed(1)}" text-anchor="middle" font-size="11" font-family="Astro" fill="var(--ink2)">${GLYPH[n]}</text>`;
+      /* No disc here either. The two rings are told apart by radius and by
+         colour, which they already were; the disc was only adding the same
+         displacement the natal ring has just been rid of. Fixing one ring and
+         not the other would have left the drawing half-converted. */
+      s+=`<text x="${px.toFixed(1)}" y="${(py+3.8).toFixed(1)}" text-anchor="middle" font-size="11"`
+        +` font-family="Astro" paint-order="stroke" stroke="var(--paper)" stroke-width="2.6"`
+        +` stroke-linejoin="round" fill="var(--accent)">${GLYPH[n]}</text>`;
+      const trDeg=Math.floor(rev(tr.pos[n].lon)%30)+1;
+      const [tdx,tdy]=polar(disp,rTr-9);
+      /* Accent, not the neutral grey the natal degrees use. The outer band
+         already carries grey cusp degrees, and a grey number beside a transit
+         glyph read as belonging to them. */
+      s+=`<text x="${tdx.toFixed(1)}" y="${(tdy+2.8).toFixed(1)}" text-anchor="middle" font-size="7.5"`
+        +` paint-order="stroke" stroke="var(--paper)" stroke-width="2.2" stroke-linejoin="round"`
+        +` fill="var(--accent)" opacity="0.8">${trDeg}${tr.pos[n].retro?'\u211e':''}</text>`;
       s+=`</g>`;
     });
   }
@@ -6148,7 +6249,7 @@ function renderPositions(ch){
   let rows=[['ASC',ch.asc],['MC',ch.mc]].map(([n,lon])=>{
     return `<div class="planet-row"><span class="g" style="color:var(--axis);font-size:13px">${n==='ASC'?'Asc':'MC'}</span><span class="nm">${PN(n)}</span><span class="pos deg">${fmtPos(lon).html}</span></div>`;
   }).join('');
-  const shown=BODIES.concat(POINTS.filter(p=>ch.pos[p]));
+  const shown=WHEEL_BODIES.concat(FACT_POINTS).filter(p=>ch.pos[p]);
   rows+=shown.map(n=>{
     const f=fmtPos(ch.pos[n].lon),hs=bodyHouse(ch,n);
     const sp=ch.pos[n].spd;
@@ -7407,6 +7508,21 @@ document.getElementById('exportCard').addEventListener('toggle',fillExport);
    engine is deterministic and a saved result would be a second version of the
    truth that a later build could disagree with. */
 {
+  const ao=document.getElementById('astOn'), st=document.getElementById('astState');
+  if(ao){
+    ao.checked=ASTEROIDS;
+    const recast=()=>{ if(CURRENT&&typeof run==='function') run(); };
+    if(ASTEROIDS){ st.textContent=t('asteroidsLoading');
+      loadAsteroids().then(ok=>{ st.textContent=ok?'':t('asteroidsFailed');
+        ao.checked=ASTEROIDS; recast(); }); }
+    ao.addEventListener('change',()=>{
+      ASTEROIDS=ao.checked; localStorage.setItem(AST_KEY,ASTEROIDS?'1':'0');
+      if(!ASTEROIDS){ st.textContent=''; recast(); return; }
+      st.textContent=t('asteroidsLoading');
+      loadAsteroids().then(ok=>{ st.textContent=ok?'':t('asteroidsFailed');
+        ao.checked=ASTEROIDS; recast(); });
+    });
+  }
   const h3=document.getElementById('house3d');
   if(h3){ h3.checked=HOUSE_3D;
     h3.addEventListener('change',()=>{

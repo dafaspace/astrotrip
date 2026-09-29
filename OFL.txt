@@ -1,8 +1,7 @@
-The web fonts shipped with AstroTrip are subsets of two typefaces released
+The web fonts shipped with AstroTrip are subsets of three typefaces released
 under the SIL Open Font License 1.1. Subsetting makes them Modified Versions
-under the terms below; the Reserved Font Name clause is respected in that the
-files are renamed (inter-400.woff2, inter-500.woff2, literata-500.woff2) and
-are not distributed under the original names.
+under the terms below; the Reserved Font Name clause is respected in that none
+of them is distributed under an original name.
 
   inter-400.woff2, inter-500.woff2
   Copyright 2020 The Inter Project Authors (https://github.com/rsms/inter)
@@ -11,7 +10,12 @@ are not distributed under the original names.
   Copyright 2017 The Literata Project Authors
   (https://github.com/googlefonts/literata)
 
-This license covers those three font files only. All other files in this
+  the family named 'Astro', embedded in index.html as a data URL rather than
+  shipped as a separate file
+  Copyright 2022 The Noto Project Authors
+  (https://github.com/notofonts/symbols) - Noto Sans Symbols 2
+
+This license covers those four fonts only. All other files in this
 repository are covered by the notice in README.md.
 
 --------------------------------------------------------------------------
