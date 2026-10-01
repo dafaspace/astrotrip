@@ -563,7 +563,7 @@ mattered: before it did, a deliberately broken app passed every check. The runne
 for the city atlas to finish loading, or the atlas tests would silently check the inline
 seed instead.
 
-**289 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
+**292 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
 library, robustness over 1550-2250 and at polar latitudes, house systems (angles land
 on the cusps, cusps run round the circle without crossing, quadrant systems coincide at
 the equator, zero-latitude bodies get the same house from both methods), library data
@@ -574,7 +574,7 @@ pack (every visible key present in all eight, no language a copy of English),
 the atlas and its progress bar, the balance tallies, the CSV round trip including quotes and commas, the
 interpretation flag, the bi-wheel's ring separation, glyph overlap in all three ring modes, how far a glyph
 may sit from the degree it marks, the four asteroids against JPL Horizons and that they stay absent until
-switched on, the wedge tap
+switched on, that every symbol drawn is in the embedded font and draws ink, the wedge tap
 and the Positions row target, that wheel and slider share one card and fit one phone
 screen, and that dragging stays continuous while stepping stays calendar-exact, contrast against WCAG AA in both
 themes, and interface wiring.
@@ -599,11 +599,12 @@ by name.
 © 2026 Daniel Fainberg (dafaspace). All rights reserved.
 Published for transparency, not licensed for reuse or redistribution.
 
-Exception: the four bundled web fonts are subsets of Inter, Literata and Noto
-Sans Symbols 2, all under the SIL Open Font License 1.1. See [OFL.txt](OFL.txt).
-Three are separate files (`inter-400.woff2`, `inter-500.woff2`,
-`literata-500.woff2`); the fourth is the astrological glyph face, embedded in
-`index.html` as a data URL under the family name `Astro`.
+Exception: the bundled web fonts are subsets of Inter, Literata, Noto Sans
+Symbols, Noto Sans Symbols 2 and Noto Sans Math, all under the SIL Open Font
+License 1.1. See [OFL.txt](OFL.txt). Three are separate files
+(`inter-400.woff2`, `inter-500.woff2`, `literata-500.woff2`); the astrological
+glyph face is embedded in `index.html` as a data URL under the family name
+`Astro`, merged from the three Noto faces by `tools-astro-font.py`.
 
 The city atlas in `cities.txt` is derived from [GeoNames](https://www.geonames.org/),
 licensed [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).

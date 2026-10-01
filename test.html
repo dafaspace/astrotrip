@@ -804,6 +804,69 @@ function run(){
     return r==='composite,lunar,solar,synastry'||'состав статичных колец: '+r;
   });
 
+  /* ---------- встроенный шрифт символов ---------- */
+  group('Шрифт символов');
+  t('каждый рисуемый символ есть во встроенном шрифте',()=>{
+    /* Та самая проверка, которой не было. Шрифт вшит в index.html и нёс 33
+       символа, а приложение рисовало 41: четыре астероида, Колесо Фортуны и все
+       четыре минорных аспекта уходили в системный шрифт. На macOS этого не
+       видно, на Android это пустые квадраты - ровно то, ради чего шрифты и
+       вшиты в файл.
+
+       Сверяется со списком, а не с измерением. Ширину пробовали первой, и она
+       не годится: у Сатурна в нашем шрифте разбег 60,200 px, а у системного
+       моноширинного 60,205, то есть присутствующий символ неотличим от
+       отсутствующего. document.fonts.check тоже не годится - он возвращает true
+       на иероглиф, которого в шрифте заведомо нет. ASTRO_GLYPHS пишется в
+       index.html скриптом сборки прямо из cmap готового шрифта, так что
+       разойтись со шрифтом он не может; разойтись может приложение, и это
+       ровно то, что здесь и ловится. */
+    const bad=ev(`(()=>{const have=new Set(ASTRO_GLYPHS);
+      const out=[], seen=new Set();
+      const add=v=>{ if(typeof v!=='string') return;
+        for(const ch of v){ if(ch.codePointAt(0)<=127||seen.has(ch)) continue;
+          seen.add(ch);
+          if(!have.has(ch)) out.push(ch+' U+'+ch.codePointAt(0).toString(16).toUpperCase()); } };
+      Object.values(GLYPH).forEach(add); SIGN_GLYPH.forEach(add);
+      Object.values(ASPECT_GLYPH).forEach(add);
+      return {n:seen.size, have:have.size, out};})()`);
+    if(bad.n<40) return `символов для проверки всего ${bad.n}, ждём не меньше 40`;
+    if(bad.have<bad.n) return `в шрифте ${bad.have} символов, рисуется ${bad.n}`;
+    return bad.out.length===0||`нет в шрифте: ${bad.out.join(', ')}`;
+  });
+  t('шрифт рисует каждый свой символ, а не пустое место',()=>{
+    /* Список может быть верным, а шрифт при этом не загрузиться: тогда всё
+       уйдёт в запасной, и первая проверка этого не заметит. Здесь символы
+       рисуются на холст и считаются непрозрачные пиксели. Пустой символ - это
+       либо не загрузившийся шрифт, либо контур, который потерялся при сборке. */
+    const r=ev(`(()=>{const cv=document.createElement('canvas'); cv.width=cv.height=90;
+      const c=cv.getContext('2d'); const blank=[];
+      for(const ch of ASTRO_GLYPHS){
+        c.clearRect(0,0,90,90); c.font='60px Astro'; c.fillStyle='#000';
+        c.textBaseline='middle'; c.fillText(ch,10,45);
+        const d=c.getImageData(0,0,90,90).data; let ink=0;
+        for(let i=3;i<d.length;i+=4) if(d[i]>8) ink++;
+        if(ink<40) blank.push('U+'+ch.codePointAt(0).toString(16).toUpperCase()+' ('+ink+'px)');
+      }
+      return blank;})()`);
+    return r.length===0||`пустые: ${r.slice(0,6).join(', ')}`;
+  });
+  t('шрифт символов падает на Inter, а не на системный',()=>{
+    /* В шрифте только символы, а четырьмя подписями рисуются буквы: Asc, MC и
+       Q с bQ у квинтиля. Запасным был назван системный символьный шрифт, и эти
+       буквы брались с машины пользователя. */
+    const bad=ev(`(()=>{const out=[];
+      const af=[...document.styleSheets[0].cssRules].filter(r=>r.selectorText==='.af')[0];
+      if(!af) out.push('правило .af не найдено');
+      else if(!/Inter/.test(af.style.fontFamily)) out.push('.af: '+af.style.fontFamily);
+      document.querySelectorAll('#wheel text[font-family]').forEach(e=>{
+        const f=e.getAttribute('font-family');
+        if(/Astro/.test(f)&&!/Inter/.test(f)) out.push('на колесе: '+f);
+      });
+      return out;})()`);
+    return bad.length===0||bad.slice(0,3).join('; ');
+  });
+
   /* ---------- астероиды ---------- */
   group('Астероиды');
   t('четыре астероида совпадают с JPL Horizons до 1 секунды дуги',()=>{
@@ -2372,8 +2435,8 @@ function run(){
       const C=190;
       for(const m of ['transit','progressed','directed']){
         RING_MODE=m; renderRingSwitch(); renderTransits(CURRENT);
-        const na=document.querySelector('#wheel .pl text[font-family="Astro"]');
-        const tr=document.querySelector('#wheel .trp text[font-family="Astro"]');
+        const na=document.querySelector('#wheel .pl text[font-family^="Astro"]');
+        const tr=document.querySelector('#wheel .trp text[font-family^="Astro"]');
         if(!na||!tr){ out[m]=null; continue; }
         const rad=e=>Math.hypot(+e.getAttribute('x')-C,+e.getAttribute('y')-C);
         out[m]=rad(na)<rad(tr);
@@ -2992,7 +3055,7 @@ function run(){
       const lonOf=(x,y)=>{const a=Math.atan2(C-y,x-C)*180/Math.PI;return ((asc+180-a)%360+360)%360;};
       let worst=0, who='';
       sv.querySelectorAll('.pl').forEach(g=>{
-        const c=g.querySelector('text[font-family="Astro"]');
+        const c=g.querySelector('text[font-family^="Astro"]');
         const drawn=lonOf(+c.getAttribute('x'),+c.getAttribute('y'));
         let d=Math.abs(drawn-rev(CURRENT.pos[g.dataset.p].lon)); if(d>180)d=360-d;
         if(d>worst){worst=d;who=g.dataset.p;}
@@ -3031,7 +3094,7 @@ function run(){
        рядом - это и было тем, что видно глазом. */
     const r=ev(`(()=>{const sv=document.querySelector('#wheel svg'), C=190, asc=CURRENT.asc;
       const lonOf=(x,y)=>{const a=Math.atan2(C-y,x-C)*180/Math.PI;return ((asc+180-a)%360+360)%360;};
-      const at=n=>{const e=sv.querySelector('.pl[data-p="'+n+'"] text[font-family="Astro"]');
+      const at=n=>{const e=sv.querySelector('.pl[data-p="'+n+'"] text[font-family^="Astro"]');
         return e?lonOf(+e.getAttribute('x'),+e.getAttribute('y')):null;};
       const dataOpp=Math.abs(rev(CURRENT.pos.SNode.lon-CURRENT.pos.NNode.lon)-180);
       const N=at('NNode'), S=at('SNode');
@@ -3047,8 +3110,8 @@ function run(){
        переставало читаться. У внутреннего теперь своя шкала, и отступ тот же. */
     const r=ev(`(()=>{const C=190, sv=document.querySelector('#wheel svg');
       const rad=e=>Math.hypot(+e.getAttribute('x')-C,+e.getAttribute('y')-C);
-      const na=sv.querySelector('.pl text[font-family="Astro"]');
-      const trc=sv.querySelector('.trp text[font-family="Astro"]');
+      const na=sv.querySelector('.pl text[font-family^="Astro"]');
+      const trc=sv.querySelector('.trp text[font-family^="Astro"]');
       if(!na||!trc) return null;
       const zod=C-52, nat=C-82;
       const scales=[...sv.querySelectorAll('circle')].map(c=>+c.getAttribute('r'));
@@ -3071,7 +3134,7 @@ function run(){
   t('глиф остаётся малой долей колеса',()=>{
     /* Раньше это мерило диск. Диска нет, и мерить надо сам глиф: он и есть
        то, что занимает место на кольце и толкает соседей. */
-    const r=ev(`(()=>{const fs=[...document.querySelectorAll('#wheel .pl text[font-family="Astro"]')]
+    const r=ev(`(()=>{const fs=[...document.querySelectorAll('#wheel .pl text[font-family^="Astro"]')]
         .map(c=>+c.getAttribute('font-size'));
       return {max:Math.max(...fs), wheel:190-3};})()`);
     const frac=r.max/(r.wheel*2);
@@ -3195,7 +3258,7 @@ function run(){
        заметно в стороне от глифа обязана выбирать его же. */
     const r=ev(`(()=>{
       const centres=[...document.querySelectorAll('#wheel .pl')].map(g=>{
-        const b=g.querySelector('text[font-family="Astro"]').getBoundingClientRect();
+        const b=g.querySelector('text[font-family^="Astro"]').getBoundingClientRect();
         return {p:g.dataset.p,cx:b.left+b.width/2,cy:b.top+b.height/2,w:b.width};});
       if(!centres.length||!centres[0].w) return null;
       const probe=(x,y)=>{ISO=null;
@@ -3504,8 +3567,8 @@ function run(){
       /* Told apart by which group they sit in, not by radius: the discs were
          made smaller and a radius range silently stopped matching them, so this
          test reported "no two sets" on a perfectly good wheel. */
-      const na=[...sv.querySelectorAll('.pl text[font-family="Astro"]')];
-      const tr=[...sv.querySelectorAll('.trp text[font-family="Astro"]')];
+      const na=[...sv.querySelectorAll('.pl text[font-family^="Astro"]')];
+      const tr=[...sv.querySelectorAll('.trp text[font-family^="Astro"]')];
       const d=c=>Math.hypot(+c.getAttribute('x')-190,+c.getAttribute('y')-190);
       const half=c=>+c.getAttribute('font-size')/2;
       if(!tr.length||!na.length) return null;

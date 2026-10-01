@@ -1,4 +1,4 @@
-The web fonts shipped with AstroTrip are subsets of three typefaces released
+The web fonts shipped with AstroTrip are subsets of five typefaces released
 under the SIL Open Font License 1.1. Subsetting makes them Modified Versions
 under the terms below; the Reserved Font Name clause is respected in that none
 of them is distributed under an original name.
@@ -11,12 +11,16 @@ of them is distributed under an original name.
   (https://github.com/googlefonts/literata)
 
   the family named 'Astro', embedded in index.html as a data URL rather than
-  shipped as a separate file
+  shipped as a separate file, merged from three Noto faces by
+  tools-astro-font.py:
+    Noto Sans Symbols 2.003     planets, signs, asteroids, most aspects
+    Noto Sans Symbols 2 2.008   square, trine, Sun, Selena
+    Noto Sans Math 3.000        Part of Fortune, semisquare
   Copyright 2022 The Noto Project Authors
-  (https://github.com/notofonts/symbols) - Noto Sans Symbols 2
+  (https://github.com/notofonts/symbols, https://github.com/notofonts/math)
 
-This license covers those four fonts only. All other files in this
-repository are covered by the notice in README.md.
+This license covers those fonts only. All other files in this repository
+are covered by the notice in README.md.
 
 --------------------------------------------------------------------------
 
