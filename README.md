@@ -355,7 +355,11 @@ Play sweeps continuously. Month and year steps use calendar arithmetic, so 31 Ja
 plus a month is 28 February and not 2 March.
 
 The wheel becomes a bi-wheel while transits are shown: natal inside, transiting bodies
-in their own outer band, with dashed chords for hits inside 2°. Each hit is marked
+in their own outer band, with dashed chords for hits inside 2°. Four tri-wheels are
+offered as chart types - progressions, directions, the solar or the lunar return in the
+middle, transits outside - all moved by the one slider; the aspect list and the grid
+read the middle ring. Solar and lunar returns are the ones in effect at the slider's
+moment, the last before it, not the next. Each hit is marked
 applying or separating, decided by measuring the orb again an hour later rather than
 from a table of mean motions, so retrograde loops come out right.
 
@@ -563,7 +567,7 @@ mattered: before it did, a deliberately broken app passed every check. The runne
 for the city atlas to finish loading, or the atlas tests would silently check the inline
 seed instead.
 
-**292 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
+**304 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
 library, robustness over 1550-2250 and at polar latitudes, house systems (angles land
 on the cusps, cusps run round the circle without crossing, quadrant systems coincide at
 the equator, zero-latitude bodies get the same house from both methods), library data
@@ -574,7 +578,9 @@ pack (every visible key present in all eight, no language a copy of English),
 the atlas and its progress bar, the balance tallies, the CSV round trip including quotes and commas, the
 interpretation flag, the bi-wheel's ring separation, glyph overlap in all three ring modes, how far a glyph
 may sit from the degree it marks, the four asteroids against JPL Horizons and that they stay absent until
-switched on, that every symbol drawn is in the embedded font and draws ink, the wedge tap
+switched on, that every symbol drawn is in the embedded font and draws ink, the tri-wheel's ring
+order, gaps, glyph displacement and tap, that returns are the ones in effect, every
+chart type named and described in all eight languages, the wedge tap
 and the Positions row target, that wheel and slider share one card and fit one phone
 screen, and that dragging stays continuous while stepping stays calendar-exact, contrast against WCAG AA in both
 themes, and interface wiring.
@@ -586,8 +592,10 @@ by name.
 ## Known limitations
 
 - Pluto is a fit, valid 1550-2250 and clamped outside.
-- No Chiron, no asteroids.
-- No synastry, solar returns or composites.
+- Asteroids are Ceres, Pallas, Juno and Vesta only, off by default, 1600-2250.
+- Tri-wheels put transits outermost; other pairings are not offered.
+- On a phone the tri-wheel's natal degree numbers are about 6 px high and need
+  pinch-zoom to read.
 - Primary directions and the quotidian progressed angles are not offered; solar
   arc is the only rule for the angles.
 - The interpretation corpus is Russian only, which is why it is switched off.

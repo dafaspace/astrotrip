@@ -47,6 +47,13 @@
      ground, sector fills keep glyphs above 12:1. MC was identical to harm
      before, so the MC axis and harmonious aspects were the same colour. */
   --axis:#ce5692; --mc:#976bd4;
+  /* The tri-wheel's outer ring. Teal because every other hue on the wheel is
+     taken - accent by the middle ring, pink and violet by the angles, blue,
+     red and green by the aspects - and solved to sit level with accent rather
+     than above it: 4.86:1 light and 5.40:1 dark against the wheel ground, to
+     accent's 4.67 and 5.35. Brighter and the outer ring would read as the
+     important one, which it is not. */
+  --ring3:#18757a;
   --harm:#4683c9; --hard:#cb614c; --conj:#2a9256;
   /* Minor aspects read as subordinate, so the colour is neutral rather than a
      fifth family hue. Measured: 4.13:1 on the light wheel and 6.09:1 on the
@@ -67,7 +74,7 @@
     --ink:#e7e6ea; --ink2:#9693a6; --ink3:#827e93;
     --accent:#bc773a; --accentBtn:#bc773a; --accentInk:#12101e;
     --wheelbg:#0f0d19;
-    --axis:#b13e78; --mc:#7f50c2; --harm:#3a6ba4;
+    --axis:#b13e78; --mc:#7f50c2; --harm:#3a6ba4; --ring3:#3d9499;
     --hard:#a94e3b; --conj:#2a774a; --minor:#8792a0;
     --fire:#583321; --earth:#1d4519; --air:#433c19; --water:#1d414e;
     --glass:rgba(16,15,23,.72);
@@ -171,6 +178,15 @@ svg{display:block;width:100%;height:auto;touch-action:manipulation}
 .ringrow{display:flex;align-items:center;gap:10px;margin:0 0 10px}
 .ringlab{margin:0;flex:none}
 .ringrow select{flex:1;min-height:44px}
+/* On a phone the label goes, visually only: the button already names the
+   chart type, and the label's 86 px were what the tri-wheel's names needed.
+   Measured at 375 px, the button had 172 px of text room and five languages
+   overflowed it - Georgian's progressions-plus-transits by 34 px. Kept in the
+   accessibility tree, so a screen reader still hears "Chart type". */
+@media (max-width:480px){
+  .ringrow .ringlab{position:absolute;width:1px;height:1px;margin:-1px;padding:0;
+    overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;border:0}
+}
 /* Wheel and controls share one screen, so the wheel gets whatever height is
    left rather than a fixed size. 46vh is measured, not guessed: on a 375x812
    phone it leaves room for the moment line, the rail, one row of controls and
@@ -238,7 +254,7 @@ button.ico:disabled{opacity:.4;cursor:default}
   :root, :root[data-theme="dark"], :root[data-theme="light"]{
     --paper:#fff; --paper2:#fff; --paper3:#fff; --line:#b9b2a4;
     --ink:#000; --ink2:#333; --ink3:#555;
-    --accent:#7a4a1c; --accentBtn:#7a4a1c; --accentInk:#fff;
+    --accent:#7a4a1c; --accentBtn:#7a4a1c; --accentInk:#fff; --ring3:#0f5a5e;
     --wheelbg:#fff; --glass:#fff;
     --fire:#f0d9cc; --earth:#cfe8c9; --air:#ece2b6; --water:#cfe4ee;
   }
@@ -812,7 +828,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
 /* Bump together with CACHE in sw.js: the two are the same release, and the
    number on screen is how you tell from a phone which one you are looking at. */
-const APP_VERSION='3.10.1';
+const APP_VERSION='3.11.0';
 document.getElementById('ver').textContent=APP_VERSION;
 
 /* ---------- feature flags ----------
@@ -897,6 +913,11 @@ const STR = {
   reading:{ru:'Разбор карты',en:'Reading'},
   corpusnote:{ru:'Тексты - структурная заготовка: кратко + подробнее по касанию. Настоящий корпус интерпретаций подключается отдельно.',en:'Texts are a structural stub: short + detail on tap. The real interpretation corpus plugs in separately.'},
   ringLabel:{ru:'Тип карты',en:'Chart type'},
+  /* Says which ring the list and the grid belong to, because with three rings
+     on the wheel that is the one thing a reader cannot see. Labels go in as
+     nominatives after a colon, which keeps every language's grammar out of it. */
+  note_tri:{ru:'Внутри: натал. В середине: {1}. Снаружи: {2}. Список и сетка аспектов относятся к среднему кольцу.',
+    en:'Inner: natal. Middle: {1}. Outer: {2}. The aspect list and the grid read the middle ring.'},
   /* Named for the chart it draws, not for the ring being empty. Astro Gold,
      Solar Fire and LUNA all call this a chart type and all call this one
      Natal; "empty" describes our implementation rather than the thing chosen. */
@@ -905,6 +926,15 @@ const STR = {
   ring_solar:{ru:'Соляр',en:'Solar return'},
   ring_lunar:{ru:'Лунар',en:'Lunar return'},
   ring_composite:{ru:'Композит',en:'Composite'},
+  /* These three notes did not exist until v3.11.0, and the card printed the
+     raw key - "note_solar" - in every language since the modes arrived in
+     v3.8.0. Each says what the code does, not what returns are in general. */
+  note_solar:{ru:'Действующий соляр: последний момент, когда Солнце вернулось в свой натальный градус, на место рождения или на место релокации. Действует до следующего.',
+    en:'The return in effect: the last moment the Sun came back to its natal degree, cast for the birthplace or the relocated place. It holds until the next one.'},
+  note_lunar:{ru:'Действующий лунар: последний момент, когда Луна вернулась в свой натальный градус, на место рождения или на место релокации. Действует около 27 дней, до следующего.',
+    en:'The return in effect: the last moment the Moon came back to its natal degree, cast for the birthplace or the relocated place. It holds for about 27 days, until the next one.'},
+  note_composite:{ru:'Одна карта из двух: каждая планета в ближней средней точке между двумя картами. Дома строятся от средней точки двух MC на средней широте.',
+    en:'One chart made from two: each planet at the nearer midpoint between the two charts. The houses are built from the midpoint of the two Midheavens at the average latitude.'},
   ring_synastry:{ru:'Синастрия',en:'Synastry'},
   note_synastry:{ru:'Карта другого человека поверх вашей. Внутреннее колесо и дома остаются вашими, аспекты считаются от его планет к вашим.',en:'Another person\u2019s chart over yours. The inner wheel and the houses stay yours; the aspects run from their planets to yours.'},
   synaFind:{ru:'Кого сравниваем? Имя, город или год',en:'Compare with whom? Name, city or year'},
@@ -1070,7 +1100,10 @@ const I18N={
     ring_synastry:"Sinastría", note_synastry:"La carta de otra persona sobre la tuya. La rueda interior y las casas siguen siendo tuyas.", synaFind:"¿Con quién comparamos? Nombre, ciudad o año", synaNone:"Nadie elegido todavía.",
     orbNote:"Orbes en grados. Los menores están desactivados por defecto: con todos activados una carta lleva cerca de la mitad más de aspectos (11,6 frente a 16,4 en 60 cartas de la biblioteca). Se aplica a la carta natal y al anillo exterior.",
     aspects:"Aspectos y orbes", orbReset:"Restablecer", orbOn:"encendido",
-    ringLabel:"Tipo de carta", ring_none:"Natal", note_none:"La carta natal por sí sola.",
+    ringLabel:"Tipo de carta", ring_solar:"Revolución solar", ring_lunar:"Revolución lunar", ring_composite:"Compuesta",
+    note_solar:"La revolución vigente: el último momento en que el Sol volvió a su grado natal, para el lugar de nacimiento o el de relocalización. Rige hasta la siguiente.",
+    note_lunar:"La revolución vigente: el último momento en que la Luna volvió a su grado natal, para el lugar de nacimiento o el de relocalización. Rige unos 27 días, hasta la siguiente.",
+    note_composite:"Una carta hecha de dos: cada planeta en el punto medio más cercano entre las dos cartas. Las casas parten del punto medio de los dos MC, a la latitud media.", note_tri:"Dentro: natal. En medio: {1}. Fuera: {2}. La lista y la cuadrícula de aspectos leen el anillo del medio.", ring_none:"Natal", note_none:"La carta natal por sí sola.",
     m_mean:"media", m_true:"verdadera",
     atlasLoading:"Descargando el atlas de ciudades", atlasOnce:"{n} lugares, 4 MB. Solo una vez, luego sin conexión.", atlasFail:"El atlas no se descargó. Por ahora solo están las ciudades grandes.", atlasRetry:"Reintentar",
     tagline:"Cartas precisas sin conexión, y un tiempo que puedes mover.", birth:"Datos de nacimiento",
@@ -1121,7 +1154,10 @@ const I18N={
     ring_synastry:"Synastrie", note_synastry:"Le thème d’une autre personne sur le vôtre. La roue intérieure et les maisons restent les vôtres.", synaFind:"Comparer avec qui ? Nom, ville ou année", synaNone:"Personne de choisi pour l’instant.",
     orbNote:"Orbes en degrés. Les mineurs sont désactivés par défaut : tous activés, un thème porte environ moitié plus d’aspects (11,6 contre 16,4 sur 60 thèmes de la bibliothèque). Vaut pour le thème natal comme pour l’anneau extérieur.",
     aspects:"Aspects et orbes", orbReset:"Réinitialiser", orbOn:"activé",
-    ringLabel:"Type de thème", ring_none:"Thème natal", note_none:"Le thème natal seul.",
+    ringLabel:"Type de thème", ring_solar:"Révolution solaire", ring_lunar:"Révolution lunaire", ring_composite:"Composite",
+    note_solar:"La révolution en cours : le dernier instant où le Soleil est revenu à son degré natal, pour le lieu de naissance ou de relocalisation. Elle vaut jusqu’à la suivante.",
+    note_lunar:"La révolution en cours : le dernier instant où la Lune est revenue à son degré natal, pour le lieu de naissance ou de relocalisation. Elle vaut environ 27 jours, jusqu’à la suivante.",
+    note_composite:"Un thème fait de deux : chaque planète au point médian le plus proche entre les deux thèmes. Les maisons partent du point médian des deux MC, à la latitude moyenne.", note_tri:"Au centre : natal. Au milieu : {1}. À l'extérieur : {2}. La liste et la grille des aspects lisent le cercle du milieu.", ring_none:"Thème natal", note_none:"Le thème natal seul.",
     m_mean:"moyenne", m_true:"vraie",
     atlasLoading:"Téléchargement de l’atlas des villes", atlasOnce:"{n} lieux, 4 Mo. Une seule fois, ensuite hors ligne.", atlasFail:"L’atlas ne s’est pas téléchargé. Seules les grandes villes sont disponibles pour l’instant.", atlasRetry:"Réessayer",
     tagline:"Des cartes précises hors ligne, et un temps que l’on peut déplacer.",
@@ -1173,7 +1209,10 @@ const I18N={
     ring_synastry:"Synastrie", note_synastry:"Das Chart einer anderen Person über Ihrem. Das innere Rad und die Häuser bleiben Ihre.", synaFind:"Mit wem vergleichen? Name, Ort oder Jahr", synaNone:"Noch niemand gewählt.",
     orbNote:"Orben in Grad. Die kleinen Aspekte sind standardmäßig aus: alle zusammen bringen etwa die Hälfte mehr Aspekte (11,6 gegen 16,4, gemessen an 60 Charts der Bibliothek). Gilt für das Radix und für den äußeren Ring.",
     aspects:"Aspekte und Orben", orbReset:"Zurücksetzen", orbOn:"an",
-    ringLabel:"Chart-Typ", ring_none:"Radix", note_none:"Das Radix für sich allein.",
+    ringLabel:"Chart-Typ", ring_solar:"Solar", ring_lunar:"Lunar", ring_composite:"Composit",
+    note_solar:"Das geltende Solar: der letzte Moment, in dem die Sonne an ihren Radixgrad zurückkehrte, für den Geburtsort oder den Ort der Relokation. Es gilt bis zum nächsten.",
+    note_lunar:"Das geltende Lunar: der letzte Moment, in dem der Mond an seinen Radixgrad zurückkehrte, für den Geburtsort oder den Ort der Relokation. Es gilt etwa 27 Tage, bis zum nächsten.",
+    note_composite:"Ein Chart aus zweien: jeder Planet am näheren Mittelpunkt zwischen den beiden Charts. Die Häuser gehen vom Mittelpunkt der beiden MC aus, auf der mittleren Breite.", note_tri:"Innen: Radix. Mitte: {1}. Außen: {2}. Aspektliste und Raster lesen den mittleren Ring.", ring_none:"Radix", note_none:"Das Radix für sich allein.",
     m_mean:"mittlere", m_true:"wahre",
     atlasLoading:"Städte-Atlas wird geladen", atlasOnce:"{n} Orte, 4 MB. Nur einmal, danach offline.", atlasFail:"Der Atlas wurde nicht geladen. Vorerst gibt es nur die großen Städte.", atlasRetry:"Erneut versuchen",
     tagline:"Genaue Charts offline, und eine Zeit, die sich bewegen lässt.", birth:"Geburtsdaten",
@@ -1222,7 +1261,10 @@ const I18N={
     ring_synastry:"Sinastria", note_synastry:"La carta di un’altra persona sopra la tua. La ruota interna e le case restano le tue.", synaFind:"Con chi confrontiamo? Nome, città o anno", synaNone:"Ancora nessuno scelto.",
     orbNote:"Orbi in gradi. I minori sono disattivati per impostazione predefinita: con tutti attivi una carta porta circa metà aspetti in più (11,6 contro 16,4 su 60 carte della biblioteca). Vale per la carta natale e per l’anello esterno.",
     aspects:"Aspetti e orbi", orbReset:"Ripristina", orbOn:"attivo",
-    ringLabel:"Tipo di carta", ring_none:"Natale", note_none:"La carta natale da sola.",
+    ringLabel:"Tipo di carta", ring_solar:"Rivoluzione solare", ring_lunar:"Rivoluzione lunare", ring_composite:"Composito",
+    note_solar:"La rivoluzione in corso: l’ultimo momento in cui il Sole è tornato al suo grado natale, per il luogo di nascita o di rilocazione. Vale fino alla successiva.",
+    note_lunar:"La rivoluzione in corso: l’ultimo momento in cui la Luna è tornata al suo grado natale, per il luogo di nascita o di rilocazione. Vale circa 27 giorni, fino alla successiva.",
+    note_composite:"Una carta fatta di due: ogni pianeta nel punto medio più vicino tra le due carte. Le case partono dal punto medio dei due MC, alla latitudine media.", note_tri:"Dentro: natale. Al centro: {1}. Fuori: {2}. Elenco e griglia degli aspetti leggono l'anello centrale.", ring_none:"Natale", note_none:"La carta natale da sola.",
     m_mean:"media", m_true:"vera",
     atlasLoading:"Scaricamento dell’atlante delle città", atlasOnce:"{n} luoghi, 4 MB. Una volta sola, poi offline.", atlasFail:"L’atlante non si è scaricato. Per ora ci sono solo le città grandi.", atlasRetry:"Riprova",
     tagline:"Carte precise offline, e un tempo che si può muovere.", birth:"Dati di nascita", date:"Data",
@@ -1271,7 +1313,10 @@ const I18N={
     ring_synastry:"Синастрія", note_synastry:"Карта іншої людини поверх вашої. Внутрішнє колесо й доми лишаються вашими.", synaFind:"Кого порівнюємо? Ім’я, місто або рік", synaNone:"Нікого не вибрано.",
     orbNote:"Орбіс у градусах. Мінорні вимкнені типово: з усіма увімкненими аспектів у карті стає приблизно в півтора раза більше - на 60 картах бібліотеки 11.6 проти 16.4. Діє і на натал, і на зовнішнє кільце.",
     aspects:"Аспекти й орбіси", orbReset:"Повернути типові", orbOn:"увімк",
-    ringLabel:"Тип карти", ring_none:"Натальна карта", note_none:"Натальна карта сама по собі.",
+    ringLabel:"Тип карти", ring_solar:"Соляр", ring_lunar:"Лунар", ring_composite:"Композит",
+    note_solar:"Чинний соляр: останній момент, коли Сонце повернулося у свій натальний градус, на місце народження або на місце релокації. Діє до наступного.",
+    note_lunar:"Чинний лунар: останній момент, коли Місяць повернувся у свій натальний градус, на місце народження або на місце релокації. Діє близько 27 днів, до наступного.",
+    note_composite:"Одна карта з двох: кожна планета в ближчій середній точці між двома картами. Доми будуються від середньої точки двох MC на середній широті.", note_tri:"Усередині: натал. Посередині: {1}. Зовні: {2}. Список і сітка аспектів стосуються середнього кільця.", ring_none:"Натальна карта", note_none:"Натальна карта сама по собі.",
     m_mean:"середній", m_true:"істинний",
     atlasLoading:"Завантажується атлас міст", atlasOnce:"{n} місць, 4 МБ. Лише один раз, далі офлайн.", atlasFail:"Атлас не завантажився. Поки доступні лише великі міста.", atlasRetry:"Повторити",
     tagline:"Точні карти офлайн, і час, який можна рухати.", birth:"Дані народження", date:"Дата",
@@ -1320,7 +1365,10 @@ const I18N={
     ring_synastry:"სინასტრია", note_synastry:"სხვა ადამიანის რუკა თქვენსაზე. შიდა ბორბალი და სახლები თქვენი რჩება.", synaFind:"ვისთან შევადაროთ? სახელი, ქალაქი ან წელი", synaNone:"ჯერ არავინ არის არჩეული.",
     orbNote:"ორბისი გრადუსებში. მინორული ასპექტები ნაგულისხმევად გამორთულია: ყველას ჩართვისას რუკაში ასპექტები დაახლოებით ნახევრად მეტი ხდება - ბიბლიოთეკის 60 რუკაზე 11.6 და 16.4. მოქმედებს ნატალურ რუკაზეც და გარე რგოლზეც.",
     aspects:"ასპექტები და ორბისები", orbReset:"ნაგულისხმევის დაბრუნება", orbOn:"ჩართ",
-    ringLabel:"რუკის ტიპი", ring_none:"ნატალური რუკა", note_none:"ნატალური რუკა თავისთავად.",
+    ringLabel:"რუკის ტიპი", ring_solar:"სოლარი", ring_lunar:"ლუნარი", ring_composite:"კომპოზიტი",
+    note_solar:"მოქმედი სოლარი: ბოლო მომენტი, როცა მზე დაბრუნდა თავის ნატალურ გრადუსში, დაბადების ან რელოკაციის ადგილისთვის. მოქმედებს მომდევნომდე.",
+    note_lunar:"მოქმედი ლუნარი: ბოლო მომენტი, როცა მთვარე დაბრუნდა თავის ნატალურ გრადუსში, დაბადების ან რელოკაციის ადგილისთვის. მოქმედებს დაახლოებით 27 დღე, მომდევნომდე.",
+    note_composite:"ერთი რუკა ორისგან: თითოეული პლანეტა ორ რუკას შორის უახლოეს შუა წერტილში. სახლები აიგება ორი MC-ის შუა წერტილიდან, საშუალო განედზე.", note_tri:"შიგნით: ნატალი. შუაში: {1}. გარეთ: {2}. ასპექტების სია და ბადე შუა რგოლს ეხება.", ring_none:"ნატალური რუკა", note_none:"ნატალური რუკა თავისთავად.",
     m_mean:"საშუალო", m_true:"ჭეშმარიტი",
     atlasLoading:"ქალაქების ატლასი იტვირთება", atlasOnce:"{n} ადგილი, 4 მბ. მხოლოდ ერთხელ, შემდეგ ოფლაინში.", atlasFail:"ატლასი ვერ ჩამოიტვირთა. ჯერჯერობით მხოლოდ დიდი ქალაქებია.", atlasRetry:"ხელახლა",
     tagline:"ზუსტი რუკები ოფლაინში, და დრო, რომელიც შეიძლება გადაანაცვლო.", birth:"დაბადების მონაცემები",
@@ -4865,17 +4913,37 @@ function fanOut(lons,sep){
    radius: overlapping glyphs is exactly the failure that makes cheap mobile
    charts unreadable, and the whole reason for the scrubber is that you can see
    which ring a body belongs to while it moves. */
-function drawWheel(ch,tr){
+function drawWheel(ch,tr,t3=TR3_CHART){
+  if(!tr) t3=null;                     // a third ring with no second is not a thing
   const asc=ch.asc, polar=polarFor(asc);
   const rHouOut=C-3, rHouIn=C-26, rZodIn=C-52, rTickEnd=C-60;
-  const rTr=tr?rZodIn-16:0;
+  /* With three rings the outermost keeps the place the bi-wheel's outer ring
+     had, against the zodiac scale, and the middle ring takes the place the
+     natal one had, against a scale of its own at C-82. Natal moves in by one
+     band of 30. So the bi-wheel's numbers are untouched, which is what keeps
+     every bi-wheel test meaning what it meant. Feasible only because the glyph
+     discs are gone: at the natal radius this leaves, the old 19 px discs fitted
+     17 bodies round the circle, and the bare glyphs fit 27. */
+  const tri=!!t3;
+  const rTr=tr?rZodIn-16:0;                       // the outermost ring's glyphs
+  const rMidScale=tri?C-82:0, rMid=tri?rMidScale-16:0;
+  const rTrG=tri?rMid:rTr;                        // where the second chart's glyphs sit
   /* Each ring reads against a scale of its own, at the same remove. The outer
      ring sits 16 units inside the zodiac scale; the inner ring used to sit 52
      units inside it with no scale at all, so a glyph had a long leader line to
      a mark it did not belong to and a stellium was invisible. The inner ring
      now has its own degree scale and hugs it the same way. */
-  const rNatScale=tr?C-82:rZodIn;
-  const rPl=rNatScale-19;
+  const rNatScale=tri?C-112:(tr?C-82:rZodIn);
+  /* In a tri-wheel the natal ring is one band nearer the centre, and its
+     circumference is two thirds of the bi-wheel's. Measured across 340 library
+     charts at the old 13 px glyph, that put a glyph 7.51 degrees from its
+     degree on average and 43.5 at worst. Drawn at the 11 px the outer rings
+     already use, and 3 units further out because a smaller glyph needs less
+     leader, it is 4.57 and 31.1 - level with the bi-wheel once asteroids are
+     on. Two radial lanes were tried on paper and lost: the inner lane is at a
+     smaller radius, so it needs a wider angle, which eats most of the gain. */
+  const rPl=rNatScale-(tri?16:19);
+  const natFoot=tri?4.5:5.5, natFs=tri?11:13, natPtFs=tri?9.5:11, natDegFs=tri?7.5:8.5;
   const rDeg=rPl-16;
   /* Aspect chords start where the body's exact tick ends, not on a small inner
      circle. A chord drawn between two points on a circle of radius 91 has its
@@ -4897,7 +4965,7 @@ function drawWheel(ch,tr){
      wedge now, not the disc, so the drawing no longer has to carry the finger. */
   const sepFor=(R,rad)=>2*Math.asin(Math.min(1,(rad+1)/R))*R2D;
   /* Half the glyph's footprint, not half a disc: 5.5 against the old 9.5. */
-  const sepPl=sepFor(rPl,5.5), sepTr=tr?sepFor(rTr,5):0;
+  const sepPl=sepFor(rPl,natFoot), sepTr=tr?sepFor(rTrG,5):0, sep3=tri?sepFor(rTr,5):0;
   const cusps=ch.houses.cusps;
   function sector(l0,l1,r1,r2,fill,op){
     const [ax,ay]=polar(l0,r2),[bx,by]=polar(l1,r2),[cx,cy]=polar(l1,r1),[dx,dy]=polar(l0,r1);
@@ -4964,24 +5032,34 @@ function drawWheel(ch,tr){
     const [bx,by]=polar(lon,base+len);
     return `<line x1="${ax.toFixed(1)}" y1="${ay.toFixed(1)}" x2="${bx.toFixed(1)}" y2="${by.toFixed(1)}" stroke="${colour}" stroke-width="1.7" stroke-linecap="round"/>`;
   }
-  BODIES.concat(POINTS.filter(p=>ch.pos[p])).forEach(n=>{
+  /* The same list the glyphs are drawn from. It was BODIES plus POINTS, so the
+     asteroids had a glyph and no tick - drawn where they were fanned to, with
+     nothing saying where they actually stand. */
+  WHEEL_BODIES.concat(FACT_POINTS).filter(p=>ch.pos[p]).forEach(n=>{
     const dimT=CONF_ISO?!CONF_ISO.includes(n):(ISO&&ISO!==n);
     s+=`<g opacity="${dimT?0.2:1}">${exactTick(ch.pos[n].lon,'var(--ink)',rNatScale,-8)}</g>`;
   });
-  if(tr) WHEEL_BODIES.forEach(n=>{ if(tr.pos[n]) s+=exactTick(tr.pos[n].lon,'var(--accent)',rZodIn,8); });
+  /* The middle ring's ticks hang from its own scale, inward, the way the natal
+     ones do; only the outermost ring stands up into the sign band. */
+  if(tr) WHEEL_BODIES.forEach(n=>{ if(tr.pos[n]) s+=tri
+    ? exactTick(tr.pos[n].lon,'var(--accent)',rMidScale,-8)
+    : exactTick(tr.pos[n].lon,'var(--accent)',rZodIn,8); });
+  if(tri) WHEEL_BODIES.forEach(n=>{ if(t3.pos[n]) s+=exactTick(t3.pos[n].lon,'var(--ring3)',rZodIn,8); });
   /* The inner ring's own degree scale, when there is an outer ring taking the
      zodiac one. Same construction as the outer scale, one tick a degree and a
      taller one every five, so both rings are read the same way. */
-  if(tr){
-    s+=`<circle cx="${C}" cy="${C}" r="${rNatScale}" fill="none" stroke="var(--line)" stroke-width="0.6" opacity="0.8"/>`;
+  const innerScale=r=>{
+    let o=`<circle cx="${C}" cy="${C}" r="${r}" fill="none" stroke="var(--line)" stroke-width="0.6" opacity="0.8"/>`;
     let nt='';
     for(let g=0;g<360;g++){
       const len=(g%5===0)?6.5:3.2;
-      const [x1,y1]=polar(g,rNatScale),[x2,y2]=polar(g,rNatScale-len);
+      const [x1,y1]=polar(g,r),[x2,y2]=polar(g,r-len);
       nt+=`M${x1.toFixed(1)} ${y1.toFixed(1)}L${x2.toFixed(1)} ${y2.toFixed(1)}`;
     }
-    s+=`<path d="${nt}" stroke="var(--ink3)" stroke-width="0.5" opacity="0.6" fill="none"/>`;
-  }
+    return o+`<path d="${nt}" stroke="var(--ink3)" stroke-width="0.5" opacity="0.6" fill="none"/>`;
+  };
+  if(tr) s+=innerScale(rNatScale);
+  if(tri) s+=innerScale(rMidScale);
   // --- aspects with glyph at midpoint, line broken there ---
   const asps=findAspects(ch.pos);
   asps.forEach(a=>{
@@ -5036,7 +5114,7 @@ function drawWheel(ch,tr){
        paint-order puts the stroke first; without it the halo covers the glyph. */
     const retro=ch.pos[n].retro?'\u211e':'';
     const deg=Math.floor(rev(ch.pos[n].lon)%30)+1;
-    const fs=isPoint?11:13;
+    const fs=isPoint?natPtFs:natFs;
     s+=`<text x="${px.toFixed(1)}" y="${(py+fs*0.34).toFixed(1)}" text-anchor="middle"`
       +` font-size="${fs}" font-family="Astro,Inter,sans-serif" paint-order="stroke"`
       +` stroke="var(--paper)" stroke-width="3" stroke-linejoin="round"`
@@ -5049,55 +5127,62 @@ function drawWheel(ch,tr){
        scale is, and in a stellium the numbers landed on both. */
     const [dx2,dy2]=polar(disp,rPl-fs*0.82);
     s+=`<text x="${dx2.toFixed(1)}" y="${(dy2+3).toFixed(1)}" text-anchor="middle"`
-      +` font-size="8.5" paint-order="stroke" stroke="var(--paper)" stroke-width="2.5"`
+      +` font-size="${natDegFs}" paint-order="stroke" stroke="var(--paper)" stroke-width="2.5"`
       +` stroke-linejoin="round" fill="var(--ink3)">${deg}${retro}</text>`;
     s+=`</g>`;
   });
-  // --- transiting bodies, outer band ---
-  if(tr){
-    /* An actual band, drawn as an even-odd annulus so the natal aspect lines
-       underneath still show through the hole. Without it the two sets of
-       glyphs read as one crowded ring, which is the failure this layout exists
-       to avoid. */
-    const ring=(r)=>`M${C-r} ${C}a${r} ${r} 0 1 0 ${2*r} 0a${r} ${r} 0 1 0 ${-2*r} 0`;
-    s+=`<path d="${ring(rTr+12)}${ring(rTr-12)}" fill-rule="evenodd" fill="var(--paper2)" fill-opacity="0.55" stroke="var(--line)" stroke-width="0.5"/>`;
-    /* Only the tight hits get a line drawn. Every hit within a full orb would
-       be fifteen or twenty chords across the middle, and the wheel stops being
-       readable at about six. */
-    TR_HITS.filter(h=>h.orb<=2).forEach(h=>{
-      const nlon=h.np==='ASC'?ch.asc:h.np==='MC'?ch.mc:(ch.pos[h.np]?ch.pos[h.np].lon:null);
-      if(nlon==null) return;
-      const [x1,y1]=polar(tr.pos[h.tp].lon,rTr-11), [x2,y2]=polar(nlon,rPl+12);
-      s+=`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${h.asp.color}" stroke-width="1" stroke-dasharray="3 3" opacity="0.55"/>`;
-    });
-    const trShown=WHEEL_BODIES.filter(n=>tr.pos[n]);
-    const trFan=fanOut(trShown.map(n=>tr.pos[n].lon),sepTr);
-    trShown.forEach((n,ti)=>{
-      const disp=trFan[ti];
-      const [px,py]=polar(disp,rTr);
-      const [tx,ty]=polar(tr.pos[n].lon,rZodIn-1);
+  // --- the outer rings: one in a bi-wheel, two in a tri-wheel ---
+  /* An actual band, drawn as an even-odd annulus so the natal aspect lines
+     underneath still show through the hole. Without it the two sets of
+     glyphs read as one crowded ring, which is the failure this layout exists
+     to avoid. */
+  const ring=(r)=>`M${C-r} ${C}a${r} ${r} 0 1 0 ${2*r} 0a${r} ${r} 0 1 0 ${-2*r} 0`;
+  /* One function for every outer ring, so the middle and the outermost are
+     drawn by the same code and cannot drift apart the way the natal and the
+     transit ring once did, when one lost its disc and the other kept it. */
+  function ringBand(R,rG,colour,cls,sep,leaderR){
+    let o=`<path d="${ring(rG+12)}${ring(rG-12)}" fill-rule="evenodd" fill="var(--paper2)" fill-opacity="0.55" stroke="var(--line)" stroke-width="0.5"/>`;
+    const shown=WHEEL_BODIES.filter(n=>R.pos[n]);
+    const fan=fanOut(shown.map(n=>R.pos[n].lon),sep);
+    shown.forEach((n,ti)=>{
+      const disp=fan[ti];
+      const [px,py]=polar(disp,rG);
+      const [tx,ty]=polar(R.pos[n].lon,leaderR);
       /* Named, not identified by an opacity value: two tests used to find
          these groups by opacity="0.92" and by a radius range, and both broke
          silently when the drawing changed. */
-      s+=`<g class="trp" opacity="0.92">`;
-      s+=`<line x1="${tx.toFixed(1)}" y1="${ty.toFixed(1)}" x2="${px.toFixed(1)}" y2="${py.toFixed(1)}" stroke="var(--accent)" stroke-width="0.5" opacity="0.6"/>`;
-      /* No disc here either. The two rings are told apart by radius and by
-         colour, which they already were; the disc was only adding the same
-         displacement the natal ring has just been rid of. Fixing one ring and
-         not the other would have left the drawing half-converted. */
-      s+=`<text x="${px.toFixed(1)}" y="${(py+3.8).toFixed(1)}" text-anchor="middle" font-size="11"`
+      o+=`<g class="${cls}" data-p="${n}" opacity="0.92">`;
+      o+=`<line x1="${tx.toFixed(1)}" y1="${ty.toFixed(1)}" x2="${px.toFixed(1)}" y2="${py.toFixed(1)}" stroke="${colour}" stroke-width="0.5" opacity="0.6"/>`;
+      /* No disc. The rings are told apart by radius and by colour; the disc
+         only added the displacement the natal ring has been rid of. */
+      o+=`<text x="${px.toFixed(1)}" y="${(py+3.8).toFixed(1)}" text-anchor="middle" font-size="11"`
         +` font-family="Astro,Inter,sans-serif" paint-order="stroke" stroke="var(--paper)" stroke-width="2.6"`
-        +` stroke-linejoin="round" fill="var(--accent)">${GLYPH[n]}</text>`;
-      const trDeg=Math.floor(rev(tr.pos[n].lon)%30)+1;
-      const [tdx,tdy]=polar(disp,rTr-9);
-      /* Accent, not the neutral grey the natal degrees use. The outer band
-         already carries grey cusp degrees, and a grey number beside a transit
-         glyph read as belonging to them. */
-      s+=`<text x="${tdx.toFixed(1)}" y="${(tdy+2.8).toFixed(1)}" text-anchor="middle" font-size="7.5"`
+        +` stroke-linejoin="round" fill="${colour}">${GLYPH[n]}</text>`;
+      const dg=Math.floor(rev(R.pos[n].lon)%30)+1;
+      const [tdx,tdy]=polar(disp,rG-9);
+      /* In the ring's colour, not the neutral grey the natal degrees use. The
+         outer band already carries grey cusp degrees, and a grey number beside
+         a transit glyph read as belonging to them. */
+      o+=`<text x="${tdx.toFixed(1)}" y="${(tdy+2.8).toFixed(1)}" text-anchor="middle" font-size="7.5"`
         +` paint-order="stroke" stroke="var(--paper)" stroke-width="2.2" stroke-linejoin="round"`
-        +` fill="var(--accent)" opacity="0.8">${trDeg}${tr.pos[n].retro?'\u211e':''}</text>`;
-      s+=`</g>`;
+        +` fill="${colour}" opacity="0.8">${dg}${R.pos[n].retro?'\u211e':''}</text>`;
+      o+=`</g>`;
     });
+    return o;
+  }
+  if(tr){
+    /* Only the tight hits get a line drawn. Every hit within a full orb would
+       be fifteen or twenty chords across the middle, and the wheel stops being
+       readable at about six. They belong to the middle ring, as the list and
+       the grid do; the third ring is drawn, not read. */
+    TR_HITS.filter(h=>h.orb<=2).forEach(h=>{
+      const nlon=h.np==='ASC'?ch.asc:h.np==='MC'?ch.mc:(ch.pos[h.np]?ch.pos[h.np].lon:null);
+      if(nlon==null||!tr.pos[h.tp]) return;
+      const [x1,y1]=polar(tr.pos[h.tp].lon,rTrG-11), [x2,y2]=polar(nlon,rPl+12);
+      s+=`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${h.asp.color}" stroke-width="1" stroke-dasharray="3 3" opacity="0.55"/>`;
+    });
+    s+=ringBand(tr,rTrG,'var(--accent)','trp',sepTr,tri?rMidScale-8:rZodIn-1);
+    if(tri) s+=ringBand(t3,rTr,'var(--ring3)','trp3',sep3,rZodIn-1);
   }
   s+=`</svg>`;
   document.getElementById('wheel').innerHTML=s;
@@ -5126,7 +5211,10 @@ function drawWheel(ch,tr){
        scarce direction, and everything between the aspect lines and the zodiac
        ring can only mean one thing. 62 units of depth is about 49 px on a
        phone, which clears the 44 px floor; anything narrower did not. */
-    if(rad<40||rad>rZodIn) return;
+    /* In a tri-wheel the natal band is one ring nearer the centre, so its
+       floor drops to 20 to keep about 61 units of depth, roughly 55 px on a
+       phone: 40 would have left 41 units, under the 44 px floor. */
+    if(rad<(tri?20:40)||rad>rZodIn) return;
     if(tr&&rad>rNatScale+3) return;                  // above this the tap belongs to the transit ring
     const lon=rev(asc+180-Math.atan2(dy,dx)*R2D);
     let best=null, bestD=1e9;
@@ -5677,6 +5765,31 @@ const STATIC_RING=['synastry','composite','solar','lunar'];
 const PARTNER_RING=['synastry','composite'];
 let RING_MODE=RING_MODES.includes(localStorage.getItem('astrarium_ring'))
   ? localStorage.getItem('astrarium_ring') : 'none';
+/* The tri-wheel: a second chart drawn outside the first, both read against the
+   natal one in the middle. The classic arrangement - Solar Fire's, Astro
+   Gold's - is natal, progressed, transits, and that is what this is built for:
+   two timing charts at the same moment, moved together by the one slider.
+
+   Only timing charts, on both rings. Synastry and the composite are left out
+   as the first ring because each is a second person or a third chart rather
+   than a moment, and their swap and partner logic assumes two rings. They are
+   left out as the third ring for the same reason, plus one: nothing scrubs. */
+const TRI_FIRST=['transit','progressed','directed','solar','lunar'];
+/* Offered as chart types in the one select rather than as a second control.
+   A second row was built first and measured: on a 375x812 phone it pushed the
+   scrubber's buttons to 823 px, off the screen, and the only room to win back
+   was the wheel's - shrinking it exactly when it carries three rings. These
+   four are the tri-wheels people use: transits always outermost, with a
+   progressed chart, a directed one or a return in the middle. */
+const TRI_COMBOS=[['progressed','transit'],['directed','transit'],['solar','transit'],['lunar','transit']];
+const RING2_MODES=['none','transit'];
+let RING2_MODE=RING2_MODES.includes(localStorage.getItem('astrarium_ring2'))
+  ? localStorage.getItem('astrarium_ring2') : 'none';
+const ringValue=()=>RING_MODE+(triOn()?'+'+RING2_MODE:'');
+/* Whether the third ring is drawn right now. Checked rather than assumed,
+   because the stored pair comes back from localStorage, where anything can be,
+   and a third ring identical to the middle one would draw the same chart twice. */
+const triOn=()=>TRI_FIRST.includes(RING_MODE)&&RING2_MODE!=='none'&&RING2_MODE!==RING_MODE;
 const TROPICAL_YEAR=365.242190;
 /* How far ahead to look when deciding applying or separating. A progressed or
    directed chart moves about a degree a year, so an hour would move it by
@@ -5739,18 +5852,28 @@ function returnChart(ch,ms,body){
      real crossing is continuous, so the two samples must differ by less than
      half a circle. */
   const crossing=(a,b)=>((a<=0&&b>0)||(a>=0&&b<0))&&Math.abs(b-a)<180;
+  /* Backwards first: the return IN EFFECT at the moment, which is the last one
+     at or before it. A solar return governs the year from one birthday to the
+     next, a lunar return the month to the next one, and that is the chart a
+     reader expects for the date on the slider.
+
+     It searched forwards first until v3.10.1, and so returned the NEXT return:
+     with a 20 March birthday, on 1 June 2026 it drew the return of March 2027,
+     292 days ahead, while the one in effect was 73 days behind. The tests only
+     asked that the return be near the requested date, which the next one was
+     for the date they happened to use. Forwards remains as a fallback only. */
   let f=lonAt(ms).d;
   let lo=null,hi=null;
   for(let k=1;k<=60;k++){
-    const t2=ms+k*step, f2=lonAt(t2).d;
-    if(crossing(f,f2)){ lo=t2-step; hi=t2; break; }
+    const t2=ms-k*step, f2=lonAt(t2).d;
+    if(crossing(f2,f)){ lo=t2; hi=t2+step; break; }
     f=f2;
   }
   if(lo==null){
     f=lonAt(ms).d;
     for(let k=1;k<=60;k++){
-      const t2=ms-k*step, f2=lonAt(t2).d;
-      if(crossing(f2,f)){ lo=t2; hi=t2+step; break; }
+      const t2=ms+k*step, f2=lonAt(t2).d;
+      if(crossing(f,f2)){ lo=t2-step; hi=t2; break; }
       f=f2;
     }
   }
@@ -5784,18 +5907,22 @@ function compositeChart(ch){
   return {...ch, pos, mc, asc:a.asc, ramc:a.ramc, houses:a.houses, composite:true};
 }
 
-function outerChart(ch,ms){
-  if(RING_MODE==='none') return null;
-  if(RING_MODE==='synastry') return partnerChart(ch);
-  if(RING_MODE==='composite') return compositeChart(ch);
-  if(RING_MODE==='solar') return returnChart(ch,ms,'Sun');
-  if(RING_MODE==='lunar') return returnChart(ch,ms,'Moon');
-  if(RING_MODE==='transit') return transitChartAt(ch,ms);
+function outerChart(ch,ms){ return ringChart(ch,ms,RING_MODE); }
+/* Any ring's chart for any mode. It was outerChart reading RING_MODE directly,
+   which is fine with one ring and wrong with two: the third ring would have
+   been cast as whatever the first select said. */
+function ringChart(ch,ms,mode){
+  if(mode==='none') return null;
+  if(mode==='synastry') return partnerChart(ch);
+  if(mode==='composite') return compositeChart(ch);
+  if(mode==='solar') return returnChart(ch,ms,'Sun');
+  if(mode==='lunar') return returnChart(ch,ms,'Moon');
+  if(mode==='transit') return transitChartAt(ch,ms);
   const pr=transitChartAt(ch,progressedMs(ch,ms));
   const arc=rev(pr.pos.Sun.lon-ch.pos.Sun.lon);
   const mc=rev(ch.mc+arc);
   const a=anglesFromMC(mc,ch.geolat,ch.ecl);
-  if(RING_MODE==='progressed')
+  if(mode==='progressed')
     return {...pr, mc, asc:a.asc, ramc:a.ramc, houses:a.houses, arc};
   const pos={};
   Object.keys(ch.pos).forEach(k=>{ pos[k]={...ch.pos[k], lon:rev(ch.pos[k].lon+arc)}; });
@@ -5978,7 +6105,7 @@ const SCRUB_UNITS=[['sec','u_sec'],['min','u_min'],['hour','u_hour'],['day','u_d
 let SCRUB_UNIT=SCRUB_UNITS.some(u=>u[0]===localStorage.getItem('astrarium_unit'))
   ? localStorage.getItem('astrarium_unit') : 'day';
 let TR_MS=Date.now(), TR_ANCHOR=TR_MS, TR_TZ=0, PLAYING=false, PLAY_RAF=0;
-let TR_CHART=null, TR_HITS=[];
+let TR_CHART=null, TR_HITS=[], TR3_CHART=null;
 
 /* Calendar steps, not millisecond steps, for month and up: adding "a month" to
    31 January must not land in March, and adding "a year" to 29 February must
@@ -6098,11 +6225,16 @@ function renderPartnerLine(){
     +` · ${e._own?(e.city||''):LX(e.city)}`;
 }
 function renderRingSwitch(){
-  const sel=document.getElementById('ringSel');
-  sel.innerHTML=RING_MODES.map(m=>
-    `<option value="${m}"${m===RING_MODE?' selected':''}>${t('ring_'+m)}</option>`).join('');
-  document.getElementById('ringTitle').textContent=t('ring_'+RING_MODE);
-  document.getElementById('ringNote').textContent=t('note_'+RING_MODE);
+  const sel=document.getElementById('ringSel'), cur=ringValue();
+  sel.innerHTML=RING_MODES.map(m=>[m,t('ring_'+m)])
+    .concat(TRI_COMBOS.map(([a,b])=>[a+'+'+b,t('ring_'+a)+' + '+t('ring_'+b)]))
+    .map(([v,lbl])=>`<option value="${v}"${v===cur?' selected':''}>${lbl}</option>`).join('');
+  const tri=triOn();
+  document.getElementById('ringTitle').textContent=t('ring_'+RING_MODE)
+    +(tri?' + '+t('ring_'+RING2_MODE):'');
+  document.getElementById('ringNote').textContent=tri
+    ? t('note_tri').replace('{1}',t('ring_'+RING_MODE)).replace('{2}',t('ring_'+RING2_MODE))
+    : t('note_'+RING_MODE);
   /* With an empty ring there is no moment to scrub and nothing to list, so
      both disappear rather than sitting there inert. The wheel takes the room
      they leave. */
@@ -6149,6 +6281,10 @@ function renderTransits(ch){
   const o=learn();
   const tr=outerChart(ch,TR_MS);
   TR_CHART=tr;
+  /* Cast at the same moment as the middle ring, so dragging the slider moves
+     both - progressed and transiting Moon walking together is the reason a
+     tri-wheel exists. */
+  TR3_CHART=tr&&triOn()?ringChart(ch,TR_MS,RING2_MODE):null;
   if(!tr){ TR_HITS=[]; drawWheel(ch,null); renderGrid(ch,null); renderConfigurations(ch); renderLearned(); return; }
   const stat=STATIC_RING.includes(RING_MODE);
   const syn=RING_MODE==='synastry';
@@ -6929,11 +7065,12 @@ document.getElementById('reset').addEventListener('click',()=>{localStorage.remo
     scrollChartIntoView();
   });
   document.getElementById('ringSel').addEventListener('change',e=>{
-    const v=e.target.value;
+    const [v,v2='none']=e.target.value.split('+');
     if((v==='progressed'||v==='directed')&&BIRTH_MS==null){
-      alert(t('needbirth')); e.target.value=RING_MODE; return;
+      alert(t('needbirth')); e.target.value=ringValue(); return;
     }
     RING_MODE=v; localStorage.setItem('astrarium_ring',RING_MODE);
+    RING2_MODE=v2; localStorage.setItem('astrarium_ring2',RING2_MODE);
     setPlaying(false); renderRingSwitch(); if(CURRENT) renderTransits(CURRENT);
   });
   document.getElementById('momNow').addEventListener('click',()=>{setPlaying(false);setMoment(Date.now(),{recenter:true});});

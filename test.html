@@ -54,7 +54,7 @@ const frame=document.getElementById('app');
      last switched on by hand. Cleared before the iframe loads so the suite
      tests a fresh install: the ring mode, the orbs and the chosen partner have
      each already made a run behave differently from a real first launch. */
-  try{ ['astrarium_ring','astrarium_orbs','astrarium_partner','astrarium_asteroids','astrarium_house3d']
+  try{ ['astrarium_ring','astrarium_ring2','astrarium_orbs','astrarium_partner','astrarium_asteroids','astrarium_house3d']
          .forEach(k=>localStorage.removeItem(k)); }catch(e){}
   /* Read once here, because the runner below is synchronous. */
   try{ SW_SRC=await (await fetch('./sw.js?notacache='+Date.now())).text(); }catch(e){}
@@ -720,9 +720,9 @@ function run(){
       if(!sr) return {none:true};
       return {err:Math.abs((((sr.pos.Sun.lon-c.pos.Sun.lon+540)%360)-180))*3600,
         when:new Date(sr.returnMs).toISOString().slice(0,10),
-        withinYear:Math.abs(sr.returnMs-Date.UTC(2026,2,1))<200*86400000};})()`);
+        inEffect:sr.returnMs<=Date.UTC(2026,2,1)&&Date.UTC(2026,2,1)-sr.returnMs<366*86400000};})()`);
     if(r.none) return 'соляр не найден';
-    if(!r.withinYear) return 'найденный соляр далеко от запрошенного года: '+r.when;
+    if(!r.inEffect) return 'найден не действующий соляр, а '+r.when;
     return r.err<1||`Солнце вернулось с ошибкой ${r.err.toFixed(2)}″`;
   });
   t('лунар возвращает Луну и попадает в свой месяц',()=>{
@@ -730,9 +730,9 @@ function run(){
       const lr=returnChart(c,Date.UTC(2026,2,1),'Moon');
       if(!lr) return {none:true};
       return {err:Math.abs((((lr.pos.Moon.lon-c.pos.Moon.lon+540)%360)-180))*3600,
-        days:Math.abs(lr.returnMs-Date.UTC(2026,2,1))/86400000};})()`);
+        days:(Date.UTC(2026,2,1)-lr.returnMs)/86400000};})()`);
     if(r.none) return 'лунар не найден';
-    if(r.days>28) return `найденный лунар в ${r.days.toFixed(0)} днях от запроса`;
+    if(r.days<0||r.days>27.6) return `найденный лунар в ${r.days.toFixed(1)} днях до запроса, ждём 0..27,6`;
     return r.err<2||`Луна вернулась с ошибкой ${r.err.toFixed(2)}″`;
   });
   t('соляр находится для любого года в диапазоне движка',()=>{
@@ -745,6 +745,19 @@ function run(){
       }
       return out;})()`);
     return bad.length===0||bad.join('; ');
+  });
+  t('соляр и лунар берутся действующие, а не следующие',()=>{
+    /* Соляр действует от одного дня рождения до следующего, лунар до
+       следующего лунара. До v3.10.1 поиск шёл вперёд, и 1 июня 2026 года при
+       дне рождения 20 марта рисовался соляр марта 2027-го, на 292 дня вперёд.
+       Две проверки выше этого не видели: они спрашивали только, близко ли
+       найденное к запросу, а для 1 марта следующий соляр как раз близко.
+       Здесь запрос в середине года и в середине лунного месяца. */
+    const r=ev(`(()=>{const c=computeChart(1985,3,20,6.5,3,55.7558,37.6173), ask=Date.UTC(2026,5,1);
+      const sr=returnChart(c,ask,'Sun'), lr=returnChart(c,ask,'Moon');
+      return {sr:(ask-sr.returnMs)/86400000, lr:(ask-lr.returnMs)/86400000};})()`);
+    if(r.sr<0||r.sr>366) return `соляр в ${r.sr.toFixed(0)} днях до запроса, ждём 0..366`;
+    return (r.lr>=0&&r.lr<=27.6)||`лунар в ${r.lr.toFixed(1)} днях до запроса, ждём 0..27,6`;
   });
   t('композит берёт ближнюю среднюю точку, а не среднее арифметическое',()=>{
     /* Пара, стоящая по разные стороны от 0 Овна, при простом усреднении
@@ -802,6 +815,166 @@ function run(){
        метка "расходится" там была бы не приблизительной, а бессмысленной. */
     const r=ev(`STATIC_RING.slice().sort().join(',')`);
     return r==='composite,lunar,solar,synastry'||'состав статичных колец: '+r;
+  });
+
+  /* ---------- трёхкольцевая карта ---------- */
+  group('Трёхкольцевая карта');
+  /* Каждая проверка включает режим сама и возвращает прежний: набор идёт с
+     транзитами, и оставленное здесь третье кольцо поменяло бы геометрию всем
+     проверкам ниже. */
+  const tri=(fn)=>ev(`(()=>{const k1=RING_MODE,k2=RING2_MODE;
+      RING_MODE='progressed'; RING2_MODE='transit'; renderRingSwitch(); renderTransits(CURRENT);
+      let out; try{ out=(${fn})(); }
+      finally{ RING_MODE=k1; RING2_MODE=k2; renderRingSwitch(); renderTransits(CURRENT); }
+      return out;})()`);
+  t('три набора глифов, натал внутри, транзиты снаружи',()=>{
+    /* Порядок Solar Fire и Astro Gold: радикс, прогрессии, транзиты. */
+    const r=tri(`()=>{const C=190, sv=document.querySelector('#wheel svg');
+      const rad=sel=>[...sv.querySelectorAll(sel+' text[font-family^="Astro"]')]
+        .map(e=>Math.hypot(+e.getAttribute('x')-C,+e.getAttribute('y')-C));
+      const a=rad('.pl'), b=rad('.trp'), c=rad('.trp3');
+      return {n:[a.length,b.length,c.length], nat:Math.max(...a), mid:[Math.min(...b),Math.max(...b)],
+        out:Math.min(...c)};}`);
+    if(r.n.some(x=>x===0)) return 'наборов не три: '+r.n.join('/');
+    return (r.nat<r.mid[0]&&r.mid[1]<r.out)||JSON.stringify(r);
+  });
+  t('кольца не налезают друг на друга',()=>{
+    /* Зазор между краями глифов соседних колец, а не между центрами: глиф
+       11 единиц высотой, и центры в 30 единицах ещё ничего не гарантируют. */
+    const r=tri(`()=>{const C=190, sv=document.querySelector('#wheel svg');
+      const ext=sel=>{const es=[...sv.querySelectorAll(sel+' text[font-family^="Astro"]')];
+        const d=e=>Math.hypot(+e.getAttribute('x')-C,+e.getAttribute('y')-C), h=e=>+e.getAttribute('font-size')/2;
+        return [Math.min(...es.map(e=>d(e)-h(e))), Math.max(...es.map(e=>d(e)+h(e)))];};
+      const a=ext('.pl'), b=ext('.trp'), c=ext('.trp3');
+      return {inner:b[0]-a[1], outer:c[0]-b[1]};}`);
+    return (r.inner>=6&&r.outer>=6)||`зазоры ${r.inner.toFixed(1)} и ${r.outer.toFixed(1)}`;
+  });
+  t('среднее кольцо - прогрессии, внешнее - транзиты, в один момент',()=>{
+    const r=tri(`()=>({mid:TR_CHART.pos.Moon.lon, wantMid:ringChart(CURRENT,TR_MS,'progressed').pos.Moon.lon,
+      out:TR3_CHART.pos.Moon.lon, wantOut:transitChartAt(CURRENT,TR_MS).pos.Moon.lon})`);
+    const e1=Math.abs(r.mid-r.wantMid), e2=Math.abs(r.out-r.wantOut);
+    return (e1<1e-9&&e2<1e-9)||`среднее мимо на ${e1}, внешнее на ${e2}`;
+  });
+  t('ползунок двигает оба внешних кольца',()=>{
+    /* Ради этого трёхкольцевая карта и существует: прогрессивная и транзитная
+       Луна идут вместе. Месяц вперёд: транзитное Солнце уходит примерно на
+       30 градусов, прогрессивное на 0,08. */
+    const r=tri(`()=>{const k=TR_MS, a=TR_CHART.pos.Sun.lon, b=TR3_CHART.pos.Sun.lon;
+      TR_MS=k+30*86400000; renderTransits(CURRENT);
+      const out={mid:Math.abs(TR_CHART.pos.Sun.lon-a), outer:Math.abs(TR3_CHART.pos.Sun.lon-b)};
+      TR_MS=k; renderTransits(CURRENT); return out;}`);
+    return (r.mid>0.03&&r.mid<0.2&&r.outer>25&&r.outer<35)
+      ||`среднее сдвинулось на ${r.mid.toFixed(3)}°, внешнее на ${r.outer.toFixed(1)}°`;
+  });
+  t('натальный глиф в тесном кольце не уезжает дальше двухкольцевого',()=>{
+    /* Натальное кольцо стало на треть короче. Замерено на 340 картах: при
+       прежнем глифе в 13 единиц средний увод 7,51°, худший 43,5°; при 11
+       единицах и чуть большем радиусе 4,57° и 31,1°. Пороги стоят между,
+       чтобы возврат к большому глифу провалил тест. Радиус берётся с колеса,
+       а не из головы. */
+    const r=tri(`()=>{const C=190, g=document.querySelector('#wheel .pl text[font-family^="Astro"]');
+      const fs=+[...document.querySelectorAll('#wheel .pl text[font-family^="Astro"]')]
+        .map(e=>+e.getAttribute('font-size')).sort((a,b)=>b-a)[0];
+      const R=Math.hypot(+g.getAttribute('x')-C,+g.getAttribute('y')-C);
+      const sepFor=(r,h)=>2*Math.asin(Math.min(1,(h+1)/r))*180/Math.PI;
+      const AST=['Ceres','Pallas','Juno','Vesta'];
+      let worst=0,sum=0,n=0;
+      for(let i=0;i<CHART_LIBRARY.length;i+=11){
+        const e=CHART_LIBRARY[i], hh=e.t==null?12:e.t;
+        const c=computeChart(e.y,e.mo,e.d,hh,libTz(e),e.lat,e.lon,false);
+        const lons=WHEEL_BODIES.concat(FACT_POINTS).filter(p=>c.pos[p]&&!AST.includes(p)).map(p=>c.pos[p].lon);
+        fanOut(lons,sepFor(R,fs*0.41)).forEach((v,k)=>{const d=Math.abs(((v-lons[k]+540)%360)-180);
+          sum+=d;n++;if(d>worst)worst=d;});
+      }
+      return {R:+R.toFixed(1),fs,avg:+(sum/n).toFixed(2),worst:+worst.toFixed(1)};}`);
+    if(r.fs>11) return `натальный глиф ${r.fs} единиц, ждём 11`;
+    if(r.avg>6) return `средний увод ${r.avg}° на радиусе ${r.R}, ждём меньше 6`;
+    return r.worst<38||`худший увод ${r.worst}°, ждём меньше 38`;
+  });
+  t('тап в тесном натальном кольце выбирает свою планету',()=>{
+    /* Натальная полоса стала уже, и нижняя граница цели опущена до 20, чтобы
+       глубина осталась около 55 px на телефоне. */
+    const r=tri(`()=>{const centres=[...document.querySelectorAll('#wheel .pl')].map(g=>{
+        const b=g.querySelector('text[font-family^="Astro"]').getBoundingClientRect();
+        return {p:g.dataset.p,cx:b.left+b.width/2,cy:b.top+b.height/2,w:b.width};});
+      if(!centres.length||!centres[0].w) return null;
+      let ok=0, miss=[];
+      for(const c of centres){ ISO=null;
+        document.querySelector('#wheel svg').dispatchEvent(new MouseEvent('click',{bubbles:true,clientX:c.cx,clientY:c.cy}));
+        if(ISO===c.p) ok++; else miss.push(c.p+'->'+ISO);
+        ISO=null; drawWheel(CURRENT,TR_CHART); }
+      return {n:centres.length, ok, miss};}`);
+    if(!r) return 'колесо не отрисовано';
+    return r.ok===r.n||`выбираются ${r.ok} из ${r.n}: ${r.miss.slice(0,4).join(', ')}`;
+  });
+  t('после натала третьего кольца нет',()=>{
+    const r=ev(`(()=>{const k1=RING_MODE,k2=RING2_MODE;
+      RING_MODE='progressed'; RING2_MODE='transit'; renderTransits(CURRENT);
+      const on=document.querySelectorAll('#wheel .trp3').length;
+      RING_MODE='synastry'; renderTransits(CURRENT);
+      const syn=document.querySelectorAll('#wheel .trp3').length, synChart=TR3_CHART;
+      RING_MODE='none'; renderTransits(CURRENT);
+      const off=document.querySelectorAll('#wheel .trp3').length;
+      RING_MODE=k1; RING2_MODE=k2; renderRingSwitch(); renderTransits(CURRENT);
+      return {on,syn,synChart:!!synChart,off};})()`);
+    return (r.on>0&&r.syn===0&&!r.synChart&&r.off===0)||JSON.stringify(r);
+  });
+  t('цвет третьего кольца читается в обеих темах',()=>{
+    /* Подобран на уровень акцента, а не ярче: иначе внешнее кольцо читалось
+       бы как главное. */
+    const L=cr('#18757a','#f4f2ee'), Dk=cr('#3d9499','#0f0d19');
+    const used=ev(`getComputedStyle(document.documentElement).getPropertyValue('--ring3').trim()`);
+    if(!used) return '--ring3 не задан';
+    return (L>=4.5&&Dk>=4.5&&L<5.5&&Dk<6)||`светлая ${L.toFixed(2)}, тёмная ${Dk.toFixed(2)}`;
+  });
+  t('у каждого режима есть имя и подпись на всех восьми языках, а не ключ',()=>{
+    /* Подписей соляра, лунара и композита не существовало с v3.8.0, и карточка
+       печатала сырой ключ «note_solar» на всех языках. Проверка языков этого не
+       видела: она перебирает ключи из разметки, а эти собираются в коде из
+       имени режима. Здесь перебирается сам список режимов. Совпадение с
+       английским допустимо только для имени (Natal, Transits, Composite - это
+       те же слова), но не для подписи, которая всегда фраза. */
+    const bad=ev(`(()=>{const out=[], k=LANG;
+      LANG='en'; const en={}; RING_MODES.forEach(m=>en[m]=t('note_'+m));
+      for(const c of LANG_CODES){ LANG=c;
+        RING_MODES.forEach(m=>{
+          const nm=t('ring_'+m), nt=t('note_'+m);
+          if(!nm||nm==='ring_'+m) out.push(c+': ring_'+m);
+          if(!nt||nt==='note_'+m) out.push(c+': note_'+m);
+          else if(c!=='en'&&nt===en[m]) out.push(c+': note_'+m+' по-английски');
+        }); }
+      LANG=k; return out;})()`);
+    return bad.length===0||bad.slice(0,8).join(', ')+(bad.length>8?` и ещё ${bad.length-8}`:'');
+  });
+  t('подпись трёхкольцевого режима есть на всех восьми языках',()=>{
+    const miss=ev(`(()=>{const out=[], k=LANG;
+      for(const c of LANG_CODES){ LANG=c; const v=t('note_tri');
+        if(!v||v==='note_tri'||!v.includes('{1}')||!v.includes('{2}')) out.push(c); }
+      LANG=k; return out;})()`);
+    return miss.length===0||'нет или без подстановок: '+miss.join(', ');
+  });
+  t('самое длинное имя режима помещается в кнопку на телефоне',()=>{
+    /* Сочетания длиннее одиночных, и кнопка выбора не должна ни обрезать их,
+       ни переноситься на вторую строку, которая съела бы экран, ради которого
+       второй ряд и был убран. Фрейм сужается до телефона, как в проверке ниже:
+       на 900 px это проходило бы при любой длине. Мерится настоящая кнопка,
+       в каждом языке, самым длинным сочетанием. */
+    const wasW=frame.style.width, wasH=frame.style.height;
+    frame.style.width='375px'; frame.style.height='812px'; void frame.offsetWidth;
+    const r=ev(`(()=>{const k=LANG, sel=document.getElementById('ringSel');
+      const btn=sel.closest('.dd').querySelector('.ddbtn');
+      const cs=getComputedStyle(btn);
+      const room=btn.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight);
+      const c=document.createElement('canvas').getContext('2d');
+      c.font=cs.fontWeight+' '+cs.fontSize+' '+cs.fontFamily;
+      let worst={w:0};
+      for(const l of LANG_CODES){ LANG=l;
+        for(const [a,b] of TRI_COMBOS){ const s=t('ring_'+a)+' + '+t('ring_'+b);
+          const w=c.measureText(s).width; if(w>worst.w) worst={w,s,l}; } }
+      LANG=k;
+      return {...worst, room};})()`);
+    frame.style.width=wasW; frame.style.height=wasH; void frame.offsetWidth;
+    return r.w<=r.room||`"${r.s}" (${r.l}) ${r.w.toFixed(0)} px при месте ${r.room.toFixed(0)} px`;
   });
 
   /* ---------- встроенный шрифт символов ---------- */
@@ -2350,7 +2523,10 @@ function run(){
   });
   t('список режимов начинается с пустого и держит все пять',()=>{
     const r=ev(`[...document.getElementById('ringSel').options].map(o=>o.value).join(',')`);
-    return r==='none,transit,progressed,directed,solar,lunar,synastry,composite'||`получилось ${r}`;
+    /* Восемь одиночных и за ними четыре трёхкольцевых. Сочетания стоят в конце,
+       а не рядом со своим первым кольцом, чтобы привычный список не менялся. */
+    return r==='none,transit,progressed,directed,solar,lunar,synastry,composite,'
+      +'progressed+transit,directed+transit,solar+transit,lunar+transit'||`получилось ${r}`;
   });
   t('прогрессии без построенной карты не выбираются',()=>{
     /* Они отсчитываются от момента рождения, которого ещё нет. Раньше кнопка
