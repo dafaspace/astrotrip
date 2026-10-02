@@ -54,7 +54,10 @@ const frame=document.getElementById('app');
      last switched on by hand. Cleared before the iframe loads so the suite
      tests a fresh install: the ring mode, the orbs and the chosen partner have
      each already made a run behave differently from a real first launch. */
-  try{ ['astrarium_ring','astrarium_ring2','astrarium_orbs','astrarium_partner','astrarium_asteroids','astrarium_house3d']
+  /* The language too: a manual check in Georgian on 2 Oct 2026 left it stored,
+     and the next run quietly tested the export in Georgian, where a line
+     looked for by its English or Russian label was "missing". */
+  try{ ['astrarium_ring','astrarium_ring2','astrarium_orbs','astrarium_partner','astrarium_asteroids','astrarium_house3d','astrarium_rulers','astrarium_lang']
          .forEach(k=>localStorage.removeItem(k)); }catch(e){}
   /* Read once here, because the runner below is synchronous. */
   try{ SW_SRC=await (await fetch('./sw.js?notacache='+Date.now())).text(); }catch(e){}
@@ -374,13 +377,130 @@ function run(){
      солнечное состояние. Проверять его надо до того, как поверх появится
      хоть одна строка текста: трактовка, построенная на неверном факте, хуже
      отсутствия трактовки, потому что она этот факт маскирует. */
+  group('Управители');
+  /* Три режима, по умолчанию современный. Проверяется по таблицам, а не по
+     впечатлению: Solar Fire держит те же современные управители в первом
+     столбце, ZET учит им же с коуправлением Марса в Скорпионе. */
+  t('по умолчанию управители современные',()=>{
+    /* Обвязка стирает сохранённый выбор, так что здесь видно ровно то, что
+       получит человек после установки. */
+    const r=ev(`({mode:RULER_MODE, sel:document.getElementById('rulerSel').value})`);
+    return (r.mode==='modern'&&r.sel==='modern')||JSON.stringify(r);
+  });
+  t('современные: высшие планеты в обители и изгнании, старые управители - коуправители',()=>{
+    const r=ev(`(()=>{const d=(p,s)=>dignityOf(p,s,'modern');
+      return {plutoSco:d('Pluto',7), uraAqr:d('Uranus',10), nepPsc:d('Neptune',11),
+        marsSco:d('Mars',7), satAqr:d('Saturn',10), jupPsc:d('Jupiter',11),
+        plutoTau:d('Pluto',1), uraLeo:d('Uranus',4), nepVir:d('Neptune',5), marsTau:d('Mars',1),
+        uraExalt:[0,1,2,3,4,5,6,7,8,9,10,11].map(s=>d('Uranus',s)).filter(x=>x==='exalt'||x==='fall').length,
+        chiron:d('Chiron',7), node:d('NNode',11)};})()`);
+    const want={plutoSco:'ruler',uraAqr:'ruler',nepPsc:'ruler',marsSco:'coRuler',satAqr:'coRuler',
+      jupPsc:'coRuler',plutoTau:'detriment',uraLeo:'detriment',nepVir:'detriment',marsTau:'detriment',
+      uraExalt:0,chiron:null,node:null};
+    const bad=Object.keys(want).filter(k=>r[k]!==want[k]).map(k=>k+'='+r[k]);
+    return bad.length===0||bad.join(', ');
+  });
+  t('современные: планету в Рыбах ведёт Нептун, дом с Рыбами на куспиде у Нептуна',()=>{
+    /* Карта ручного разбора: Луна в Рыбах. По классике её диспозитор Юпитер,
+       по современной схеме Нептун. */
+    const r=ev(`(()=>{const c=computeChart(1985,3,20,6.5,3,55.7558,37.6173);
+      const M=chartFacts(c,'modern'), C=chartFacts(c,'classical');
+      const pscHouse=M.houses.find(h=>h.cuspSign===11);
+      return {modern:M.planets.Moon.dispositor, classical:C.planets.Moon.dispositor,
+        house:pscHouse?pscHouse.rulers.join('+'):null,
+        nepRules:pscHouse?M.planets.Neptune.rulesHouses.includes(pscHouse.house):null};})()`);
+    if(r.modern!=='Neptune') return 'современный диспозитор Луны '+r.modern;
+    if(r.classical!=='Jupiter') return 'классический диспозитор Луны '+r.classical;
+    if(r.house!==null&&(r.house!=='Neptune'||!r.nepRules)) return 'дом с Рыбами: '+r.house;
+    return true;
+  });
+  t('оба набора: у Рыб, Скорпиона и Водолея по два управителя, и цепочка ветвится',()=>{
+    const r=ev(`(()=>{const c=computeChart(1985,3,20,6.5,3,55.7558,37.6173);
+      const F=chartFacts(c,'both'), m=F.planets.Moon;
+      const two=F.houses.filter(h=>h.rulers.length===2).map(h=>h.cuspSign);
+      return {disp:m.dispositors.join('+'), branches:m.branches.length,
+        twoOnlyOnThree:two.every(s=>[7,10,11].includes(s)),
+        jupAtHome:chartFacts(c,'both').planets.Jupiter?null:null,
+        recNep:F.receptions.some(x=>x.from==='Neptune'&&x.to==='Moon'&&x.type==='domicile'),
+        recJup:F.receptions.some(x=>x.from==='Jupiter'&&x.to==='Moon'&&x.type==='domicile')};})()`);
+    if(r.disp!=='Neptune+Jupiter') return 'диспозиторы Луны: '+r.disp;
+    if(r.branches<2) return 'ветвей '+r.branches;
+    if(!r.twoOnlyOnThree) return 'два управителя у дома не из Скорпиона, Водолея или Рыб';
+    return (r.recNep&&r.recJup)||'Луну принимают не оба управителя Рыб';
+  });
+  t('оба набора: карточка показывает граф, а не перечень ветвей',()=>{
+    /* Перечень ветвей пробовали первым: у Солнца Шпицвега их 32, около сотни
+       строк в карточке. Граф даёт строку на тело, и потолок задаёт число тел,
+       а не число путей. Проверяется на всей выборке: каждое тело в графе один
+       раз, и строк не больше, чем тел плюс две итоговые. */
+    const bad=ev(`(()=>{const out=[];
+      for(let i=0;i<CHART_LIBRARY.length;i+=7){
+        const e=CHART_LIBRARY[i], hh=e.t==null?12:e.t;
+        const c=computeChart(e.y,e.mo,e.d,hh,libTz(e),e.lat,e.lon,false), F=chartFacts(c,'both');
+        const n=Object.keys(F.planets).length;
+        for(const p of Object.keys(F.planets)){
+          const g=dispositorGraph(F,p), names=g.rows.map(r=>r[0]);
+          if(new Set(names).size!==names.length) out.push(e.id+'/'+p+': тело дважды');
+          if(g.rows.length+2>n+2) out.push(e.id+'/'+p+': строк '+g.rows.length);
+          if(F.planets[p].dispositors.length&&!g.ends.length&&!g.loops.length) out.push(e.id+'/'+p+': ни конца, ни цикла');
+        }
+      }
+      return out.slice(0,5);})()`);
+    return bad.length===0||bad.join('; ');
+  });
+  t('оба набора: планета в знаке, которым управляет как старый управитель, дома',()=>{
+    /* Юпитер в Рыбах в режиме обоих наборов - полноправный управитель: он
+       дома, и его ветвь на нём заканчивается. */
+    const r=ev(`(()=>{const d=dignityOf('Jupiter',11,'both'), dm=dignityOf('Jupiter',11,'modern');
+      return {both:d, modern:dm};})()`);
+    return (r.both==='ruler'&&r.modern==='coRuler')||JSON.stringify(r);
+  });
+  t('переключатель меняет карточку без пересчёта карты, и блок для ИИ называет схему',()=>{
+    /* Положения от управителей не зависят, поэтому пересчёта нет, только
+       другое чтение. Блок для ИИ обязан говорить, по какой схеме прочитан:
+       иначе «Нептун - диспозитор Солнца» неотличим от утверждения о карте. */
+    const r=ev(`(()=>{const k=RULER_MODE, kl=LANG, c=CURRENT, sel=document.getElementById('rulerSel'), out={};
+      LANG='en';
+      for(const m of RULER_MODES){ sel.value=m; sel.dispatchEvent(new Event('change',{bubbles:true}));
+        out[m]={same:CURRENT===c&&RULER_MODE===m,
+          line:chartExportText(CURRENT).split('\\n').find(l=>/^(Rulers|Управители):/.test(l))||null}; }
+      sel.value=k; sel.dispatchEvent(new Event('change',{bubbles:true}));
+      LANG=kl; localStorage.removeItem('astrarium_rulers'); return out;})()`);
+    const modes=ev('RULER_MODES');
+    const bad=modes.filter(m=>!r[m].same||!r[m].line);
+    if(bad.length) return 'нет строки или пересчёт в: '+bad.join(', ');
+    return new Set(modes.map(m=>r[m].line)).size===3||'строки одинаковые: '+modes.map(m=>r[m].line).join(' | ');
+  });
+  t('у переключателя управителей есть подписи на всех восьми языках',()=>{
+    const miss=ev(`(()=>{const out=[], k=LANG;
+      for(const c of LANG_CODES){ LANG=c;
+        ['rulersLabel',...RULER_MODES.map(m=>'rulers_'+m)].forEach(key=>{
+          const v=t(key); if(!v||v===key) out.push(c+': '+key); }); }
+      LANG=k; return out;})()`);
+    return miss.length===0||miss.join(', ');
+  });
+  t('классический раздел эталона не изменился от появления режимов',()=>{
+    /* Первые строки parity.txt - классический слой в том виде, в каком он был
+       до режимов. Совпадение их с живым классическим расчётом и есть
+       доказательство, что добавление режимов ничего в нём не сдвинуло. */
+    if(!PARITY_GOLD) return 'parity.txt не загрузился';
+    const gold=PARITY_GOLD.split('\n').filter(l=>!l.startsWith('#'));
+    const cut=gold.indexOf('== rulers:modern');
+    if(cut<0) return 'в эталоне нет раздела современного режима';
+    const goldClassical=gold.slice(0,cut-1).join('\n').trim();
+    const live=ev(`parityFor('classical')`).trim();
+    return live===goldClassical||'классический раздел расходится с живым расчётом';
+  });
+
   group('Структурные факты');
   const FCH='computeChart(1985,3,20,6.5,3,55.7558,37.6173)';
   t('цепочка диспозиторов совпадает с ручным разбором',()=>{
     /* Считается на бумаге: Луна в Рыбах -> Юпитер, Юпитер в Водолее ->
        Сатурн, Сатурн в Скорпионе -> Марс, Марс в Тельце -> Венера, Венера в
        Овне -> обратно Марс. Конечного диспозитора нет, есть замкнутая пара. */
-    const r=ev(`(()=>{const F=chartFacts(${FCH});
+    /* По классическим управителям: разбор делался по ним. Современный режим
+       проверяется отдельно, в группе «Управители». */
+    const r=ev(`(()=>{const F=chartFacts(${FCH},'classical');
       return {chain:['Moon',...F.planets.Moon.dispositorChain].join('>'),
         loop:(F.planets.Moon.loop||[]).join('+'),
         terminal:F.planets.Moon.terminal};})()`);
@@ -392,7 +512,7 @@ function run(){
     /* Марс в Тельце и Венера в Овне обмениваются обителями. Солнце в Рыбах и
        Венера в Овне обмениваются экзальтациями. Оба факта считаются по
        таблицам, без единого суждения. */
-    const r=ev(`(()=>{const F=chartFacts(${FCH});
+    const r=ev(`(()=>{const F=chartFacts(${FCH},'classical');
       return F.mutualReceptions.map(m=>[m.a,m.b].sort().join('+')+':'
         +m.aReceivesB.join('/')+'|'+m.bReceivesA.join('/'));})()`);
     const want=['Mars+Venus:domicile|domicile','Sun+Venus:exaltation|exaltation'];
@@ -403,7 +523,7 @@ function run(){
     /* Один общий список типов терял ответ, как только направления
        расходились: "A принимает B по обители, B принимает A по экзальтации"
        это не та же конфигурация, что зеркальная. */
-    const r=ev(`(()=>{const F=chartFacts(${FCH});
+    const r=ev(`(()=>{const F=chartFacts(${FCH},'classical');
       return F.mutualReceptions.every(m=>Array.isArray(m.aReceivesB)&&Array.isArray(m.bReceivesA)
         &&m.aReceivesB.length&&m.bReceivesA.length);})()`);
     return r===true||'направления не разделены';
@@ -411,27 +531,33 @@ function run(){
   /* Инварианты, а не снимки: они обязаны держаться на любой карте, поэтому
      проверяются на выборке из библиотеки, а не на одной удобной. */
   const FSAMPLE=80;
-  t('на '+FSAMPLE+' картах библиотеки каждая цепочка заканчивается',()=>{
+  t('на '+FSAMPLE+' картах библиотеки каждая цепочка заканчивается, в любом режиме',()=>{
+    /* В режиме обоих наборов цепочка ветвится, и заканчиваться обязана каждая
+       ветвь, а не первая. */
     const bad=ev(`(()=>{const out=[];
       for(let i=0;i<CHART_LIBRARY.length;i+=Math.ceil(CHART_LIBRARY.length/${FSAMPLE})){
         const e=CHART_LIBRARY[i], hh=e.t==null?12:e.t;
-        const F=chartFacts(computeChart(e.y,e.mo,e.d,hh,libTz(e),e.lat,e.lon));
-        for(const [p,f] of Object.entries(F.planets)){
-          if(!f.terminal&&!f.loop) out.push(e.id+'/'+p+': ни конца, ни петли');
-          if(f.dispositorChain.length>7) out.push(e.id+'/'+p+': цепочка '+f.dispositorChain.length);
+        const c=computeChart(e.y,e.mo,e.d,hh,libTz(e),e.lat,e.lon);
+        for(const mode of RULER_MODES){ const F=chartFacts(c,mode);
+          for(const [p,f] of Object.entries(F.planets)) f.branches.forEach(b=>{
+            if(!b.terminal&&!b.loop) out.push(mode+' '+e.id+'/'+p+': ни конца, ни петли');
+            if(b.via.length>9) out.push(mode+' '+e.id+'/'+p+': цепочка '+b.via.length);
+          });
         }
       }
       return out.slice(0,5);})()`);
     return bad.length===0||bad.join('; ');
   });
-  t('внешние планеты и Хирон никогда не диспозиторы',()=>{
-    /* Ради этого цепочки идут по классическим управителям. С современными
-       Плутон управляет Скорпионом, но сам никуда не передаёт, и половина
-       цепочек упирается в планету, которая не может их продолжить. */
+  t('в классическом режиме внешние планеты и Хирон никогда не диспозиторы',()=>{
+    /* Определение классической схемы: управляют только семь видимых планет.
+       Прежний комментарий здесь утверждал, что с современными управителями
+       цепочки обрываются на Плутоне. Это неверно: у Плутона тоже есть знак, а
+       у знака управитель, и цепочка идёт дальше, что и проверяет тест выше во
+       всех трёх режимах. */
     const bad=ev(`(()=>{const out=[], outer=['Uranus','Neptune','Pluto','Chiron'];
       for(let i=0;i<CHART_LIBRARY.length;i+=Math.ceil(CHART_LIBRARY.length/${FSAMPLE})){
         const e=CHART_LIBRARY[i], hh=e.t==null?12:e.t;
-        const F=chartFacts(computeChart(e.y,e.mo,e.d,hh,libTz(e),e.lat,e.lon));
+        const F=chartFacts(computeChart(e.y,e.mo,e.d,hh,libTz(e),e.lat,e.lon),'classical');
         for(const [p,f] of Object.entries(F.planets)){
           if(outer.includes(f.dispositor)) out.push(e.id+'/'+p+': диспозитор '+f.dispositor);
           f.dispositorChain.forEach(x=>{if(outer.includes(x)) out.push(e.id+'/'+p+': в цепочке '+x);});
@@ -488,7 +614,7 @@ function run(){
        управители, и выдавал Плутону в Скорпионе «обитель», а Водолею сразу
        двух управителей, Сатурна и Урана. Внутри слоя, вся посылка которого
        классическая. */
-    const r=ev(`(()=>{const F=chartFacts(${FCH});
+    const r=ev(`(()=>{const F=chartFacts(${FCH},'classical');
       const outers=['Uranus','Neptune','Pluto','Chiron']
         .filter(p=>F.planets[p]&&F.planets[p].dignity!==null)
         .map(p=>p+':'+F.planets[p].dignity);
@@ -517,7 +643,8 @@ function run(){
     return bad.length===0||bad.join('; ');
   });
   t('каждый из 12 куспидов получает ровно одного управителя',()=>{
-    const r=ev(`(()=>{const F=chartFacts(${FCH});
+    /* С одним набором. В режиме обоих у трёх знаков по два, это отдельный тест. */
+    const r=ev(`(()=>{const F=chartFacts(${FCH},'classical');
       const ruled=[]; Object.values(F.planets).forEach(f=>ruled.push(...f.rulesHouses));
       return {houses:F.houses.length, ruled:ruled.length,
         unique:new Set(ruled).size, noRuler:F.houses.filter(h=>!h.ruler).length};})()`);
@@ -590,8 +717,12 @@ function run(){
      подписи "УПРАВЛЯЕТ" и "RULES" в innerText и провалилась дважды: набор
      идёт на английском, а innerText не применяет text-transform, так что в
      тексте лежало "Rules". Секции надо спрашивать у разметки. */
+  /* Classical, set here and put back: these checks were written against the
+     hand-worked classical reading of this chart. The modern scheme has its own
+     group, "Управители". */
   const CARD=`(()=>{const el=document.getElementById('detail');
-    const keep=el.innerHTML, keepCls=el.className, keepLang=LANG;
+    const keep=el.innerHTML, keepCls=el.className, keepLang=LANG, keepR=RULER_MODE;
+    RULER_MODE='classical';
     const c=computeChart(1985,3,20,6.5,3,55.7558,37.6173);
     const read=(p,lang)=>{LANG=lang||keepLang; showDetail(p,c);
       return {html:el.innerHTML, text:el.innerText,
@@ -602,7 +733,7 @@ function run(){
     read('Venus','en'); out.moonAgain=read('Moon','en');
     out.moonRu=read('Moon','ru'); out.plutoRu=read('Pluto','ru');
     out.saturnRu=read('Saturn','ru');
-    LANG=keepLang; el.innerHTML=keep; el.className=keepCls;
+    LANG=keepLang; RULER_MODE=keepR; el.innerHTML=keep; el.className=keepCls;
     return out;})()`;
   const secOf=(card,name)=>card.sections.find(x=>x[0]===name);
   const bad_none=a=>a.length===0;
@@ -1280,7 +1411,8 @@ function run(){
   /* ---------- печатный лист ---------- */
   group('Печатный лист');
   const SHEET=`(()=>{const el=document.getElementById('printFacts');
-    const keep=el.innerHTML, keepLang=LANG;
+    const keep=el.innerHTML, keepLang=LANG, keepR=RULER_MODE;
+    RULER_MODE='classical';
     const pick=id=>{const e=CHART_LIBRARY.find(x=>x.id===id), hh=e.t==null?12:e.t;
       return computeChart(e.y,e.mo,e.d,hh,libTz(e),e.lat,e.lon);};
     const read=(ch,lang)=>{LANG=lang||keepLang; el.innerHTML=printFactsSheet(ch);
@@ -1294,7 +1426,7 @@ function run(){
     const out={ru:read(c,'ru'), en:read(c,'en'),
       terminal:read(pick('alonsocano'),'ru'), noRec:read(pick('salvatorrosa'),'ru')};
     out.again=read(c,'ru');
-    LANG=keepLang; el.innerHTML=keep;
+    LANG=keepLang; RULER_MODE=keepR; el.innerHTML=keep;
     return out;})()`;
   t('на листе есть каждое нарисованное тело',()=>{
     const r=ev(SHEET);

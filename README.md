@@ -89,16 +89,28 @@ deliberately **no scores** - "strong" and "weak" are judgements, and a test asse
 no field matching `score|strength|weak|strong` exists, because the moment one does the
 text layer starts asking for the word "afflicted".
 
-Three limits, stated rather than discovered later. Chains walk the **classical** rulers,
-because Pluto rules Scorpio but disposits nothing back into the seven and half the
-chains would end on a planet that cannot pass them on; the modern ruler is reported
-beside it where they differ. Receptions are by domicile and exaltation only, because
+The rulers are a setting with three values, because the profession has three answers
+and each is somebody's practice. **Modern**, the default: Pluto rules Scorpio, Uranus
+Aquarius, Neptune Pisces, as in Solar Fire's first column and the ZET manual, with Mars,
+Saturn and Jupiter shown as co-rulers there. **Traditional**: the seven visible planets,
+as Astro Gold uses for its house dispositors and almutens. **Both**: each of those three
+signs has two full rulers, so a chain of dispositors branches and the card shows it as a
+graph, one row per body, rather than as a list of walks (one Sun in the library has 32 of
+them). On the 1019 library charts the single final dispositor differs between modern and
+traditional in 167. Sect, solar phase, angularity and the exaltations of the seven are the
+same in every mode; the outer planets get no exaltation in any, because the sources
+disagree. The export block and the print sheet name the mode, so a reading cannot mistake
+a setting for a fact about the chart.
+
+Two further limits, stated rather than discovered later. Receptions are by domicile and exaltation only, because
 triplicity, term and face each have competing tables and picking one silently would be a
 decision dressed as a calculation. House rulership comes from the cusp sign, so the
 layer lists which signs are intercepted instead of noting the gap in the abstract.
 
 `parity.txt` holds a golden serialisation of the whole structural layer across six
-charts chosen for the paths they exercise. It is the contract between the web build and
+charts chosen for the paths they exercise, under each of the three ruler modes. The
+traditional section comes first and is byte for byte what it was before the modes
+existed, which is the proof that adding them changed nothing in it. It is the contract between the web build and
 the store build: the same six must produce the same text in both, and if they do not,
 the wrapper has changed an answer rather than only the way it is delivered. Not a hash,
 on purpose - when it differs you want to see where.
@@ -567,7 +579,7 @@ mattered: before it did, a deliberately broken app passed every check. The runne
 for the city atlas to finish loading, or the atlas tests would silently check the inline
 seed instead.
 
-**304 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
+**313 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
 library, robustness over 1550-2250 and at polar latitudes, house systems (angles land
 on the cusps, cusps run round the circle without crossing, quadrant systems coincide at
 the equator, zero-latitude bodies get the same house from both methods), library data
@@ -580,7 +592,8 @@ interpretation flag, the bi-wheel's ring separation, glyph overlap in all three 
 may sit from the degree it marks, the four asteroids against JPL Horizons and that they stay absent until
 switched on, that every symbol drawn is in the embedded font and draws ink, the tri-wheel's ring
 order, gaps, glyph displacement and tap, that returns are the ones in effect, every
-chart type named and described in all eight languages, the wedge tap
+chart type named and described in all eight languages, the three ruler modes (dignities,
+dispositors, branching, the graph's bound, the export naming the mode), the wedge tap
 and the Positions row target, that wheel and slider share one card and fit one phone
 screen, and that dragging stays continuous while stepping stays calendar-exact, contrast against WCAG AA in both
 themes, and interface wiring.

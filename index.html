@@ -596,7 +596,9 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
     <div class="grid" style="margin-top:10px">
       <div><label data-i="hsysLabel"></label><select id="hsys"></select></div>
       <div><label data-i="lilLabel"></label><select id="lilmode"></select></div>
+      <div><label data-i="rulersLabel"></label><select id="rulerSel"></select></div>
     </div>
+    <div class="tiny" data-i="rulersNote" style="margin:6px 0 0"></div>
     <div style="margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
       <button class="primary" id="calc" data-i="cast"></button>
       <span class="tiny" data-i="hint"></span>
@@ -828,7 +830,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
 /* Bump together with CACHE in sw.js: the two are the same release, and the
    number on screen is how you tell from a phone which one you are looking at. */
-const APP_VERSION='3.11.0';
+const APP_VERSION='3.12.0';
 document.getElementById('ver').textContent=APP_VERSION;
 
 /* ---------- feature flags ----------
@@ -1042,6 +1044,15 @@ const STR = {
   digRuler:{ru:'обитель',en:'domicile'}, digExalt:{ru:'экзальтация',en:'exaltation'},
   digDetriment:{ru:'изгнание',en:'detriment'}, digFall:{ru:'падение',en:'fall'},
   digPeregrine:{ru:'перегрин',en:'peregrine'},
+  digCoRuler:{ru:'коуправитель',en:'co-ruler'},
+  rulersLabel:{ru:'УПРАВИТЕЛИ',en:'RULERS'},
+  rulers_modern:{ru:'Современные',en:'Modern'},
+  rulers_classical:{ru:'Классические',en:'Traditional'},
+  rulers_both:{ru:'Оба набора',en:'Both'},
+  rulersNote:{ru:'Современные: Плутон управляет Скорпионом, Уран Водолеем, Нептун Рыбами, а Марс, Сатурн и Юпитер там коуправители. Классические: только семь видимых планет. Оба набора: у этих трёх знаков по два управителя, и цепочка диспозиторов может ветвиться. Секта, экзальтации и фазы относительно Солнца одинаковы во всех трёх.',
+    en:'Modern: Pluto rules Scorpio, Uranus Aquarius, Neptune Pisces, and Mars, Saturn and Jupiter are co-rulers there. Traditional: the seven visible planets only. Both: each of those three signs has two rulers, so a chain of dispositors can branch. Sect, exaltations and solar phase are the same in all three.'},
+  sfFinals:{ru:'Конечные диспозиторы',en:'Final dispositors'},
+  sfCycles:{ru:'Циклы диспозиторов',en:'Dispositor cycles'},
   angAngular:{ru:'в угловом доме',en:'angular'},
   angSuccedent:{ru:'в последующем доме',en:'succedent'},
   angCadent:{ru:'в падающем доме',en:'cadent'},
@@ -1115,7 +1126,7 @@ const I18N={
     libNone:"No se encontró nada. Prueba con parte de un nombre o de una ciudad.",
     libNote:"Las cartas guardadas se quedan solo en este dispositivo",
     noTime:"hora de nacimiento desconocida, carta al mediodía", rrKnown:"hora tomada de un documento",
-    delChart:"eliminar", hsysLabel:"SISTEMA DE CASAS", lilLabel:"LUNA NEGRA", lil_mean:"Media (Lilith)",
+    delChart:"eliminar", hsysLabel:"SISTEMA DE CASAS", rulersLabel:"REGENTES", rulers_modern:"Modernos", rulers_classical:"Tradicionales", rulers_both:"Ambos", lilLabel:"LUNA NEGRA", lil_mean:"Media (Lilith)",
     lil_true:"Verdadera (osculatriz)", transittime:"Hora UT",
     secondsLabel:"Mostrar segundos de arco en las posiciones",
     needdata:"Rellena la fecha, la hora y el lugar.",
@@ -1171,7 +1182,7 @@ const I18N={
     libNone:"Rien trouvé. Essayez une partie du nom ou de la ville.",
     libNote:"Les cartes enregistrées restent sur cet appareil uniquement",
     noTime:"heure de naissance inconnue, carte dressée à midi", rrKnown:"heure tirée d’un document",
-    delChart:"supprimer", hsysLabel:"SYSTÈME DE MAISONS", lilLabel:"LUNE NOIRE",
+    delChart:"supprimer", hsysLabel:"SYSTÈME DE MAISONS", rulersLabel:"MAÎTRES", rulers_modern:"Modernes", rulers_classical:"Traditionnels", rulers_both:"Les deux", lilLabel:"LUNE NOIRE",
     lil_mean:"Moyenne (Lilith)", lil_true:"Vraie (osculatrice)", transittime:"Heure UT",
     secondsLabel:"Afficher les secondes d’arc dans les positions",
     needdata:"Renseignez la date, l’heure et le lieu.",
@@ -1224,7 +1235,7 @@ const I18N={
     libNone:"Nichts gefunden. Versuch einen Teil des Namens oder der Stadt.",
     libNote:"Gespeicherte Charts bleiben nur auf diesem Gerät",
     noTime:"Geburtszeit unbekannt, Chart auf Mittag gerechnet", rrKnown:"Zeit aus einem Dokument",
-    delChart:"löschen", hsysLabel:"HÄUSERSYSTEM", lilLabel:"SCHWARZER MOND", lil_mean:"Mittlere (Lilith)",
+    delChart:"löschen", hsysLabel:"HÄUSERSYSTEM", rulersLabel:"HERRSCHER", rulers_modern:"Modern", rulers_classical:"Traditionell", rulers_both:"Beide", lilLabel:"SCHWARZER MOND", lil_mean:"Mittlere (Lilith)",
     lil_true:"Wahre (oskulierend)", transittime:"Zeit UT",
     secondsLabel:"Bogensekunden in den Positionen zeigen", needdata:"Datum, Zeit und Ort ausfüllen.",
     empty:"Geburtsdaten eingeben und das Chart berechnen.", natal:"Radix", era1:"Vor dem Kino",
@@ -1276,7 +1287,7 @@ const I18N={
     libNone:"Non ho trovato nulla. Prova una parte del nome o della città.",
     libNote:"Le carte salvate restano solo su questo dispositivo",
     noTime:"ora di nascita ignota, carta calcolata a mezzogiorno", rrKnown:"ora presa da un documento",
-    delChart:"elimina", hsysLabel:"SISTEMA DI CASE", lilLabel:"LUNA NERA", lil_mean:"Media (Lilith)",
+    delChart:"elimina", hsysLabel:"SISTEMA DI CASE", rulersLabel:"GOVERNATORI", rulers_modern:"Moderni", rulers_classical:"Tradizionali", rulers_both:"Entrambi", lilLabel:"LUNA NERA", lil_mean:"Media (Lilith)",
     lil_true:"Vera (osculatrice)", transittime:"Ora UT",
     secondsLabel:"Mostra i secondi d’arco nelle posizioni", needdata:"Compila data, ora e luogo.",
     empty:"Inserisci i dati di nascita e calcola la carta.", natal:"Carta natale", era1:"Prima del cinema",
@@ -1328,7 +1339,7 @@ const I18N={
     libNone:"Нічого не знайшлося. Спробуйте частину імені або міста.",
     libNote:"Збережені карти лишаються тільки на цьому пристрої",
     noTime:"час народження невідомий, карта на полудень", rrKnown:"час із документа", delChart:"видалити",
-    hsysLabel:"СИСТЕМА ДОМІВ", lilLabel:"ЧОРНИЙ МІСЯЦЬ", lil_mean:"Середній (Ліліт)",
+    hsysLabel:"СИСТЕМА ДОМІВ", rulersLabel:"УПРАВИТЕЛІ", rulers_modern:"Сучасні", rulers_classical:"Класичні", rulers_both:"Обидва набори", lilLabel:"ЧОРНИЙ МІСЯЦЬ", lil_mean:"Середній (Ліліт)",
     lil_true:"Істинний (оскулюючий)", transittime:"Час UT",
     secondsLabel:"Показувати кутові секунди в позиціях", needdata:"Заповніть дату, час і місце.",
     empty:"Введіть дані народження і побудуйте карту.", natal:"Натальна карта", era1:"До кінематографа",
@@ -1380,7 +1391,7 @@ const I18N={
     libNone:"ვერაფერი მოიძებნა. სცადე სახელის ან ქალაქის ნაწილი.",
     libNote:"შენახული რუკები რჩება მხოლოდ ამ მოწყობილობაზე",
     noTime:"დაბადების დრო უცნობია, რუკა შუადღეზეა აგებული", rrKnown:"დრო დოკუმენტიდან", delChart:"წაშლა",
-    hsysLabel:"სახლების სისტემა", lilLabel:"შავი მთვარე", lil_mean:"საშუალო (ლილიტი)",
+    hsysLabel:"სახლების სისტემა", rulersLabel:"მმართველები", rulers_modern:"თანამედროვე", rulers_classical:"ტრადიციული", rulers_both:"ორივე", lilLabel:"შავი მთვარე", lil_mean:"საშუალო (ლილიტი)",
     lil_true:"ჭეშმარიტი (ოსკულირებადი)", transittime:"დრო UT",
     secondsLabel:"რკალის წამების ჩვენება პოზიციებში", needdata:"შეავსე თარიღი, დრო და ადგილი.",
     empty:"შეიყვანე დაბადების მონაცემები და ააგე რუკა.", natal:"ნატალური რუკა", era1:"კინომდე",
@@ -3655,6 +3666,42 @@ function bodyHouse(ch,name){
    always in the direction of a more confident reading. */
 const CLASSICAL_RULERS={0:'Mars',1:'Venus',2:'Mercury',3:'Moon',4:'Sun',5:'Mercury',
   6:'Venus',7:'Mars',8:'Jupiter',9:'Saturn',10:'Saturn',11:'Jupiter'};
+/* Solar Fire's "Modern Ruler" column, exactly: the outer planets take
+   Scorpio, Aquarius and Pisces, and nothing else moves. */
+const MODERN_RULERS={...CLASSICAL_RULERS,7:'Pluto',10:'Uranus',11:'Neptune'};
+/* Which rulers the structural layer reads. Three, because the profession has
+   three answers and each is somebody's practice, checked in the programs'
+   own documentation on 2 Oct 2026:
+     modern     Solar Fire's first column; ZET's manual teaches it, with Mars
+                "sharing" Scorpio. The default, at Dafa's call: it is what the
+                Russian-speaking market was taught.
+     classical  the seven visible planets. Astro Gold computes its house
+                dispositors and almutens this way whatever else is chosen.
+     both       each of the three signs has two rulers, both full: a body in
+                Pisces is disposed by Neptune AND by Jupiter, so a chain can
+                branch, both receive it, and both rule a Pisces house.
+   Measured on the 1019 library charts: the single final dispositor differs
+   between modern and classical in 167 of them. Not a cosmetic choice.
+
+   What does NOT change with it: sect, solar phase, angularity, and the
+   exaltations and falls of the seven. The outer planets get no exaltation in
+   any mode, because the sources disagree - Solar Fire's own table puts Uranus
+   in Scorpio and says Neptune "may also be considered" exalted in Cancer or in
+   Pisces - and picking one would be a decision dressed up as a calculation. */
+const RULER_MODES=['modern','classical','both'];
+const RULER_KEY='astrarium_rulers';
+let RULER_MODE=RULER_MODES.includes(localStorage.getItem(RULER_KEY))
+  ? localStorage.getItem(RULER_KEY) : 'modern';
+/* The rulers of a sign under a mode, modern first. Every reader of rulership
+   in the layer goes through this, so the three modes cannot drift apart one
+   field at a time - which is how the modern canon once leaked into the
+   classical layer, through a shared dignity() nobody had looked at. */
+function rulersOf(s,mode=RULER_MODE){
+  if(mode==='classical') return [CLASSICAL_RULERS[s]];
+  if(mode==='modern') return [MODERN_RULERS[s]];
+  const a=MODERN_RULERS[s], b=CLASSICAL_RULERS[s];
+  return a===b?[a]:[a,b];
+}
 /* Only these seven appear as values above, so only they can hold a chain, and
    only they have essential dignity: the outers and Chiron take a dispositor
    like any other body but are never one, which is also what guarantees every
@@ -3691,12 +3738,32 @@ function classicalDignity(p,s){
   if(EXALT[p]===o) return 'fall';
   return 'peregrine';
 }
-const dignityOf=classicalDignity;
+/* Dignity under the chosen rulers. Classical is the function above, untouched.
+   Modern gives the outers their domicile and detriment and calls Mars in
+   Scorpio, Saturn in Aquarius and Jupiter in Pisces co-rulers, which is how
+   the ZET manual puts it. Both makes those co-rulers full rulers, because in
+   that mode they are: they dispose, they receive, they rule the house. */
+function dignityOf(p,s,mode=RULER_MODE){
+  if(mode==='classical') return classicalDignity(p,s);
+  const o=(s+6)%12;
+  if(rulersOf(s,mode).includes(p)) return 'ruler';
+  if(CLASSICAL_RULERS[s]===p) return 'coRuler';
+  if(EXALT[p]===s) return 'exalt';
+  if(rulersOf(o,'both').includes(p)) return 'detriment';
+  if(EXALT[p]===o) return 'fall';
+  return TRAD_BODIES.includes(p)?'peregrine':null;
+}
+/* One facts object per chart per mode. A single cache slot would hand back
+   the classical answer after the switch had been moved to modern. */
+function factsOf(ch){
+  const c=ch.__factsBy||(ch.__factsBy={});
+  return c[RULER_MODE]||(c[RULER_MODE]=chartFacts(ch,RULER_MODE));
+}
 const signOfLon=lon=>Math.floor(rev(lon)/30);
 /* Shortest separation between two longitudes, 0 to 180. */
 const arcBetween=(a,b)=>{const d=Math.abs(rev(a-b));return d>180?360-d:d;};
 
-function chartFacts(ch){
+function chartFacts(ch,mode=RULER_MODE){
   /* The karmic points are here too. They have no essential dignity and rule no
      house, but "the North Node in Taurus, disposed by Venus" is ordinary
      practice and the walk costs nothing once the signs are known. Leaving them
@@ -3718,6 +3785,7 @@ function chartFacts(ch){
   const mercOriental=ch.pos.Mercury?rev(ch.pos.Mercury.lon-ch.pos.Sun.lon)>180:null;
 
   const F={
+    rulers:mode,
     sect:{chart:chartSect, sunAboveHorizon:sunAbove, sunHouse:house.Sun},
     planets:{}, houses:[], receptions:[], mutualReceptions:[],
     terminals:[], loops:[],
@@ -3736,13 +3804,16 @@ function chartFacts(ch){
   /* ---- houses: the sign on each cusp, its ruler, and where that ruler sits ---- */
   for(let h=1;h<=12;h++){
     const cusp=ch.houses.cusps[h-1], s=signOfLon(cusp);
-    const ruler=CLASSICAL_RULERS[s], modern=RULERS[s];
+    /* `ruler` is the first of `rulers`, kept because most readers want one
+       name; anything that asks "does this body rule this house" reads
+       `rulers`, or a Pisces house in both mode would lose Jupiter. */
+    const rulers=rulersOf(s,mode), ruler=rulers[0];
     F.houses.push({
       house:h, cuspSign:s, cuspLon:cusp,
-      ruler, modernRuler:modern===ruler?null:modern,
+      ruler, rulers,
       rulerSign:sign[ruler]!=null?sign[ruler]:null,
       rulerHouse:house[ruler]!=null?house[ruler]:null,
-      rulerDignity:sign[ruler]!=null?dignityOf(ruler,sign[ruler]):null,
+      rulerDignity:sign[ruler]!=null?dignityOf(ruler,sign[ruler],mode):null,
       derivedFrom:['cusp_'+h]
     });
   }
@@ -3756,24 +3827,32 @@ function chartFacts(ch){
     /* Dispositor, then the walk. It stops on a planet standing in its own
        sign (the chain's end) or on a planet already seen in this walk (a
        closed loop). Both are real answers; forcing one of them into the
-       other is how software quietly simplifies a chart. */
-    const disp=CLASSICAL_RULERS[s];
-    const chain=[]; let cur=p, loop=null, terminal=null;
-    const seen=new Set();
-    while(true){
-      if(seen.has(cur)){ loop=chain.slice(chain.indexOf(cur)); break; }
-      seen.add(cur);
+       other is how software quietly simplifies a chart.
+
+       With both sets of rulers a sign can have two, so the walk is a tree and
+       every branch is followed to its own end. With one set there is one
+       branch and the fields below are exactly what the single walk always
+       produced - parity.txt holds the classical answers byte for byte. A body
+       standing in a sign it rules, as either ruler, is at home and ends its
+       branch there. */
+    const dispositors=rulersOf(s,mode).includes(p)?[]:rulersOf(s,mode);
+    const paths=[];
+    const walk=(cur,chain)=>{
+      const at=chain.indexOf(cur);
+      if(at>=0){ paths.push({chain,loop:chain.slice(at),terminal:null}); return; }
       const cs=sign[cur];
-      if(cs==null) break;                       // body not in this chart
-      const next=CLASSICAL_RULERS[cs];
-      if(next===cur){ terminal=cur; break; }    // stands in its own sign
-      chain.push(cur); cur=next;
-    }
+      if(cs==null){ paths.push({chain,loop:null,terminal:null}); return; }   // not in this chart
+      const rs=rulersOf(cs,mode);
+      if(rs.includes(cur)){ paths.push({chain,loop:null,terminal:cur}); return; }
+      rs.forEach(next=>walk(next,[...chain,cur]));
+    };
+    walk(p,[]);
+    const {chain,loop,terminal}=paths[0];
 
     /* Which houses this body rules, and the theme it therefore carries into
        the house it occupies. This is the part no mobile app does, and it is
        the cheapest of all of them: the cusp signs are already computed. */
-    const rules=F.houses.filter(x=>x.ruler===p).map(x=>x.house);
+    const rules=F.houses.filter(x=>x.rulers.includes(p)).map(x=>x.house);
     const carries=hs!=null?rules.filter(r=>r!==hs).map(r=>({from:r,into:hs})):[];
 
     /* Angularity as the category AND the distance, because the category is a
@@ -3800,10 +3879,13 @@ function chartFacts(ch){
        outside the scheme, the same as the outers, and it rules nothing. */
     F.planets[p]={
       sign:s, house:hs, lon,
-      dignity:dignityOf(p,s),
-      dispositor:disp===p?null:disp,
+      dignity:dignityOf(p,s,mode),
+      dispositor:dispositors[0]||null,
+      dispositors,
       dispositorChain:chain.slice(1),           // without the body itself
       terminal, loop,
+      /* Every branch, for both mode; one entry otherwise. */
+      branches:paths.map(x=>({via:x.chain.slice(1),terminal:x.terminal,loop:x.loop})),
       rulesHouses:rules, carries,
       angularity, nearestAngle:nearest, distanceToAngle:dist,
       sect:{planet:natal, aboveHorizon:hs==null?null:hs>=7,
@@ -3816,12 +3898,11 @@ function chartFacts(ch){
 
   /* Every distinct end a chain reaches, and every closed loop, once. */
   const seenT=new Set(), seenL=new Set();
-  bodies.forEach(p=>{
-    const f=F.planets[p];
-    if(f.terminal&&!seenT.has(f.terminal)){ seenT.add(f.terminal); F.terminals.push(f.terminal); }
-    if(f.loop){ const k=[...f.loop].sort().join('-');
-      if(!seenL.has(k)){ seenL.add(k); F.loops.push(f.loop); } }
-  });
+  bodies.forEach(p=>F.planets[p].branches.forEach(b=>{
+    if(b.terminal&&!seenT.has(b.terminal)){ seenT.add(b.terminal); F.terminals.push(b.terminal); }
+    if(b.loop){ const k=[...b.loop].sort().join('-');
+      if(!seenL.has(k)){ seenL.add(k); F.loops.push(b.loop); } }
+  }));
 
   /* ---- receptions ----
      Directed: the receiver is the planet whose sign the other one stands in.
@@ -3831,9 +3912,10 @@ function chartFacts(ch){
   const recKey=r=>`${r.from}>${r.to}:${r.type}`;
   bodies.forEach(guest=>{
     const s=sign[guest];
-    const byDom=CLASSICAL_RULERS[s];
-    if(byDom&&byDom!==guest&&sign[byDom]!=null)
-      F.receptions.push({from:byDom,to:guest,type:'domicile',derivedFrom:['sign_'+guest]});
+    rulersOf(s,mode).forEach(byDom=>{
+      if(byDom&&byDom!==guest&&sign[byDom]!=null)
+        F.receptions.push({from:byDom,to:guest,type:'domicile',derivedFrom:['sign_'+guest]});
+    });
     Object.entries(EXALT).forEach(([host,es])=>{
       if(es===s&&host!==guest&&sign[host]!=null)
         F.receptions.push({from:host,to:guest,type:'exaltation',derivedFrom:['sign_'+guest]});
@@ -4020,18 +4102,10 @@ function unitHTML(label,short,detail){
    These weights rank the comma-separated tags under each card heading. */
 const TAG_TOKENS={"planets":{"Sun":{"tokens":[["воля",3],["инициатива",3],["импульс",2],["императив",2],["внимание",2],["действие",2],["власть",1]]},"Moon":{"tokens":[["подсознание",3],["восприятие",3],["забота",3],["потребности",2],["привычка",2],["защита",2],["мать",2],["эмоции",1]]},"Mercury":{"tokens":[["мышление",3],["речь",3],["слово",2],["контакты",2],["информация",2],["логика",2],["посредничество",1]]},"Venus":{"tokens":[["любовь",3],["красота",3],["гармония",3],["притяжение",2],["эстетика",2],["восприятие",2],["социум",1],["чувства",1]]},"Mars":{"tokens":[["энергия",3],["активность",3],["желание",2],["агрессия",2],["труд",2],["сила",2],["честолюбие",1]]},"Jupiter":{"tokens":[["расширение",3],["удача",3],["широта",2],["покровительство",2],["компенсация",2],["этика",2],["оптимизм",1],["философия",1]]},"Saturn":{"tokens":[["ограничение",3],["терпение",3],["карма",3],["глубина",2],["мудрость",2],["дисциплина",2],["сжатие",2],["время",1]]},"Chiron":{"tokens":[["расширение сознания",3],["тупик",3],["интуиция",2],["оккультизм",2],["нестандартность",2],["целительство",1],["юмор",1]]},"Uranus":{"tokens":[["неожиданность",3],["откровение",3],["свобода",2],["гениальность",2],["революция",2],["независимость",2],["эксцентричность",2],["будущее",1]]},"Neptune":{"tokens":[["экстаз",3],["синтез",3],["туман",2],["мистика",2],["сострадание",2],["растворение",2],["обман",2],["интуиция",1]]},"Pluto":{"tokens":[["трансформация",3],["очищение",3],["власть",2],["рок",2],["глубина",2],["самоотречение",2],["воля",1],["смерть",1]]},"NNode":{"tokens":[["новизна",3],["развитие",3],["будущее",2],["социум",2],["рост",2],["расширение",1],["энтузиазм",1]]},"SNode":{"tokens":[["прошлое",3],["опыт",3],["традиция",3],["привычка",2],["мудрость",2],["консерватизм",2],["ограничение",1]]}},"signs":{"Aries":{"tokens":[["энергия",3],["порыв",3],["действие",2],["искра",2],["энтузиазм",2],["наивность",1],["цикличность",1]]},"Taurus":{"tokens":[["форма",3],["надёжность",3],["чувственность",2],["упорство",2],["материализация",2],["эстетика",2],["лень",1],["инерция",1]]},"Gemini":{"tokens":[["связь",3],["информация",3],["лёгкость",2],["любопытство",2],["посредничество",2],["блеск",2],["непостоянство",1],["рассеяние",1]]},"Cancer":{"tokens":[["глубина",3],["эмоция",3],["панцирь",3],["тайна",2],["интуиция",2],["адаптация",2],["дом",1],["скрытность",1]]},"Leo":{"tokens":[["энергия",3],["поток",3],["власть",2],["признание",2],["благородство",2],["творчество",2],["сцена",1],["самоослепление",1]]},"Virgo":{"tokens":[["деталь",3],["порядок",3],["форма",2],["анализ",2],["труд",2],["чистота",2],["служение",1],["дробление",1]]},"Libra":{"tokens":[["равновесие",3],["гармония",3],["справедливость",2],["суд",2],["связь",2],["красота",2],["холодность",1],["колебание",1]]},"Scorpio":{"tokens":[["трансформация",3],["глубина",3],["смерть",2],["магнетизм",2],["психология",2],["власть",2],["возрождение",1],["яд",1]]},"Sagittarius":{"tokens":[["устремлённость",3],["идея",3],["свобода",2],["обаяние",2],["широта",2],["энтузиазм",2],["проповедь",1],["непостоянство",1]]},"Capricorn":{"tokens":[["цель",3],["восхождение",3],["структура",2],["труд",2],["ответственность",2],["время",2],["аскеза",1],["уныние",1]]},"Aquarius":{"tokens":[["будущее",3],["озарение",3],["свобода",2],["оригинальность",2],["дружба",2],["отстранённость",2],["структура",1],["связь",1]]},"Pisces":{"tokens":[["сострадание",3],["растворение",3],["интуиция",2],["адаптация",2],["воображение",2],["трансформация",1],["глубина",1],["ускользание",1]]}},"houses":{"H1":{"tokens":[["личность",3],["маска",3],["самовыражение",3],["восприятие",2],["внешность",2],["инициатива",2],["обаяние",1],["уязвимость",1]]},"H2":{"tokens":[["собственность",3],["деньги",3],["этика",3],["ценности",2],["вещи",2],["энергообмен",2],["жадность",1],["устойчивость",1]]},"H3":{"tokens":[["информация",3],["общение",3],["рассудок",2],["обучение",2],["знакомые",2],["братья",2],["эрудиция",1],["суета",1]]},"H4":{"tokens":[["дом",3],["корни",3],["семья",3],["родина",2],["подсознание",2],["фундамент",2],["отец",1],["старость",1]]},"H5":{"tokens":[["творчество",3],["роль",3],["любовь",3],["сцена",2],["игра",2],["дети",2],["самовыражение",1],["Бог",1]]},"H6":{"tokens":[["труд",3],["служение",3],["здоровье",3],["тело",2],["долг",2],["инструменты",2],["повседневность",1],["мастерство",1]]},"H7":{"tokens":[["партнёрство",3],["брак",3],["враги",3],["равновесие",2],["сотрудничество",2],["зеркало",2],["мир",1],["конфликт",1]]},"H8":{"tokens":[["коллектив",3],["идеология",3],["кризис",3],["смерть",2],["трансформация",2],["наследство",2],["групповая-этика",1],["власть",1]]},"H9":{"tokens":[["идеал",3],["мировоззрение",3],["путешествие",3],["учитель",2],["расширение",2],["философия",2],["убеждения",1],["слава",1]]},"H10":{"tokens":[["карьера",3],["цель",3],["иерархия",3],["власть",2],["дисциплина",2],["ограничение",2],["мать",1],["выбор",1]]},"H11":{"tokens":[["друзья",3],["группа",3],["единство",3],["равенство",2],["отдых",2],["будущее",2],["наука",1],["терпимость",1]]},"H12":{"tokens":[["жертва",3],["уединение",3],["смирение",3],["милосердие",2],["мистика",2],["тайное",2],["служение",2],["одиночество",1]]}},"aspects":{"conjunction":{"tokens":[["сплав",3],["сила",3],["притяжение",2],["отталкивание",2],["задача",1]]},"sextile":{"tokens":[["способность",3],["усилие",2],["развитие",2],["контакт",2],["речь",1]]},"square":{"tokens":[["препятствие",3],["напряжение",3],["работа",2],["смирение",2],["крючок",1]]},"trine":{"tokens":[["поток",3],["защита",3],["талант",2],["везение",2],["расслабление",1]]},"opposition":{"tokens":[["качели",3],["равновесие",3],["поляризация",2],["проекция",2],["отношения",1]]}}};
 const SIGN_KEYS=['Aries','Taurus','Gemini','Cancer','Leo','Virgo','Libra','Scorpio','Sagittarius','Capricorn','Aquarius','Pisces'];
-/* instrumental case for "трин с ..." phrases */
-const RULERS={0:'Mars',1:'Venus',2:'Mercury',3:'Moon',4:'Sun',5:'Mercury',6:'Venus',7:'Pluto',8:'Jupiter',9:'Saturn',10:'Uranus',11:'Neptune'};
-const CORULERS={7:'Mars',10:'Saturn',11:'Jupiter'};
+/* The modern table and the separate dignity() that read it are gone: they
+   were a second rulership scheme living beside the structural layer's, and
+   both are now one, chosen by RULER_MODE through rulersOf() and dignityOf(). */
 const EXALT={Sun:0,Moon:1,Mercury:5,Venus:11,Mars:9,Jupiter:3,Saturn:6};
-function dignity(p,s){
-  if(RULERS[s]===p||CORULERS[s]===p) return 'ruler';
-  if(EXALT[p]===s) return 'exalt';
-  const o=(s+6)%12;
-  if(RULERS[o]===p||CORULERS[o]===p) return 'detriment';
-  if(EXALT[p]===o) return 'fall';
-  return null;
-}
 /* Plain-language notes for essential dignity - the sign/planet fit itself
    (ruler/exalt/detriment/fall) is computed precisely by the token engine below;
    this is just how it's put into words for the reader. */
@@ -4652,8 +4726,8 @@ function buildPlacement(ch,p){
   const P=TAG_TOKENS.planets[p];
   const lon=ch.pos[p].lon, s=Math.floor(rev(lon)/30), hs=bodyHouse(ch,p);
   const S=TAG_TOKENS.signs[SIGN_KEYS[s]], H=TAG_TOKENS.houses['H'+hs];
-  const dig=dignity(p,s);
-  const wSign=dig==='ruler'?1.0:dig==='exalt'?0.95:0.85;
+  const dig=dignityOf(p,s);
+  const wSign=dig==='ruler'||dig==='coRuler'?1.0:dig==='exalt'?0.95:0.85;
   const score={};
   const add=(tokens,mult)=>{(tokens||[]).forEach(([w,x])=>{score[w]=(score[w]||0)+x*mult;});};
   add(P&&P.tokens,1.0); add(S&&S.tokens,wSign); add(H&&H.tokens,0.55);
@@ -5242,7 +5316,7 @@ function drawWheel(ch,tr,t3=TR3_CHART){
    houses by number, the chain always starting at the tapped body. The same
    chart therefore always renders identically, which is what makes a screenshot
    comparison possible at all. */
-const DIG_KEY={ruler:'digRuler',exalt:'digExalt',detriment:'digDetriment',
+const DIG_KEY={ruler:'digRuler',coRuler:'digCoRuler',exalt:'digExalt',detriment:'digDetriment',
   fall:'digFall',peregrine:'digPeregrine'};
 const ANG_KEY={angular:'angAngular',succedent:'angSuccedent',cadent:'angCadent'};
 const SOL_KEY={cazimi:'solCazimi',combust:'solCombust',
@@ -5255,12 +5329,32 @@ const REC_ORDER={domicile:0,exaltation:1};
 const PLANET_ACC={ru:{Moon:'Луну',Venus:'Венеру'}};
 const PNacc=n=>((PLANET_ACC[LANG]||{})[n])||PN(n);
 
+/* The dispositors reachable from one body, each listed once with its own
+   dispositors, plus every end the walks reach. For both sets of rulers, where
+   the walk is a tree: listing the walks themselves was tried first and gave
+   the Sun in Spitzweg's chart 32 of them, about a hundred lines in a card. The
+   graph has at most one row per body, and says the same thing. */
+function dispositorGraph(F,p){
+  const order=[], q=[p];
+  while(q.length){
+    const x=q.shift(); if(order.includes(x)||!F.planets[x]) continue;
+    order.push(x); F.planets[x].dispositors.forEach(d=>q.push(d));
+  }
+  const f=F.planets[p];
+  const ends=[...new Set(f.branches.filter(b=>b.terminal).map(b=>b.terminal))];
+  const seenL=new Set(), loops=[];
+  f.branches.forEach(b=>{ if(!b.loop) return; const k=[...b.loop].sort().join('-');
+    if(!seenL.has(k)){ seenL.add(k); loops.push(b.loop); } });
+  return {rows:order.filter(x=>F.planets[x].dispositors.length).map(x=>[x,F.planets[x].dispositors]),
+    ends, loops};
+}
+const cycleText=(l,arrow,pair)=>l.length===2?l.map(PN).join(pair):[...l,l[0]].map(PN).join(arrow);
 /* The lines, once. The panel stacks them and the print sheet lays them across,
    and two copies of this logic would have drifted the first time a label
    changed on one side only - which is the defect this repo has paid for before
    in two apps that shared button CSS. */
 function structureLines(ch,p){
-  const F=ch.__facts||(ch.__facts=chartFacts(ch));
+  const F=factsOf(ch);
   const f=F.planets[p]; if(!f) return null;
   const out=[];
 
@@ -5270,18 +5364,32 @@ function structureLines(ch,p){
      are just as possible, and a name that only fits the common case quietly
      becomes wrong the day it does not. */
   {
-    let body='';
-    if(f.dispositor==null){
-      body=`<span class="dim">${t('sfOwnSign')}</span>`;
-    }else{
-      body=[p,...f.dispositorChain].map(PN).join(' \u2192 ');
-      if(f.loop){
-        const cyc=f.loop.length===2?f.loop.map(PN).join(' \u2194 ')
-          :[...f.loop,f.loop[0]].map(PN).join(' \u2192 ');
-        body+=`<br><span class="dim">${t('sfCycle')}: ${cyc}<br>${t('sfNoFinal')}</span>`;
-      }else if(f.terminal){
-        body+=`<br><span class="dim">${t('sfFinal')}: ${PN(f.terminal)}</span>`;
+    /* One block per branch. With one set of rulers there is one branch and
+       this prints exactly what it always printed; with both, a body in
+       Pisces walks once through Neptune and once through Jupiter, and the two
+       walks can end in different places, so each is shown to its own end. */
+    const one=b=>{
+      let o=[p,...b.via].map(PN).join(' \u2192 ');
+      if(b.loop){
+        const cyc=b.loop.length===2?b.loop.map(PN).join(' \u2194 ')
+          :[...b.loop,b.loop[0]].map(PN).join(' \u2192 ');
+        o+=`<br><span class="dim">${t('sfCycle')}: ${cyc}<br>${t('sfNoFinal')}</span>`;
+      }else if(b.terminal){
+        o+=`<br><span class="dim">${t('sfFinal')}: ${PN(b.terminal)}</span>`;
       }
+      return o;
+    };
+    let body='';
+    if(f.dispositor==null) body=`<span class="dim">${t('sfOwnSign')}</span>`;
+    else if(f.branches.length===1) body=one(f.branches[0]);
+    else{
+      const g=dispositorGraph(F,p);
+      body=g.rows.map(([x,ds])=>`${PN(x)} \u2192 ${ds.map(PN).join(', ')}`).join('<br>');
+      const tail=[];
+      if(g.ends.length) tail.push(`${t(g.ends.length>1?'sfFinals':'sfFinal')}: ${g.ends.map(PN).join(', ')}`);
+      if(g.loops.length) tail.push(`${t(g.loops.length>1?'sfCycles':'sfCycle')}: `
+        +g.loops.map(l=>cycleText(l,' \u2192 ',' \u2194 ')).join('; '));
+      body+=`<br><span class="dim">${tail.join('<br>')}</span>`;
     }
     out.push([t('sfDispositor'),body]);
   }
@@ -5493,7 +5601,7 @@ function aspectDirection(ch,a,b,asp){
 function chartExportText(ch){
   if(!ch) return '';
   const ru=LANG==='ru';
-  const F=ch.__facts||(ch.__facts=chartFacts(ch));
+  const F=factsOf(ch);
   const S=n=>LX(SIGN_NAME)[n];
   const deg=lon=>{const d=rev(lon)%30;
     return `${Math.floor(d)}°${String(Math.floor((d-Math.floor(d))*60)).padStart(2,'0')}′`;};
@@ -5512,6 +5620,10 @@ function chartExportText(ch){
      first thing a reader noticed. */
   L.push(t(F.sect.chart==='day'?'sheetDay':'sheetNight')
     +(F.intercepted.length?` · ${t('sheetIntercepted')}: ${F.intercepted.map(S).join(', ')}`:''));
+  /* Which rulers the chains below were walked with. Without it a reader is
+     handed "Neptune disposes the Sun" and cannot tell whether that is a claim
+     about the chart or about the setting. */
+  L.push(rulersLine(F));
   L.push('');
 
   L.push(ru?'УГЛЫ И КУСПИДЫ':'ANGLES AND CUSPS');
@@ -5563,7 +5675,7 @@ function chartExportText(ch){
    so the grid has none and the reason is here rather than in a bug report. */
 function placementLines(ch){
   const ru=LANG==='ru';
-  const F=ch.__facts||(ch.__facts=chartFacts(ch));
+  const F=factsOf(ch);
   const S=n=>LX(SIGN_NAME)[n];
   const deg=lon=>{const d=rev(lon)%30;
     return `${Math.floor(d)}°${String(Math.floor((d-Math.floor(d))*60)).padStart(2,'0')}′`;};
@@ -5581,10 +5693,19 @@ function placementLines(ch){
     if(f.solar.condition&&f.solar.condition!=='free') head.push(t(SOL_KEY[f.solar.condition]));
     L.push(head.join(', '));
     if(f.dispositor==null) L.push('  '+t('sfOwnSign'));
-    else{
-      let d='  '+t('sfDispositor').toLowerCase()+': '+[p,...f.dispositorChain].map(PN).join(' -> ');
-      if(f.loop) d+=`, ${t('sfCycle').toLowerCase()} ${f.loop.map(PN).join(' <-> ')}, ${t('sfNoFinal').toLowerCase()}`;
-      else if(f.terminal) d+=`, ${t('sfFinal').toLowerCase()}: ${PN(f.terminal)}`;
+    else if(f.branches.length===1){
+      const b=f.branches[0];
+      let d='  '+t('sfDispositor').toLowerCase()+': '+[p,...b.via].map(PN).join(' -> ');
+      if(b.loop) d+=`, ${t('sfCycle').toLowerCase()} ${b.loop.map(PN).join(' <-> ')}, ${t('sfNoFinal').toLowerCase()}`;
+      else if(b.terminal) d+=`, ${t('sfFinal').toLowerCase()}: ${PN(b.terminal)}`;
+      L.push(d);
+    }else{
+      const g=dispositorGraph(F,p);
+      let d='  '+t('sfDispositor').toLowerCase()+': '
+        +g.rows.map(([x,ds])=>`${PN(x)} -> ${ds.map(PN).join(', ')}`).join('; ');
+      if(g.ends.length) d+=`; ${t(g.ends.length>1?'sfFinals':'sfFinal').toLowerCase()}: ${g.ends.map(PN).join(', ')}`;
+      if(g.loops.length) d+=`; ${t(g.loops.length>1?'sfCycles':'sfCycle').toLowerCase()}: `
+        +g.loops.map(l=>l.map(PN).join(' <-> ')).join(', ');
       L.push(d);
     }
     if(f.rulesHouses.length){
@@ -5634,11 +5755,20 @@ const PARITY_CHARTS=[
   [2001,6,21,23.75,2,69.6492,18.9553],      // above the polar circle, Placidus falls back
   [2200,3,1,0,0,-33.8688,151.2093]          // far future, southern hemisphere
 ];
+/* Every ruler mode, classical first and in exactly the form it always had, so
+   the lines that existed before the modes did are the proof that adding them
+   changed nothing in the classical layer. The other two follow, each under a
+   header line. */
 function parityDigest(){
+  return [parityFor('classical'),
+    '== rulers:modern\n'+parityFor('modern'),
+    '== rulers:both\n'+parityFor('both')].join('\n--\n');
+}
+function parityFor(mode){
   const S=['Ari','Tau','Gem','Cnc','Leo','Vir','Lib','Sco','Sgr','Cap','Aqr','Psc'];
   return PARITY_CHARTS.map(a=>{
     const ch=computeChart(a[0],a[1],a[2],a[3],a[4],a[5],a[6],false);
-    const F=chartFacts(ch);
+    const F=chartFacts(ch,mode);
     const head=`${a[0]}-${a[1]}-${a[2]} ${ch.houses.system} ${F.sect.chart}`
       +` int:${F.intercepted.map(i=>S[i]).join('')||'-'}`
       +` term:${F.terminals.join('/')||'-'}`
@@ -5646,7 +5776,7 @@ function parityDigest(){
     const bodies=WHEEL_BODIES.filter(p=>ch.pos[p]).map(p=>{
       const f=F.planets[p];
       return `${p} ${S[f.sign]}${Math.floor(rev(ch.pos[p].lon)%30)} h${f.house}`
-        +` ${f.dignity||'-'} d:${f.dispositor||'self'}`
+        +` ${f.dignity||'-'} d:${mode==='both'&&f.dispositors.length>1?f.dispositors.join('|'):(f.dispositor||'self')}`
         +` r:${f.rulesHouses.join(',')||'-'} ${f.angularity} ${f.sect.status}`
         +` ${f.solar.condition||'-'}`;
     });
@@ -5660,10 +5790,15 @@ function parityDigest(){
    one page per chart and can go through the whole structural layer in a single
    pass instead of tapping eleven glyphs. This exists as a QA instrument first
    and a feature second, which is why it is a plain list and not a design. */
+function rulersLine(F){
+  const lbl=t('rulersLabel');
+  return lbl.charAt(0)+lbl.slice(1).toLowerCase()+': '+t('rulers_'+F.rulers).toLowerCase();
+}
 function printFactsSheet(ch){
-  const F=ch.__facts||(ch.__facts=chartFacts(ch));
+  const F=factsOf(ch);
   const head=[];
   head.push(t(F.sect.chart==='day'?'sheetDay':'sheetNight'));
+  head.push(rulersLine(F));
   if(F.intercepted.length)
     head.push(t('sheetIntercepted')+': '+F.intercepted.map(i=>LX(SIGN_NAME)[i]).join(', '));
   if(F.terminals.length)
@@ -7101,7 +7236,7 @@ function fillLangSel(){
 document.getElementById('langSel').addEventListener('change',e=>{
   LANG=e.target.value; localStorage.setItem('astrarium_lang',LANG);
   document.documentElement.lang=LANG;
-  applyStatic(); fillHsys(); fillLil(); renderOrbs(); fillScrubUnit(); renderRingSwitch();
+  applyStatic(); fillHsys(); fillLil(); fillRulers(); renderOrbs(); fillScrubUnit(); renderRingSwitch();
   setPlaying(PLAYING); fillNamePh(); fillLibSort(); renderLibrary();
   upgradeAllSelects(); repaintDropdowns();
   if(CURRENT)run();
@@ -7139,6 +7274,18 @@ document.getElementById('lilmode').addEventListener('change',e=>{
   LILMODE=e.target.value; localStorage.setItem('astrarium_lilith',LILMODE);
   if(CURRENT) run();
 });
+function fillRulers(){
+  const sel=document.getElementById('rulerSel');
+  sel.innerHTML=RULER_MODES.map(m=>`<option value="${m}"${m===RULER_MODE?' selected':''}>${t('rulers_'+m)}</option>`).join('');
+}
+/* No recast: the positions do not change, only what is read from them. The
+   facts are cached per mode, so switching back is instant. */
+document.getElementById('rulerSel').addEventListener('change',e=>{
+  RULER_MODE=e.target.value; localStorage.setItem(RULER_KEY,RULER_MODE);
+  if(CURRENT){ renderPositions(CURRENT); renderBalance(CURRENT); renderTransits(CURRENT);
+    fillExport(); if(ISO) showDetail(ISO,CURRENT); }
+});
+fillRulers();
 fillLil();
 fillHsys();
 renderOrbs();
@@ -7682,7 +7829,7 @@ document.getElementById('exportCard').addEventListener('toggle',fillExport);
     h3.addEventListener('change',()=>{
       HOUSE_3D=h3.checked;
       localStorage.setItem(HOUSE3D_KEY,HOUSE_3D?'1':'0');
-      if(CURRENT){ CURRENT.__facts=null; renderPositions(CURRENT); renderBalance(CURRENT);
+      if(CURRENT){ CURRENT.__factsBy=null; renderPositions(CURRENT); renderBalance(CURRENT);
         renderTransits(CURRENT); fillExport(); if(ISO) showDetail(ISO,CURRENT); }
     }); }
 }
