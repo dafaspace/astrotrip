@@ -1353,6 +1353,22 @@ function run(){
     const ru=chartExportText(c);
     LANG='en'; const en=chartExportText(c);
     LANG=keep; return {ru,en};})()`;
+  t('блок - только данные: без просьбы о разборе, на обоих языках',()=>{
+    /* До v3.12.2 текст открывался просьбой к ИИ о разборе. Блок служит не
+       только для ИИ, а свой запрос тот, кто вставляет, пишет сам. Первой
+       строкой обязан идти заголовок карты, и нигде не должно быть обращения
+       к читателю. */
+    const r=ev(`(()=>{const kl=LANG, out={};
+      for(const l of ['ru','en']){ LANG=l; const txt=chartExportText(CURRENT);
+        out[l]={first:txt.split('\\n')[0], ask:(txt.match(/Прошу|Please|разбор, в котором|give a reading|любой ИИ|any AI/)||[null])[0]}; }
+      LANG=kl; return out;})()`);
+    const bad=[];
+    if(r.ru.first!=='КАРТА') bad.push('ru начинается с «'+r.ru.first.slice(0,40)+'»');
+    if(r.en.first!=='CHART') bad.push('en начинается с «'+r.en.first.slice(0,40)+'»');
+    if(r.ru.ask) bad.push('ru: «'+r.ru.ask+'»');
+    if(r.en.ask) bad.push('en: «'+r.en.ask+'»');
+    return bad.length===0||bad.join('; ');
+  });
   t('в блок попадает каждое тело, включая точки',()=>{
     const r=ev(EXP);
     const miss=ev(`(()=>{const keep=LANG; LANG='ru';

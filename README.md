@@ -64,15 +64,19 @@ exactly the kind of number astrologers disagree about.
 A folded card carries every computed fact in one plain-text block with a copy button:
 placements with dignity, dispositor chain, houses ruled and where each theme lands,
 receptions, every aspect with its orb and whether it applies or separates,
-configurations, and the balance. It is meant to be pasted into a language model.
+configurations, and the balance. Data only: it opens with the chart's heading, not with a
+request, and is meant for whatever the reader does next - notes, a colleague, a forum, a
+language model with a request of their own.
 
 The reason is a real complaint about how astrology is published. Sites give a page per
 element, so "Moon in Scorpio" is read on its own and comes out sounding far harsher than
 it is in a chart where its dispositor is well placed, where it is received, and where
 three other factors pull the other way. The reader is then left to weigh the
-contradictions, which is the hard part and the part nobody hands over. Giving a model
-the whole evidence set at once is what makes weighing possible; the block opens by
-asking for exactly that. What it cannot do is force the model to weigh rather than list.
+contradictions, which is the hard part and the part nobody hands over. Handing over the
+whole evidence set at once is what makes weighing possible. Until v3.12.2 the block also
+opened with a request to a model to weigh rather than list; it was removed, because the
+person pasting writes their own request and the same text goes to places where a built-in
+one is noise.
 
 Copy controls resolve a **named producer**, not a CSS selector. Reading `innerText` off
 the rendered card was the first idea and it was wrong: the aspect grid's text form is
@@ -579,7 +583,7 @@ mattered: before it did, a deliberately broken app passed every check. The runne
 for the city atlas to finish loading, or the atlas tests would silently check the inline
 seed instead.
 
-**314 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
+**315 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
 library, robustness over 1550-2250 and at polar latitudes, house systems (angles land
 on the cusps, cusps run round the circle without crossing, quadrant systems coincide at
 the equator, zero-latitude bodies get the same house from both methods), library data

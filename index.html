@@ -830,7 +830,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
 /* Bump together with CACHE in sw.js: the two are the same release, and the
    number on screen is how you tell from a phone which one you are looking at. */
-const APP_VERSION='3.12.1';
+const APP_VERSION='3.12.2';
 document.getElementById('ver').textContent=APP_VERSION;
 
 /* ---------- feature flags ----------
@@ -1026,10 +1026,15 @@ const STR = {
   chartNote:{ru:'Заметка к карте',en:'Chart note'},
   copied:{ru:'Скопировано',en:'Copied'},
   copyFail:{ru:'Не удалось скопировать',en:'Copy failed'},
-  exportTitle:{ru:'Карта целиком, для ИИ',en:'The whole chart, for an AI'},
-  exportBrief:{ru:'скопировать и вставить',en:'copy and paste'},
-  exportNote:{ru:'Один блок со всем, что приложение посчитало: положения, достоинства, цепочки диспозиторов, рецепции, аспекты с орбисами, конфигурации и баланс. Скопируйте его и вставьте в любой ИИ. Смысл в том, что разбор делается по всей совокупности сразу, а не по элементам поодиночке: отдельно взятый показатель почти всегда читается резче, чем он есть в карте, где его уравновешивают другие.',
-    en:'One block with everything the app computed: placements, dignities, dispositor chains, receptions, aspects with orbs, configurations and balance. Copy it and paste it into any AI. The point is that the reading is made from the whole set at once rather than element by element: a single factor on its own almost always reads harsher than it is in a chart where other factors balance it.'},
+  /* Data, not a prompt. Until v3.12.2 this was "the whole chart, for an AI"
+     and the text opened with a request for a reading. Dafa's call: whoever
+     pastes it into a model writes their own request, and the same text goes
+     into notes, to a colleague or onto a forum, where a built-in request was
+     noise. */
+  exportTitle:{ru:'Данные карты текстом',en:'Chart data as text'},
+  exportBrief:{ru:'одним блоком',en:'in one block'},
+  exportNote:{ru:'Всё, что приложение посчитало по этой карте: положения, достоинства, цепочки диспозиторов, рецепции, аспекты с орбисами, конфигурации и баланс. Только факты, без трактовок.',
+    en:'Everything the app computed for this chart: placements, dignities, dispositor chains, receptions, aspects with orbs, configurations and balance. Facts only, no interpretation.'},
   stationary:{ru:'стационарна',en:'stationary'},
   applying:{ru:'сходится',en:'applying'},
   separating:{ru:'расходится',en:'separating'},
@@ -5614,11 +5619,6 @@ function chartExportText(ch){
     return `${Math.floor(d)}°${String(Math.floor((d-Math.floor(d))*60)).padStart(2,'0')}′`;};
   const place=lon=>`${deg(lon)} ${S(signOfLon(lon))}`;
   const L=[];
-
-  L.push(ru
-    ? 'Ниже вычисленные данные натальной карты. Здесь только факты, ни одной трактовки. Прошу разбор, в котором факторы взвешены друг против друга, а не перечислены по отдельности: где один показатель уравновешивается другим, скажите об этом прямо, и скажите, какой из них в этой карте весит больше и почему.'
-    : 'Below are the computed data of a natal chart. Facts only, no interpretation. Please give a reading in which the factors are weighed against one another rather than listed separately: where one indication is balanced by another, say so plainly, and say which of them carries more weight in this chart and why.');
-  L.push('');
 
   const meta=document.getElementById('chartMeta');
   L.push((ru?'КАРТА':'CHART').toUpperCase());
