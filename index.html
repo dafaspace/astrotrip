@@ -830,7 +830,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
 /* Bump together with CACHE in sw.js: the two are the same release, and the
    number on screen is how you tell from a phone which one you are looking at. */
-const APP_VERSION='3.12.0';
+const APP_VERSION='3.12.1';
 document.getElementById('ver').textContent=APP_VERSION;
 
 /* ---------- feature flags ----------
@@ -1052,6 +1052,12 @@ const STR = {
   rulersNote:{ru:'Современные: Плутон управляет Скорпионом, Уран Водолеем, Нептун Рыбами, а Марс, Сатурн и Юпитер там коуправители. Классические: только семь видимых планет. Оба набора: у этих трёх знаков по два управителя, и цепочка диспозиторов может ветвиться. Секта, экзальтации и фазы относительно Солнца одинаковы во всех трёх.',
     en:'Modern: Pluto rules Scorpio, Uranus Aquarius, Neptune Pisces, and Mars, Saturn and Jupiter are co-rulers there. Traditional: the seven visible planets only. Both: each of those three signs has two rulers, so a chain of dispositors can branch. Sect, exaltations and solar phase are the same in all three.'},
   sfFinals:{ru:'Конечные диспозиторы',en:'Final dispositors'},
+  rulersBy_modern:{ru:'Достоинства и диспозиторы считаются по современным управителям: Плутон, Уран и Нептун управляют Скорпионом, Водолеем и Рыбами, Марс, Сатурн и Юпитер там коуправители.',
+    en:'Dignities and dispositors use the modern rulers: Pluto, Uranus and Neptune rule Scorpio, Aquarius and Pisces, with Mars, Saturn and Jupiter as co-rulers there.'},
+  rulersBy_classical:{ru:'Достоинства и диспозиторы считаются по классическим управителям, только семь видимых планет.',
+    en:'Dignities and dispositors use the traditional rulers, the seven visible planets only.'},
+  rulersBy_both:{ru:'Достоинства и диспозиторы считаются по обоим наборам управителей: у Скорпиона, Водолея и Рыб по два, поэтому цепочки диспозиторов ветвятся.',
+    en:'Dignities and dispositors use both sets of rulers: Scorpio, Aquarius and Pisces have two each, so the dispositor chains branch.'},
   sfCycles:{ru:'Циклы диспозиторов',en:'Dispositor cycles'},
   angAngular:{ru:'в угловом доме',en:'angular'},
   angSuccedent:{ru:'в последующем доме',en:'succedent'},
@@ -3641,12 +3647,13 @@ function bodyHouse(ch,name){
 
    Three deliberate limits, each so that this is days of work and not months:
 
-   1. Dispositors, house rulers and receptions walk the CLASSICAL rulers. A
-      chain only works if every sign leads to a planet that itself has a sign,
-      and the modern set breaks that: Pluto rules Scorpio, but Pluto disposits
-      nothing back into the seven, so chains end on a planet that cannot pass
-      them on. The modern ruler is reported beside the classical one wherever
-      they differ, so nothing is hidden - but the walk is classical.
+   1. Dispositors, house rulers and receptions walk whichever rulers
+      RULER_MODE names - modern by default, traditional, or both - through
+      rulersOf() below. This item used to say the walk was always classical,
+      because "Pluto disposits nothing back into the seven, so chains end on a
+      planet that cannot pass them on". That was never true: Pluto stands in a
+      sign, the sign has a ruler, and the walk goes on. A test now checks that
+      every branch ends, in every mode.
    2. Receptions are by domicile and exaltation only. Triplicity, term and face
       each have two or three competing tables (Dorothean against Ptolemaic,
       Egyptian bounds against Ptolemaic), and quietly picking one would be a
@@ -3718,12 +3725,12 @@ const SOLAR_LIMITS={cazimi:17/60, combust:8.5, underBeams:15};
    test suite compares them rather than trusting this comment. */
 const FACT_POINTS=['NNode','SNode','Lilith','Selena','Fortune'];
 
-/* Essential dignity on the classical tables, and NOT the app's dignity(),
-   which is shared with the interpretation corpus and reads the modern rulers:
-   there it answers "ruler" for Pluto in Scorpio and for Uranus in Aquarius,
-   and it calls Saturn a ruler of Aquarius as well, so Aquarius has two. Inside
-   a layer whose whole premise is the classical scheme that is the modern
-   canon leaking into the traditional one, silently, one field at a time.
+/* Essential dignity on the classical tables, used when RULER_MODE is
+   'classical' and by nothing else. It exists separately because the modern
+   canon once leaked into the traditional layer through a shared dignity()
+   that read modern rulers and co-rulers at once: Pluto in Scorpio came out
+   "ruler", and Aquarius had two. That function is gone; dignityOf() below
+   picks this one or the modern reading by mode.
 
    Three values and they are not interchangeable. A dignity name is the state.
    'peregrine' means a body that COULD hold dignity and holds none here. null
@@ -5661,9 +5668,13 @@ function chartExportText(ch){
   L.push([['hemi_e',bal.hemi.e],['hemi_w',bal.hemi.w],['hemi_n',bal.hemi.n],['hemi_s',bal.hemi.s]]
     .map(([k,n])=>`${t(k)} ${n}`).join(' · '));
   L.push('');
-  L.push(ru
-    ? 'Достоинства и диспозиторы считаются по классическим управителям. Рецепции только по обители и экзальтации. Орбис для узлов, Лилит и Селены сужен.'
-    : 'Dignities and dispositors use the classical rulers. Receptions are by domicile and exaltation only. The orb for the nodes, Lilith and Selena is narrowed.');
+  /* Names the scheme actually used. Until v3.12.1 this line said "classical"
+     whatever the setting, so with modern rulers on - the default - the block
+     opened with "Rulers: modern" and closed by contradicting it, and the model
+     writing the reading was handed both. */
+  L.push(t('rulersBy_'+F.rulers)
+    +(ru?' Рецепции только по обители и экзальтации. Орбис для узлов, Лилит и Селены сужен.'
+        :' Receptions are by domicile and exaltation only. The orb for the nodes, Lilith and Selena is narrowed.'));
   return L.join('\n');
 }
 

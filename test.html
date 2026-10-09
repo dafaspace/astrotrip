@@ -57,7 +57,7 @@ const frame=document.getElementById('app');
   /* The language too: a manual check in Georgian on 2 Oct 2026 left it stored,
      and the next run quietly tested the export in Georgian, where a line
      looked for by its English or Russian label was "missing". */
-  try{ ['astrarium_ring','astrarium_ring2','astrarium_orbs','astrarium_partner','astrarium_asteroids','astrarium_house3d','astrarium_rulers','astrarium_lang']
+  try{ ['astrarium_ring','astrarium_ring2','astrarium_orbs','astrarium_partner','astrarium_asteroids','astrarium_house3d','astrarium_rulers','astrarium_lang','astrarium_form']
          .forEach(k=>localStorage.removeItem(k)); }catch(e){}
   /* Read once here, because the runner below is synchronous. */
   try{ SW_SRC=await (await fetch('./sw.js?notacache='+Date.now())).text(); }catch(e){}
@@ -122,6 +122,19 @@ const frame=document.getElementById('app');
        and leaves most of this suite with no bi-wheel to look at. The default is
        recorded here, before anything touches it, and the ring is then filled so
        the rest of the checks have two rings to measure. */
+    /* The suite casts its own chart. It never used to: it ran on whatever the
+       saved form brought back, which was whatever somebody had last typed by
+       hand. Found on 9 Oct 2026, when a fresh browser profile had no saved
+       form and eleven checks failed on a null chart - every earlier green run
+       had been green on someone's manual input. The hand-worked chart, the one
+       the structural tests already use, so the two agree. */
+    try{ await W.eval(`(()=>{
+      document.getElementById('date').value='1985-03-20';
+      document.getElementById('time').value='06:30';
+      document.getElementById('lat').value='55.7558';
+      document.getElementById('lng').value='37.6173';
+      document.getElementById('tz').value='+03:00';
+      run();})()`); }catch(e){}
     try{ DEFAULT_RING=await W.eval('RING_MODE'); }catch(e){}
     /* The asteroid file is a third of a megabyte and is fetched only when the
        switch is turned on, so nothing has loaded it by this point and the
@@ -470,6 +483,25 @@ function run(){
     const bad=modes.filter(m=>!r[m].same||!r[m].line);
     if(bad.length) return 'нет строки или пересчёт в: '+bad.join(', ');
     return new Set(modes.map(m=>r[m].line)).size===3||'строки одинаковые: '+modes.map(m=>r[m].line).join(' | ');
+  });
+  t('блок для ИИ не противоречит сам себе о схеме управителей',()=>{
+    /* До v3.12.1 последняя строка блока говорила «по классическим управителям»
+       при любой настройке: начало блока сообщало «Управители: современные»,
+       конец это опровергал, и модель, пишущая разбор, получала оба. Здесь в
+       каждом режиме и на обоих языках блок обязан назвать свою схему и не
+       назвать чужую. */
+    const r=ev(`(()=>{const k=RULER_MODE, kl=LANG, out=[];
+      const other={modern:/классическим управителям|обоим наборам|traditional rulers|both sets/,
+        classical:/современным управителям|обоим наборам|modern rulers|both sets/,
+        both:/классическим управителям|современным управителям|traditional rulers|the modern rulers/};
+      for(const lang of ['ru','en']) for(const m of RULER_MODES){
+        LANG=lang; RULER_MODE=m;
+        const txt=chartExportText(CURRENT);
+        if(!txt.includes(t('rulersBy_'+m))) out.push(lang+'/'+m+': своей схемы нет');
+        if(other[m].test(txt)) out.push(lang+'/'+m+': '+txt.match(other[m])[0]);
+      }
+      RULER_MODE=k; LANG=kl; return out;})()`);
+    return r.length===0||r.join('; ');
   });
   t('у переключателя управителей есть подписи на всех восьми языках',()=>{
     const miss=ev(`(()=>{const out=[], k=LANG;
