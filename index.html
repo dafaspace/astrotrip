@@ -441,12 +441,14 @@ html.native #printBtn{display:none}
 .learn-line:last-child{border:none}
 .learn-line b{color:var(--accent);font-weight:500}
 .pill{display:inline-block;font-size:11px;padding:2px 7px;border-radius:999px;background:var(--paper3);color:var(--ink2);margin-left:6px}
-.foot{max-width:760px;margin:20px auto;padding:0 20px;color:var(--ink3);font-size:12px}
+/* Inside .wrap like every other card, with the card's own padding. It sat outside
+   the wrap with its own max-width and side padding, which on a phone made it the
+   one card running edge to edge (iOS build, 10 Oct 2026). */
+.foot{color:var(--ink3);font-size:12px}
 .foot h2{font-size:14px;color:var(--ink3);font-weight:500}
 /* The note sits under its row rather than inside it: the row is already a
    grid of five things on a 375 px phone, and a sixth would squeeze the name. */
 .libnote{width:100%;font-size:12px;min-height:34px;margin:-4px 0 8px;padding:4px 8px}
-.foot summary{padding:6px 0}
 /* The tagline answers "what is this" for someone who lands on the web page
    cold. In the store build the listing has already answered it, and by the
    time the app opens it is a paragraph of vertical space above the fold on a
@@ -636,7 +638,9 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
     <div class="grid" style="margin-top:10px">
       <div><label data-i="hsysLabel"></label><select id="hsys"></select></div>
       <div><label data-i="lilLabel"></label><select id="lilmode"></select></div>
-      <div><label data-i="rulersLabel"></label><select id="rulerSel"></select></div>
+      <!-- A full row: in a half-width column "Современные" and its Georgian were cut
+           on a phone, and the note below it is about this control alone anyway. -->
+      <div style="grid-column:1/-1"><label data-i="rulersLabel"></label><select id="rulerSel"></select></div>
     </div>
     <div class="tiny" data-i="rulersNote" style="margin:6px 0 0"></div>
     <div style="margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
@@ -854,19 +858,20 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
     <div class="emptystate" data-i="empty"></div>
   </div>
 
+  <!-- The claims and the credits, folded. Two of the three lines belong in the
+       store listing rather than on every screen: the agreement with JPL and the
+       promise that nothing leaves the device are things you read once and then
+       never again. The third cannot simply move, because GeoNames is CC BY 4.0
+       and attribution is a condition of the licence, not a courtesy - so it has
+       to stay reachable inside the app, and folding is the only way to have both.
+       The summary line is what a curious reader opens; nobody else pays for it. -->
+  <details class="card fold foot" id="aboutCard">
+    <summary><h2 data-i="aboutTitle"></h2></summary>
+    <div class="tiny" data-i="foot"></div>
+  </details>
+
 </div>
 
-<!-- The claims and the credits, folded. Two of the three lines belong in the
-     store listing rather than on every screen: the agreement with JPL and the
-     promise that nothing leaves the device are things you read once and then
-     never again. The third cannot simply move, because GeoNames is CC BY 4.0
-     and attribution is a condition of the licence, not a courtesy - so it has
-     to stay reachable inside the app, and folding is the only way to have both.
-     The summary line is what a curious reader opens; nobody else pays for it. -->
-<details class="card fold foot" id="aboutCard">
-  <summary><h2 data-i="aboutTitle"></h2></summary>
-  <div class="tiny" data-i="foot"></div>
-</details>
 
 <script src="./ephemeris.js"></script>
 <script>
@@ -877,7 +882,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
 /* Bump together with CACHE in sw.js: the two are the same release, and the
    number on screen is how you tell from a phone which one you are looking at. */
-const APP_VERSION='3.15.0';
+const APP_VERSION='3.15.1';
 document.getElementById('ver').textContent=APP_VERSION;
 
 /* ---------- feature flags ----------
@@ -946,6 +951,11 @@ const STR = {
   tropical:{ru:'тропический',en:'tropical'},
   geocentric:{ru:'геоцентрическая',en:'geocentric'},
   lil_mean:{ru:'Средняя (Лилит)',en:'Mean (Lilith)'},
+  /* What the button shows once chosen. "Средняя (Лилит)" came out "Средняя (Ли…"
+     in its half-width column on a phone; the list keeps the full names and the
+     button the short ones, which is what a native select does with a long option. */
+  lil_mean_s:{ru:'Средняя',en:'Mean'},
+  lil_true_s:{ru:'Истинная',en:'True'},
   lil_true:{ru:'Истинная (оскулирующая)',en:'True (osculating)'},
   transittime:{ru:'Время UT',en:'Time UT'},
   secondsLabel:{ru:'Показывать угловые секунды в позициях',en:'Show arc-seconds in positions'},
@@ -1192,8 +1202,8 @@ const I18N={
     libNone:"No se encontró nada. Prueba con parte de un nombre o de una ciudad.",
     libNote:"Las cartas guardadas se quedan solo en este dispositivo",
     noTime:"hora de nacimiento desconocida, carta al mediodía", rrKnown:"hora tomada de un documento",
-    delChart:"eliminar", hsysLabel:"SISTEMA DE CASAS", wzReset:"Ver la rueda completa", rulersLabel:"REGENTES", rulers_modern:"Modernos", rulers_classical:"Tradicionales", rulers_both:"Ambos", lilLabel:"LUNA NEGRA", lil_mean:"Media (Lilith)",
-    lil_true:"Verdadera (osculatriz)", transittime:"Hora UT",
+    delChart:"eliminar", hsysLabel:"SISTEMA DE CASAS", wzReset:"Ver la rueda completa", rulersLabel:"REGENTES", rulers_modern:"Modernos", rulers_classical:"Tradicionales", rulers_both:"Ambos", lilLabel:"LUNA NEGRA", lil_mean:"Media (Lilith)", lil_mean_s:"Media",
+    lil_true:"Verdadera (osculatriz)", lil_true_s:"Verdadera", transittime:"Hora UT",
     secondsLabel:"Mostrar segundos de arco en las posiciones",
     needdata:"Rellena la fecha, la hora y el lugar.",
     empty:"Introduce los datos de nacimiento y levanta la carta.", natal:"Carta natal",
@@ -1249,7 +1259,7 @@ const I18N={
     libNote:"Les cartes enregistrées restent sur cet appareil uniquement",
     noTime:"heure de naissance inconnue, carte dressée à midi", rrKnown:"heure tirée d’un document",
     delChart:"supprimer", hsysLabel:"SYSTÈME DE MAISONS", wzReset:"Afficher toute la roue", rulersLabel:"MAÎTRES", rulers_modern:"Modernes", rulers_classical:"Traditionnels", rulers_both:"Les deux", lilLabel:"LUNE NOIRE",
-    lil_mean:"Moyenne (Lilith)", lil_true:"Vraie (osculatrice)", transittime:"Heure UT",
+    lil_mean:"Moyenne (Lilith)", lil_mean_s:"Moyenne", lil_true:"Vraie (osculatrice)", lil_true_s:"Vraie", transittime:"Heure UT",
     secondsLabel:"Afficher les secondes d’arc dans les positions",
     needdata:"Renseignez la date, l’heure et le lieu.",
     empty:"Saisissez les données de naissance et dressez la carte.", natal:"Carte natale",
@@ -1301,8 +1311,8 @@ const I18N={
     libNone:"Nichts gefunden. Versuch einen Teil des Namens oder der Stadt.",
     libNote:"Gespeicherte Charts bleiben nur auf diesem Gerät",
     noTime:"Geburtszeit unbekannt, Chart auf Mittag gerechnet", rrKnown:"Zeit aus einem Dokument",
-    delChart:"löschen", hsysLabel:"HÄUSERSYSTEM", wzReset:"Ganzes Rad zeigen", rulersLabel:"HERRSCHER", rulers_modern:"Modern", rulers_classical:"Traditionell", rulers_both:"Beide", lilLabel:"SCHWARZER MOND", lil_mean:"Mittlere (Lilith)",
-    lil_true:"Wahre (oskulierend)", transittime:"Zeit UT",
+    delChart:"löschen", hsysLabel:"HÄUSERSYSTEM", wzReset:"Ganzes Rad zeigen", rulersLabel:"HERRSCHER", rulers_modern:"Modern", rulers_classical:"Traditionell", rulers_both:"Beide", lilLabel:"SCHWARZER MOND", lil_mean:"Mittlere (Lilith)", lil_mean_s:"Mittlere",
+    lil_true:"Wahre (oskulierend)", lil_true_s:"Wahre", transittime:"Zeit UT",
     secondsLabel:"Bogensekunden in den Positionen zeigen", needdata:"Datum, Zeit und Ort ausfüllen.",
     empty:"Geburtsdaten eingeben und das Chart berechnen.", natal:"Radix", era1:"Vor dem Kino",
     era2:"Geboren 1880-1919 · die Studio-Ära", era3:"Geboren 1920-1949", era4:"Geboren ab 1950",
@@ -1353,8 +1363,8 @@ const I18N={
     libNone:"Non ho trovato nulla. Prova una parte del nome o della città.",
     libNote:"Le carte salvate restano solo su questo dispositivo",
     noTime:"ora di nascita ignota, carta calcolata a mezzogiorno", rrKnown:"ora presa da un documento",
-    delChart:"elimina", hsysLabel:"SISTEMA DI CASE", wzReset:"Mostra la ruota intera", rulersLabel:"GOVERNATORI", rulers_modern:"Moderni", rulers_classical:"Tradizionali", rulers_both:"Entrambi", lilLabel:"LUNA NERA", lil_mean:"Media (Lilith)",
-    lil_true:"Vera (osculatrice)", transittime:"Ora UT",
+    delChart:"elimina", hsysLabel:"SISTEMA DI CASE", wzReset:"Mostra la ruota intera", rulersLabel:"GOVERNATORI", rulers_modern:"Moderni", rulers_classical:"Tradizionali", rulers_both:"Entrambi", lilLabel:"LUNA NERA", lil_mean:"Media (Lilith)", lil_mean_s:"Media",
+    lil_true:"Vera (osculatrice)", lil_true_s:"Vera", transittime:"Ora UT",
     secondsLabel:"Mostra i secondi d’arco nelle posizioni", needdata:"Compila data, ora e luogo.",
     empty:"Inserisci i dati di nascita e calcola la carta.", natal:"Carta natale", era1:"Prima del cinema",
     era2:"Nati nel 1880-1919 · l’era degli studios", era3:"Nati nel 1920-1949", era4:"Nati dal 1950",
@@ -1405,8 +1415,8 @@ const I18N={
     libNone:"Нічого не знайшлося. Спробуйте частину імені або міста.",
     libNote:"Збережені карти лишаються тільки на цьому пристрої",
     noTime:"час народження невідомий, карта на полудень", rrKnown:"час із документа", delChart:"видалити",
-    hsysLabel:"СИСТЕМА ДОМІВ", wzReset:"Показати коло повністю", rulersLabel:"УПРАВИТЕЛІ", rulers_modern:"Сучасні", rulers_classical:"Класичні", rulers_both:"Обидва набори", lilLabel:"ЧОРНИЙ МІСЯЦЬ", lil_mean:"Середній (Ліліт)",
-    lil_true:"Істинний (оскулюючий)", transittime:"Час UT",
+    hsysLabel:"СИСТЕМА ДОМІВ", wzReset:"Показати коло повністю", rulersLabel:"УПРАВИТЕЛІ", rulers_modern:"Сучасні", rulers_classical:"Класичні", rulers_both:"Обидва набори", lilLabel:"ЧОРНИЙ МІСЯЦЬ", lil_mean:"Середній (Ліліт)", lil_mean_s:"Середній",
+    lil_true:"Істинний (оскулюючий)", lil_true_s:"Істинний", transittime:"Час UT",
     secondsLabel:"Показувати кутові секунди в позиціях", needdata:"Заповніть дату, час і місце.",
     empty:"Введіть дані народження і побудуйте карту.", natal:"Натальна карта", era1:"До кінематографа",
     era2:"Народжені 1880-1919 · доба студій", era3:"Народжені 1920-1949", era4:"Народжені від 1950",
@@ -1457,8 +1467,8 @@ const I18N={
     libNone:"ვერაფერი მოიძებნა. სცადე სახელის ან ქალაქის ნაწილი.",
     libNote:"შენახული რუკები რჩება მხოლოდ ამ მოწყობილობაზე",
     noTime:"დაბადების დრო უცნობია, რუკა შუადღეზეა აგებული", rrKnown:"დრო დოკუმენტიდან", delChart:"წაშლა",
-    hsysLabel:"სახლების სისტემა", wzReset:"მთლიანი წრის ჩვენება", rulersLabel:"მმართველები", rulers_modern:"თანამედროვე", rulers_classical:"ტრადიციული", rulers_both:"ორივე", lilLabel:"შავი მთვარე", lil_mean:"საშუალო (ლილიტი)",
-    lil_true:"ჭეშმარიტი (ოსკულირებადი)", transittime:"დრო UT",
+    hsysLabel:"სახლების სისტემა", wzReset:"მთლიანი წრის ჩვენება", rulersLabel:"მმართველები", rulers_modern:"თანამედროვე", rulers_classical:"ტრადიციული", rulers_both:"ორივე", lilLabel:"შავი მთვარე", lil_mean:"საშუალო (ლილიტი)", lil_mean_s:"საშუალო",
+    lil_true:"ჭეშმარიტი (ოსკულირებადი)", lil_true_s:"ჭეშმარიტი", transittime:"დრო UT",
     secondsLabel:"რკალის წამების ჩვენება პოზიციებში", needdata:"შეავსე თარიღი, დრო და ადგილი.",
     empty:"შეიყვანე დაბადების მონაცემები და ააგე რუკა.", natal:"ნატალური რუკა", era1:"კინომდე",
     era2:"დაბადებულები 1880-1919 · სტუდიების ეპოქა", era3:"დაბადებულები 1920-1949",
@@ -7117,7 +7127,10 @@ function upgradeSelect(sel){
   wrap.appendChild(sel); wrap.appendChild(btn); wrap.appendChild(list);
   sel.classList.add('ddnative');
   const paint=()=>{
-    btn.textContent=sel.selectedOptions[0]?sel.selectedOptions[0].textContent:'';
+    /* An option may carry a shorter label for the closed button; the list always
+       shows the full one. */
+    const o=sel.selectedOptions[0];
+    btn.textContent=o?(o.dataset.short||o.textContent):'';
     list.innerHTML=[...sel.options].map((o,i)=>
       `<div class="ddopt${o.selected?' on':''}" role="option" data-i="${i}" tabindex="-1">${o.textContent}</div>`).join('');
     list.querySelectorAll('.ddopt').forEach(el=>el.addEventListener('click',()=>{
@@ -7466,7 +7479,7 @@ document.getElementById('hsys').addEventListener('change',e=>{
 function fillLil(){
   const sel=document.getElementById('lilmode');
   sel.innerHTML=[['mean','lil_mean'],['true','lil_true']]
-    .map(([k,s])=>`<option value="${k}"${k===LILMODE?' selected':''}>${t(s)}</option>`).join('');
+    .map(([k,s])=>`<option value="${k}" data-short="${t(s+'_s')}"${k===LILMODE?' selected':''}>${t(s)}</option>`).join('');
 }
 document.getElementById('lilmode').addEventListener('change',e=>{
   LILMODE=e.target.value; localStorage.setItem('astrarium_lilith',LILMODE);

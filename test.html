@@ -909,8 +909,13 @@ function run(){
   t('карточка источников свёрнута и не занимает экран',()=>{
     const el=D.getElementById('aboutCard');
     if(el.open) return 'карточка раскрыта по умолчанию';
-    return el.getBoundingClientRect().height<60
-      ||`свёрнутая высота ${Math.round(el.getBoundingClientRect().height)} px`;
+    /* Не выше других свёрнутых карточек. Абсолютный порог 60 px был задан, когда
+       это была плоская строка под страницей; теперь это такая же карточка, как
+       остальные, с их отступами, и мерить её надо по ним. */
+    const others=[...D.querySelectorAll('details.card.fold:not([open])')].filter(x=>x!==el&&x.offsetParent)
+      .map(x=>x.getBoundingClientRect().height);
+    const h=el.getBoundingClientRect().height, max=Math.max(...others);
+    return h<=max+1||`свёрнутая высота ${Math.round(h)} px при ${Math.round(max)} у остальных`;
   });
   t('слоган виден в вебе и скрыт в магазинной сборке',()=>{
     /* На вебе человек приходит холодным, и строка отвечает "что это такое".
@@ -2297,6 +2302,26 @@ function run(){
       return out;})()`);
     const ok=r.find(x=>/:focus/.test(x.sel)&&x.pos==='static');
     return !!ok||'правило не найдено или не разобрано: '+JSON.stringify(r);
+  });
+  t('на телефоне ни одна карточка не шире остальных и ни одна кнопка не обрезана',()=>{
+    /* Карточка «Источники и точность» стояла вне общего контейнера и шла от края
+       до края, а кнопка Чёрной Луны показывала «Средняя (Ли…». Обе находки из
+       iOS-сборки. Проверяются все карточки и все кнопки выбора, на всех языках. */
+    const wasW=frame.style.width, wasH=frame.style.height;
+    frame.style.width='375px'; frame.style.height='812px'; void frame.offsetWidth;
+    const r=ev(`(()=>{const out=[], k=LANG;
+      const cards=[...document.querySelectorAll('.card')].filter(c=>c.offsetParent);
+      const lefts=new Set(cards.map(c=>Math.round(c.getBoundingClientRect().left)));
+      const rights=new Set(cards.map(c=>Math.round(c.getBoundingClientRect().right)));
+      if(lefts.size>1||rights.size>1) out.push('края карточек: '+[...lefts].join('/')+' .. '+[...rights].join('/'));
+      for(const l of LANG_CODES){ LANG=l; fillLil(); fillHsys(); fillRulers(); renderRingSwitch();
+        document.querySelectorAll('select[data-dd]').forEach(sel=>{ if(sel._ddPaint) sel._ddPaint();
+          const b=sel.closest('.dd').querySelector('.ddbtn'); if(!b.offsetParent) return;
+          if(b.scrollWidth>b.clientWidth+1) out.push(l+' '+(sel.id||'?')+': «'+b.textContent+'»'); }); }
+      LANG=k; fillLil(); fillHsys(); fillRulers(); renderRingSwitch(); repaintDropdowns();
+      return out;})()`);
+    frame.style.width=wasW; frame.style.height=wasH; void frame.offsetWidth;
+    return r.length===0||r.slice(0,6).join('; ');
   });
   t('поля ввода не мельче 16 px и не ниже 44 px',()=>{
     /* Найдено в iOS-сборке 10 октября 2026: при фокусе на поле города iOS
