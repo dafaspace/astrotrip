@@ -583,7 +583,7 @@ mattered: before it did, a deliberately broken app passed every check. The runne
 for the city atlas to finish loading, or the atlas tests would silently check the inline
 seed instead.
 
-**322 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
+**330 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
 library, robustness over 1550-2250 and at polar latitudes, house systems (angles land
 on the cusps, cusps run round the circle without crossing, quadrant systems coincide at
 the equator, zero-latitude bodies get the same house from both methods), library data
@@ -605,6 +605,17 @@ themes, and interface wiring.
 The suite is falsified, not just green: reintroducing the sector alpha, collapsing the
 MC colour into the aspect colour, and the mean-apogee rate error above all make it fail
 by name.
+
+### Zooming the wheel
+
+The wheel, and only the wheel, zooms: a pinch to any scale from 1x to 4x, a double tap
+that steps to 2.5x where it lands and back, ctrl-scroll or a trackpad pinch on a
+computer, and a round button to show the whole wheel again whenever it is zoomed. It
+narrows the SVG's viewBox rather than scaling the element, so the drawing is redrawn as
+vectors and stays sharp at 4x. At 1x a finger on the wheel still scrolls the page;
+zoomed in, it pans. A tap after a pinch or a pan is not taken as choosing a planet. In
+the store build the page itself does not zoom, which is how app pages behave on iOS;
+the web build keeps page zoom for whoever needs it.
 
 ## The iOS build
 

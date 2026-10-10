@@ -1037,6 +1037,82 @@ function run(){
   });
 
   /* ---------- трёхкольцевая карта ---------- */
+  group('Масштаб колеса');
+  /* Решено Дафой 10 октября 2026: увеличивается только колесо. Пальцами от 1x до
+     4x, двойным касанием шаг 2,5x и обратно, кнопка возврата видна, пока колесо
+     увеличено. В магазинной сборке страница целиком не масштабируется. */
+  const WZT=fn=>ev(`(()=>{const keep={...WZ}; try{ return (${fn})(); }
+    finally{ WZ=keep; applyWheelZoom(); } })()`);
+  t('увеличение сужает viewBox и переживает перерисовку',()=>{
+    const r=WZT(`()=>{WZ={s:2,cx:200,cy:150}; wzClamp(); applyWheelZoom();
+      const a=document.querySelector('#wheel svg').getAttribute('viewBox');
+      drawWheel(CURRENT,TR_CHART); const b=document.querySelector('#wheel svg').getAttribute('viewBox');
+      return {a,b};}`);
+    return (r.a==='105 55 190 190'&&r.b===r.a)||JSON.stringify(r);
+  });
+  t('точка под пальцем остаётся на месте при увеличении',()=>{
+    /* Иначе щипок уводит рисунок из-под пальцев, и увеличить нужное место нельзя. */
+    const r=WZT(`()=>{resetWheelZoom(); const sv=document.querySelector('#wheel svg'), R=sv.getBoundingClientRect();
+      const x=R.left+R.width*0.7, y=R.top+R.height*0.3;
+      const at=()=>{const [vx,vy,vw]=wzView(); return [vx+(x-R.left)/R.width*vw, vy+(y-R.top)/R.height*vw];};
+      const before=at(); wzZoomAt(2.5,x,y); const after=at();
+      return {dx:Math.abs(before[0]-after[0]), dy:Math.abs(before[1]-after[1]), s:WZ.s};}`);
+    return (r.s===2.5&&r.dx<0.01&&r.dy<0.01)||JSON.stringify(r);
+  });
+  t('масштаб от 1x до 4x, и вид не уходит за пределы колеса',()=>{
+    const r=WZT(`()=>{WZ={s:9,cx:-50,cy:500}; wzClamp(); const a={...WZ};
+      WZ={s:0.3,cx:10,cy:10}; wzClamp(); const b={...WZ};
+      const h=S/a.s/2; return {a,b,inside:a.cx>=h&&a.cy<=S-h};}`);
+    return (r.a.s===4&&r.inside&&r.b.s===1&&r.b.cx===190&&r.b.cy===190)||JSON.stringify(r);
+  });
+  t('щипок двумя пальцами увеличивает колесо',()=>{
+    /* Настоящие события указателя, как от пальцев, а не вызов функции. */
+    const r=WZT(`()=>{resetWheelZoom(); const el=document.getElementById('wheel');
+      const R=document.querySelector('#wheel svg').getBoundingClientRect(), cx=R.left+R.width/2, cy=R.top+R.height/2;
+      const fire=(type,id,x,y)=>el.dispatchEvent(new PointerEvent(type,{pointerId:id,pointerType:'touch',
+        clientX:x,clientY:y,bubbles:true,isPrimary:id===1}));
+      fire('pointerdown',1,cx-20,cy); fire('pointerdown',2,cx+20,cy);
+      fire('pointermove',1,cx-50,cy); fire('pointermove',2,cx+50,cy);
+      fire('pointerup',1,cx-50,cy); fire('pointerup',2,cx+50,cy);
+      return {s:+WZ.s.toFixed(2), zoomed:el.classList.contains('zoomed'), justGestured:wzJustGestured()};}`);
+    return (r.s>2&&r.zoomed&&r.justGestured)||JSON.stringify(r);
+  });
+  t('кнопка возврата видна только при увеличении и возвращает весь круг',()=>{
+    const r=WZT(`()=>{resetWheelZoom(); const b=document.getElementById('wzReset'); const at1=b.hidden;
+      WZ={s:2,cx:190,cy:190}; applyWheelZoom(); const zoomedHidden=b.hidden;
+      b.click(); return {at1, zoomedHidden, after:WZ.s,
+        vb:document.querySelector('#wheel svg').getAttribute('viewBox'), label:b.getAttribute('aria-label')};}`);
+    if(!r.label) return 'у кнопки нет подписи для VoiceOver';
+    return (r.at1===true&&r.zoomedHidden===false&&r.after===1&&r.vb==='0 0 380 380')||JSON.stringify(r);
+  });
+  t('при увеличении касание по планете выбирает её же',()=>{
+    const r=WZT(`()=>{WZ={s:2.5,cx:190,cy:190}; wzClamp(); applyWheelZoom(); WZ_GESTURE_AT=0;
+      const g=[...document.querySelectorAll('#wheel .pl')].find(x=>{const b=x.getBoundingClientRect(),
+        R=document.querySelector('#wheel svg').getBoundingClientRect();
+        return b.width&&b.left>R.left&&b.right<R.right&&b.top>R.top&&b.bottom<R.bottom;});
+      if(!g) return {none:true};
+      const b=g.querySelector('text').getBoundingClientRect(); ISO=null;
+      document.querySelector('#wheel svg').dispatchEvent(new MouseEvent('click',{bubbles:true,
+        clientX:b.left+b.width/2, clientY:b.top+b.height/2}));
+      const got=ISO; ISO=null; drawWheel(CURRENT,TR_CHART); return {want:g.dataset.p, got};}`);
+    if(r.none) return 'в увеличенном виде не нашлось планеты';
+    return r.want===r.got||JSON.stringify(r);
+  });
+  t('конец щипка или сдвига не считается касанием',()=>{
+    const r=WZT(`()=>{WZ_GESTURE_AT=Date.now(); ISO=null;
+      const R=document.querySelector('#wheel svg').getBoundingClientRect();
+      document.querySelector('#wheel svg').dispatchEvent(new MouseEvent('click',{bubbles:true,
+        clientX:R.left+R.width*0.3, clientY:R.top+R.height*0.5}));
+      const got=ISO; WZ_GESTURE_AT=0; ISO=null; return {got};}`);
+    return r.got===null||'после жеста выбралась планета '+r.got;
+  });
+  t('в магазинной сборке страница не масштабируется',()=>{
+    const r=ev(`[lockedViewport('width=device-width, initial-scale=1, viewport-fit=cover'),
+      lockedViewport(lockedViewport('width=device-width'))]`);
+    if(!/maximum-scale=1/.test(r[0])||!/user-scalable=no/.test(r[0])) return r[0];
+    return (r[1].match(/user-scalable/g)||[]).length===1||'запрет добавлен дважды: '+r[1];
+  });
+
   group('Трёхкольцевая карта');
   /* Каждая проверка включает режим сама и возвращает прежний: набор идёт с
      транзитами, и оставленное здесь третье кольцо поменяло бы геометрию всем

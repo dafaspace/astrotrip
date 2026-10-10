@@ -212,6 +212,15 @@ svg{display:block;width:100%;height:auto;touch-action:manipulation}
    the tap-detail box without scrolling, and on a desktop the 420px ceiling
    stops the wheel from filling a tall window on its own. */
 #chartCard #wheel{max-width:min(100%,420px);margin:0 auto}
+/* Zooming the wheel. At 1x a finger on the wheel scrolls the page, as it always
+   did, and a two-finger pinch is handed to the wheel instead of the page; zoomed
+   in, a finger pans the wheel. */
+.wheelwrap{position:relative}
+#wheel{touch-action:pan-y}
+#wheel.zoomed{touch-action:none}
+.wzreset{position:absolute;width:44px;height:44px;padding:0;border-radius:50%;
+  background:var(--paper2);border:1px solid var(--line);color:var(--ink2);z-index:2;
+  box-shadow:0 2px 8px rgba(0,0,0,.18)}
 #chartCard #wheel svg{max-height:46vh;width:auto;max-width:100%;margin:0 auto}
 /* Six per cent off the wheel on a phone. It buys the last twenty pixels that
    keep the wheel, the moment and both control rows on one screen, which is
@@ -696,7 +705,14 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
       <div class="row" id="synaSwapRow" hidden style="margin-top:8px">
         <button id="synaSwap" data-i="synaSwap"></button>
       </div>
-      <div id="wheel"></div>
+      <div class="wheelwrap">
+        <div id="wheel"></div>
+        <!-- Outside #wheel, which drawWheel rewrites on every draw. Shown only
+             while the wheel is zoomed: a way back that is always in view. -->
+        <button id="wzReset" type="button" class="wzreset" data-i-title="wzReset" hidden>
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.4 15.4 20 20M7.6 10.5h5.8"/></svg>
+        </button>
+      </div>
       <div class="scrub">
         <div class="momrow">
           <div class="mom" id="momUT"></div>
@@ -861,7 +877,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
 /* Bump together with CACHE in sw.js: the two are the same release, and the
    number on screen is how you tell from a phone which one you are looking at. */
-const APP_VERSION='3.14.0';
+const APP_VERSION='3.15.0';
 document.getElementById('ver').textContent=APP_VERSION;
 
 /* ---------- feature flags ----------
@@ -1088,6 +1104,7 @@ const STR = {
   digDetriment:{ru:'изгнание',en:'detriment'}, digFall:{ru:'падение',en:'fall'},
   digPeregrine:{ru:'перегрин',en:'peregrine'},
   digCoRuler:{ru:'коуправитель',en:'co-ruler'},
+  wzReset:{ru:'Показать круг целиком',en:'Show the whole wheel'},
   rulersLabel:{ru:'УПРАВИТЕЛИ',en:'RULERS'},
   rulers_modern:{ru:'Современные',en:'Modern'},
   rulers_classical:{ru:'Классические',en:'Traditional'},
@@ -1175,7 +1192,7 @@ const I18N={
     libNone:"No se encontró nada. Prueba con parte de un nombre o de una ciudad.",
     libNote:"Las cartas guardadas se quedan solo en este dispositivo",
     noTime:"hora de nacimiento desconocida, carta al mediodía", rrKnown:"hora tomada de un documento",
-    delChart:"eliminar", hsysLabel:"SISTEMA DE CASAS", rulersLabel:"REGENTES", rulers_modern:"Modernos", rulers_classical:"Tradicionales", rulers_both:"Ambos", lilLabel:"LUNA NEGRA", lil_mean:"Media (Lilith)",
+    delChart:"eliminar", hsysLabel:"SISTEMA DE CASAS", wzReset:"Ver la rueda completa", rulersLabel:"REGENTES", rulers_modern:"Modernos", rulers_classical:"Tradicionales", rulers_both:"Ambos", lilLabel:"LUNA NEGRA", lil_mean:"Media (Lilith)",
     lil_true:"Verdadera (osculatriz)", transittime:"Hora UT",
     secondsLabel:"Mostrar segundos de arco en las posiciones",
     needdata:"Rellena la fecha, la hora y el lugar.",
@@ -1231,7 +1248,7 @@ const I18N={
     libNone:"Rien trouvé. Essayez une partie du nom ou de la ville.",
     libNote:"Les cartes enregistrées restent sur cet appareil uniquement",
     noTime:"heure de naissance inconnue, carte dressée à midi", rrKnown:"heure tirée d’un document",
-    delChart:"supprimer", hsysLabel:"SYSTÈME DE MAISONS", rulersLabel:"MAÎTRES", rulers_modern:"Modernes", rulers_classical:"Traditionnels", rulers_both:"Les deux", lilLabel:"LUNE NOIRE",
+    delChart:"supprimer", hsysLabel:"SYSTÈME DE MAISONS", wzReset:"Afficher toute la roue", rulersLabel:"MAÎTRES", rulers_modern:"Modernes", rulers_classical:"Traditionnels", rulers_both:"Les deux", lilLabel:"LUNE NOIRE",
     lil_mean:"Moyenne (Lilith)", lil_true:"Vraie (osculatrice)", transittime:"Heure UT",
     secondsLabel:"Afficher les secondes d’arc dans les positions",
     needdata:"Renseignez la date, l’heure et le lieu.",
@@ -1284,7 +1301,7 @@ const I18N={
     libNone:"Nichts gefunden. Versuch einen Teil des Namens oder der Stadt.",
     libNote:"Gespeicherte Charts bleiben nur auf diesem Gerät",
     noTime:"Geburtszeit unbekannt, Chart auf Mittag gerechnet", rrKnown:"Zeit aus einem Dokument",
-    delChart:"löschen", hsysLabel:"HÄUSERSYSTEM", rulersLabel:"HERRSCHER", rulers_modern:"Modern", rulers_classical:"Traditionell", rulers_both:"Beide", lilLabel:"SCHWARZER MOND", lil_mean:"Mittlere (Lilith)",
+    delChart:"löschen", hsysLabel:"HÄUSERSYSTEM", wzReset:"Ganzes Rad zeigen", rulersLabel:"HERRSCHER", rulers_modern:"Modern", rulers_classical:"Traditionell", rulers_both:"Beide", lilLabel:"SCHWARZER MOND", lil_mean:"Mittlere (Lilith)",
     lil_true:"Wahre (oskulierend)", transittime:"Zeit UT",
     secondsLabel:"Bogensekunden in den Positionen zeigen", needdata:"Datum, Zeit und Ort ausfüllen.",
     empty:"Geburtsdaten eingeben und das Chart berechnen.", natal:"Radix", era1:"Vor dem Kino",
@@ -1336,7 +1353,7 @@ const I18N={
     libNone:"Non ho trovato nulla. Prova una parte del nome o della città.",
     libNote:"Le carte salvate restano solo su questo dispositivo",
     noTime:"ora di nascita ignota, carta calcolata a mezzogiorno", rrKnown:"ora presa da un documento",
-    delChart:"elimina", hsysLabel:"SISTEMA DI CASE", rulersLabel:"GOVERNATORI", rulers_modern:"Moderni", rulers_classical:"Tradizionali", rulers_both:"Entrambi", lilLabel:"LUNA NERA", lil_mean:"Media (Lilith)",
+    delChart:"elimina", hsysLabel:"SISTEMA DI CASE", wzReset:"Mostra la ruota intera", rulersLabel:"GOVERNATORI", rulers_modern:"Moderni", rulers_classical:"Tradizionali", rulers_both:"Entrambi", lilLabel:"LUNA NERA", lil_mean:"Media (Lilith)",
     lil_true:"Vera (osculatrice)", transittime:"Ora UT",
     secondsLabel:"Mostra i secondi d’arco nelle posizioni", needdata:"Compila data, ora e luogo.",
     empty:"Inserisci i dati di nascita e calcola la carta.", natal:"Carta natale", era1:"Prima del cinema",
@@ -1388,7 +1405,7 @@ const I18N={
     libNone:"Нічого не знайшлося. Спробуйте частину імені або міста.",
     libNote:"Збережені карти лишаються тільки на цьому пристрої",
     noTime:"час народження невідомий, карта на полудень", rrKnown:"час із документа", delChart:"видалити",
-    hsysLabel:"СИСТЕМА ДОМІВ", rulersLabel:"УПРАВИТЕЛІ", rulers_modern:"Сучасні", rulers_classical:"Класичні", rulers_both:"Обидва набори", lilLabel:"ЧОРНИЙ МІСЯЦЬ", lil_mean:"Середній (Ліліт)",
+    hsysLabel:"СИСТЕМА ДОМІВ", wzReset:"Показати коло повністю", rulersLabel:"УПРАВИТЕЛІ", rulers_modern:"Сучасні", rulers_classical:"Класичні", rulers_both:"Обидва набори", lilLabel:"ЧОРНИЙ МІСЯЦЬ", lil_mean:"Середній (Ліліт)",
     lil_true:"Істинний (оскулюючий)", transittime:"Час UT",
     secondsLabel:"Показувати кутові секунди в позиціях", needdata:"Заповніть дату, час і місце.",
     empty:"Введіть дані народження і побудуйте карту.", natal:"Натальна карта", era1:"До кінематографа",
@@ -1440,7 +1457,7 @@ const I18N={
     libNone:"ვერაფერი მოიძებნა. სცადე სახელის ან ქალაქის ნაწილი.",
     libNote:"შენახული რუკები რჩება მხოლოდ ამ მოწყობილობაზე",
     noTime:"დაბადების დრო უცნობია, რუკა შუადღეზეა აგებული", rrKnown:"დრო დოკუმენტიდან", delChart:"წაშლა",
-    hsysLabel:"სახლების სისტემა", rulersLabel:"მმართველები", rulers_modern:"თანამედროვე", rulers_classical:"ტრადიციული", rulers_both:"ორივე", lilLabel:"შავი მთვარე", lil_mean:"საშუალო (ლილიტი)",
+    hsysLabel:"სახლების სისტემა", wzReset:"მთლიანი წრის ჩვენება", rulersLabel:"მმართველები", rulers_modern:"თანამედროვე", rulers_classical:"ტრადიციული", rulers_both:"ორივე", lilLabel:"შავი მთვარე", lil_mean:"საშუალო (ლილიტი)",
     lil_true:"ჭეშმარიტი (ოსკულირებადი)", transittime:"დრო UT",
     secondsLabel:"რკალის წამების ჩვენება პოზიციებში", needdata:"შეავსე თარიღი, დრო და ადგილი.",
     empty:"შეიყვანე დაბადების მონაცემები და ააგე რუკა.", natal:"ნატალური რუკა", era1:"კინომდე",
@@ -5329,8 +5346,9 @@ function drawWheel(ch,tr,t3=TR3_CHART){
   s+=angleLabels;
   s+=`</svg>`;
   document.getElementById('wheel').innerHTML=s;
+  applyWheelZoom();                       // a redraw keeps the zoom it was given
   document.querySelectorAll('#wheel .pl').forEach(g=>g.addEventListener('click',e=>{
-    e.stopPropagation(); pick(g.dataset.p);
+    e.stopPropagation(); if(wzJustGestured()) return; pick(g.dataset.p);
   }));
   function pick(p){
     CONF_ISO=null;                                  // one thing lit at a time
@@ -5346,6 +5364,7 @@ function drawWheel(ch,tr,t3=TR3_CHART){
      overlaps its neighbour. The drawn disc stays small; only the target grows. */
   const svEl=document.querySelector('#wheel svg');
   svEl.addEventListener('click',e=>{
+    if(wzJustGestured()) return;          // the end of a pinch or a pan is not a tap
     const m=svEl.getScreenCTM(); if(!m) return;
     const pt=svEl.createSVGPoint(); pt.x=e.clientX; pt.y=e.clientY;
     const u=pt.matrixTransform(m.inverse());
@@ -5372,6 +5391,105 @@ function drawWheel(ch,tr,t3=TR3_CHART){
     if(best) pick(best);
   });
 }
+/* ---------- zooming the wheel ----------
+   The wheel, and nothing else, zooms. Decided by Dafa on 10 Oct 2026, after the
+   whole page zoomed in the iOS build and there was no getting it back: in the
+   store build the page no longer zooms at all (NATIVE, at the end of the script),
+   and the wheel gets a zoom of its own, both ways he asked for - a pinch to any
+   scale from 1x to 4x, and a double tap that steps to 2.5x where it lands and
+   back to 1x. A button to go back is in view whenever the wheel is zoomed.
+
+   Done by narrowing the SVG's viewBox, not by scaling the element: the drawing
+   is redrawn as vectors at every scale, so lines and the tri-wheel's small
+   degree numbers stay sharp at 4x instead of being an enlarged bitmap. */
+let WZ={s:1,cx:C,cy:C}, WZ_GESTURE_AT=0;
+const WZ_MAX=4, WZ_STEP=2.5;
+const wzJustGestured=()=>Date.now()-WZ_GESTURE_AT<350;
+function wzView(){ const w=S/WZ.s; return [WZ.cx-w/2,WZ.cy-w/2,w,w]; }
+function wzClamp(){
+  WZ.s=Math.min(WZ_MAX,Math.max(1,WZ.s));
+  if(WZ.s<1.01){ WZ={s:1,cx:C,cy:C}; return; }
+  const h=S/WZ.s/2;                       // the view never leaves the drawing
+  WZ.cx=Math.min(S-h,Math.max(h,WZ.cx)); WZ.cy=Math.min(S-h,Math.max(h,WZ.cy));
+}
+function applyWheelZoom(){
+  const sv=document.querySelector('#wheel svg');
+  if(sv) sv.setAttribute('viewBox',wzView().map(v=>+v.toFixed(3)).join(' '));
+  const z=WZ.s>1, wh=document.getElementById('wheel'), b=document.getElementById('wzReset');
+  if(wh) wh.classList.toggle('zoomed',z);
+  if(!b) return;
+  b.hidden=!z;
+  if(z&&sv){                              // at the wheel's own top-right corner
+    const r=sv.getBoundingClientRect(), w=b.parentElement.getBoundingClientRect();
+    b.style.left=(r.right-w.left-46)+'px'; b.style.top=(r.top-w.top+2)+'px';
+  }
+}
+function resetWheelZoom(){ WZ={s:1,cx:C,cy:C}; applyWheelZoom(); }
+/* Zoom to scale s, keeping the point of the drawing under (x,y) where it is. */
+function wzZoomAt(s,x,y){
+  const sv=document.querySelector('#wheel svg'); if(!sv) return;
+  const r=sv.getBoundingClientRect(); if(!r.width) return;
+  const [vx,vy,vw]=wzView(), fx=(x-r.left)/r.width, fy=(y-r.top)/r.height;
+  const px=vx+fx*vw, py=vy+fy*vw;
+  WZ.s=Math.min(WZ_MAX,Math.max(1,s));
+  const w=S/WZ.s;
+  WZ.cx=px-fx*w+w/2; WZ.cy=py-fy*w+w/2;
+  wzClamp(); applyWheelZoom();
+}
+{
+  const el=document.getElementById('wheel'), pts=new Map();
+  let pinch=null, pan=null, moved=false, lastTap=null, lastType='mouse';
+  el.addEventListener('pointerdown',e=>{
+    lastType=e.pointerType;
+    if(e.pointerType==='mouse') return;   // the mouse has double-click and ctrl+wheel
+    pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(pts.size===1) moved=false;
+    if(pts.size===2){ const [a,b]=[...pts.values()];
+      pinch={d:Math.hypot(a.x-b.x,a.y-b.y),s:WZ.s}; pan=null; }
+    else if(pts.size===1&&WZ.s>1) pan={x:e.clientX,y:e.clientY};
+  });
+  el.addEventListener('pointermove',e=>{
+    if(!pts.has(e.pointerId)) return;
+    const prev=pts.get(e.pointerId);
+    pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(pinch&&pts.size===2){
+      const [a,b]=[...pts.values()], d=Math.hypot(a.x-b.x,a.y-b.y);
+      if(pinch.d>8){ wzZoomAt(pinch.s*d/pinch.d,(a.x+b.x)/2,(a.y+b.y)/2); moved=true; }
+    }else if(pan&&pts.size===1){
+      const sv=document.querySelector('#wheel svg'); if(!sv) return;
+      const k=(S/WZ.s)/sv.getBoundingClientRect().width;
+      WZ.cx-=(e.clientX-prev.x)*k; WZ.cy-=(e.clientY-prev.y)*k; wzClamp(); applyWheelZoom();
+      if(Math.hypot(e.clientX-pan.x,e.clientY-pan.y)>6) moved=true;
+    }
+  });
+  const end=e=>{
+    if(!pts.has(e.pointerId)) return;
+    pts.delete(e.pointerId);
+    if(moved) WZ_GESTURE_AT=Date.now();
+    if(pts.size<2) pinch=null;
+    if(!pts.size) pan=null;
+    if(e.type!=='pointerup'||moved||pts.size) return;
+    const now=Date.now();                 // a second tap close by in time and place
+    if(lastTap&&now-lastTap.t<320&&Math.hypot(e.clientX-lastTap.x,e.clientY-lastTap.y)<30){
+      lastTap=null; WZ_GESTURE_AT=now;
+      if(WZ.s>1) resetWheelZoom(); else wzZoomAt(WZ_STEP,e.clientX,e.clientY);
+    }else lastTap={t:now,x:e.clientX,y:e.clientY};
+  };
+  el.addEventListener('pointerup',end);
+  el.addEventListener('pointercancel',end);
+  /* Touch double taps are handled above; browsers can also fire dblclick for them,
+     and answering both would zoom in and straight back out. */
+  el.addEventListener('dblclick',e=>{ if(lastType!=='mouse') return;
+    if(WZ.s>1) resetWheelZoom(); else wzZoomAt(WZ_STEP,e.clientX,e.clientY); });
+  /* A trackpad pinch arrives as a wheel event with ctrlKey; a plain wheel scrolls. */
+  el.addEventListener('wheel',e=>{ if(!e.ctrlKey) return; e.preventDefault();
+    wzZoomAt(WZ.s*Math.exp(-e.deltaY/100),e.clientX,e.clientY); },{passive:false});
+  document.getElementById('wzReset').addEventListener('click',resetWheelZoom);
+  addEventListener('resize',()=>{ if(WZ.s>1) applyWheelZoom(); });
+  /* Paper gets the whole wheel. */
+  addEventListener('beforeprint',resetWheelZoom);
+}
+
 /* ---------- the structural block of the planet card ----------
    It answers one question, "what structural state is this body in", and the
    aspect list below answers a different one, "what is it interacting with".
@@ -7200,6 +7318,7 @@ function run(){
   CAST_ARGS={y,mo,da,hh,mi,tz,lat,lng};
   RELOC=null;
   CURRENT=computeChart(y,mo,da,hh+mi/60,tz,lat,lng); ISO=null; CONF_ISO=null;
+  WZ={s:1,cx:C,cy:C};                     // a new chart starts with the whole wheel
   TR_TZ=tz;
   BIRTH_MS=utcMs(y,mo,da,0,0,0)+Math.round((hh+mi/60-tz)*3600000);
   document.getElementById('results').style.display='';
@@ -8013,4 +8132,11 @@ if(NATIVE && 'serviceWorker' in navigator){
   if(window.caches) caches.keys().then(ks=>ks.forEach(k=>caches.delete(k))).catch(()=>{});
 }
 if(NATIVE) document.documentElement.classList.add('native');
+/* In the store build the page itself does not zoom; the wheel has its own zoom.
+   An app page that zooms as a whole is not how anything on iOS behaves, and in
+   the simulator on 10 Oct 2026 it zoomed by accident with no way back. WKWebView
+   in an app honours user-scalable, unlike Safari, which ignores it on purpose -
+   so the web build keeps page zoom for whoever needs it. */
+function lockedViewport(c){ return /user-scalable/.test(c)?c:c+', maximum-scale=1, user-scalable=no'; }
+if(NATIVE){ const vm=document.querySelector('meta[name=viewport]'); if(vm) vm.content=lockedViewport(vm.content); }
 </script>
