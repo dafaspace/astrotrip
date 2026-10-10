@@ -583,7 +583,7 @@ mattered: before it did, a deliberately broken app passed every check. The runne
 for the city atlas to finish loading, or the atlas tests would silently check the inline
 seed instead.
 
-**320 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
+**322 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
 library, robustness over 1550-2250 and at polar latitudes, house systems (angles land
 on the cusps, cusps run round the circle without crossing, quadrant systems coincide at
 the equator, zero-latitude bodies get the same house from both methods), library data
@@ -608,7 +608,16 @@ by name.
 
 ## The iOS build
 
-`mobile/` is the store shell: Capacitor 8, no plugins, and nothing in it but delivery.
+`mobile/` is the store shell: Capacitor 8, and nothing in it but delivery. Two official
+plugins, each for a thing the web layer cannot do in a WKWebView, both checked before
+adding: **Preferences**, because WebKit's own storage policy says web storage of every
+kind is "best-effort ... their data can be evicted" and `persist()` was refused in the
+shell, so saved charts are mirrored to UserDefaults and restored at launch, newer copy
+winning (deleting the app's whole WebKit store in the simulator brought them back); and
+**Keyboard** with `resize: native`, because without it iOS shifts the view under an open
+keyboard and the sticky header slid under the clock. The web build gets a CSS answer to
+the same keyboard problem instead (the header unsticks while a field has focus), which a
+plugin could not give it.
 The product is `index.html`; `mobile/sync-web.sh` copies it and the files it loads
 into the bundle and refuses a bundle that is missing one of them, carries a test or
 tool, or references the published site. Versions come from `APP_VERSION` and nowhere

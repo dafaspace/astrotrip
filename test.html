@@ -136,6 +136,35 @@ const frame=document.getElementById('app');
       document.getElementById('tz').value='+03:00';
       run();})()`); }catch(e){}
     try{ DEFAULT_RING=await W.eval('RING_MODE'); }catch(e){}
+    /* The native mirror of the saved charts, through a stand-in Preferences store:
+       written on save, restored after iOS clears the web copy, newer copy wins. */
+    try{ STORE_CHECK=await W.eval(`(async()=>{const keepC=window.Capacitor;
+      const kc=localStorage.getItem(LKEY_CHARTS), ka=localStorage.getItem(LKEY_CHARTS_AT), out={};
+      const mem={};
+      const P={set:async o=>{mem[o.key]=o.value;}, get:async o=>({value:mem[o.key]===undefined?null:mem[o.key]})};
+      try{
+        out.webIsNoop=nativePrefs()===null;
+        window.Capacitor={isNativePlatform:()=>true, Plugins:{Preferences:P}};
+        const A=[{id:'a',name:'A',y:2000,mo:1,d:1,t:12,lat:0,lon:0}];
+        writeCharts(A); await new Promise(r=>setTimeout(r,10));
+        out.mirrored=!!mem[LKEY_CHARTS]&&JSON.parse(JSON.parse(mem[LKEY_CHARTS]).charts)[0].id==='a';
+        localStorage.removeItem(LKEY_CHARTS); localStorage.removeItem(LKEY_CHARTS_AT);
+        out.restoredFlag=await syncChartsWithNative();
+        out.restored=(savedCharts()[0]||{}).id==='a';
+        /* a local write the native copy missed: local is newer and must not be undone */
+        localStorage.setItem(LKEY_CHARTS,JSON.stringify([{id:'b',name:'B',y:2001,mo:1,d:1,t:12,lat:0,lon:0}]));
+        localStorage.setItem(LKEY_CHARTS_AT,String(Date.now()+1000));
+        out.newerLocalFlag=await syncChartsWithNative();
+        out.newerLocalKept=(savedCharts()[0]||{}).id==='b';
+        out.nativeCaughtUp=JSON.parse(JSON.parse(mem[LKEY_CHARTS]).charts)[0].id==='b';
+      }catch(e){ out.error=e.message; }
+      finally{
+        if(keepC===undefined) delete window.Capacitor; else window.Capacitor=keepC;
+        if(kc===null) localStorage.removeItem(LKEY_CHARTS); else localStorage.setItem(LKEY_CHARTS,kc);
+        if(ka===null) localStorage.removeItem(LKEY_CHARTS_AT); else localStorage.setItem(LKEY_CHARTS_AT,ka);
+        renderLibrary(); renderBackupLine();
+      }
+      return out;})()`); }catch(e){ STORE_CHECK={error:e.message}; }
     /* The store build's export, through a stand-in for the shell: window.Capacitor
        and navigator.share are replaced, one share cancelled and one completed. */
     try{ SHARE_CHECK=await W.eval(`(async()=>{const keepC=window.Capacitor, keepS=navigator.share;
@@ -182,7 +211,7 @@ const frame=document.getElementById('app');
   },220));
   frame.src='./index.html?notacache='+Date.now();
 })();
-let SHARE_CHECK=null, SW_SRC='', PARITY_GOLD='', SWE_REF=null, ATLAS_REAL_BYTES=null, ATLAS_BAR=null, ATLAS_FAIL=null, DEFAULT_RING=null;
+let STORE_CHECK=null, SHARE_CHECK=null, SW_SRC='', PARITY_GOLD='', SWE_REF=null, ATLAS_REAL_BYTES=null, ATLAS_BAR=null, ATLAS_FAIL=null, DEFAULT_RING=null;
 
 function run(){
   const W=frame.contentWindow, D=frame.contentDocument;
@@ -2161,6 +2190,37 @@ function run(){
     if(r.afterCancel) bad.push('отменённая отправка записана как выгрузка');
     if(!r.afterDone) bad.push('завершённая отправка не записана');
     return bad.length===0||bad.join('; ');
+  });
+  t('сохранённые карты дублируются в нативное хранилище и возвращаются после очистки',()=>{
+    /* Capacitor: «the OS will reclaim local storage from Web Views if a device is
+       running low on space». Проверяется на заглушке хранилища: запись уходит в
+       обе копии, после очистки веб-копии карты возвращаются, а более новая
+       локальная запись не затирается старой нативной. В вебе ничего не делается. */
+    const r=STORE_CHECK;
+    if(!r) return 'замер не выполнен';
+    if(r.error) return 'исключение: '+r.error;
+    const bad=Object.entries({webIsNoop:'в вебе нативное хранилище не пустое',
+      mirrored:'запись не ушла в нативную копию', restored:'после очистки карты не вернулись',
+      restoredFlag:'восстановление не попросило перерисовать библиотеку',
+      newerLocalKept:'новая локальная запись затёрта старой нативной',
+      nativeCaughtUp:'нативная копия не догнала локальную'})
+      .filter(([k])=>!r[k]).map(([,v])=>v);
+    if(r.newerLocalFlag) bad.push('при более новой локальной копии библиотека перерисована зря');
+    return bad.length===0||bad.join('; ');
+  });
+  t('шапка открепляется, пока поле ввода в фокусе',()=>{
+    /* При открытой клавиатуре iOS сдвигает видимую область, и прилипшая шапка
+       уезжала под часы и Dynamic Island. Поведение проверено на симуляторе: в
+       тестовой странице у окна нет фокуса, focus() не срабатывает, и :focus не
+       совпадает ни с чем. Здесь проверяется, что правило есть и что браузер его
+       разобрал: селектор, который он не понял, он выбрасывает целиком. */
+    const r=ev(`(()=>{const out=[];
+      for(const sh of document.styleSheets){ let rules; try{rules=sh.cssRules}catch(e){continue}
+        for(const ru of rules||[]) if(ru.selectorText&&ru.selectorText.includes(':has(')&&ru.selectorText.includes('header'))
+          out.push({sel:ru.selectorText, pos:ru.style.position}); }
+      return out;})()`);
+    const ok=r.find(x=>/:focus/.test(x.sel)&&x.pos==='static');
+    return !!ok||'правило не найдено или не разобрано: '+JSON.stringify(r);
   });
   t('поля ввода не мельче 16 px и не ниже 44 px',()=>{
     /* Найдено в iOS-сборке 10 октября 2026: при фокусе на поле города iOS

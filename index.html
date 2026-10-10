@@ -526,6 +526,14 @@ header{
   -webkit-backdrop-filter:blur(20px) saturate(180%);
   backdrop-filter:blur(20px) saturate(180%);
 }
+/* While a text field has focus the header stops being sticky. With the keyboard
+   open iOS shifts the visible area to keep the field above it, and a sticky header
+   rides that shift up under the clock and the Dynamic Island - seen in the iOS
+   build on 10 Oct 2026, and the same in Safari on an iPhone. Unstuck, it is only
+   the top of the page, scrolled away like the rest; it comes back on blur. Sticky
+   and static take the same space in the flow, so nothing below moves. A plugin
+   would have fixed the app alone; this fixes the web build too. */
+html:not(.native) body:has(input:not([type=checkbox]):not([type=radio]):not([type=range]):focus) header{position:static}
 header::after{
   content:'';position:absolute;left:0;right:0;top:100%;height:14px;
   background:linear-gradient(var(--glass),transparent);pointer-events:none;
@@ -853,7 +861,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
 /* Bump together with CACHE in sw.js: the two are the same release, and the
    number on screen is how you tell from a phone which one you are looking at. */
-const APP_VERSION='3.13.0';
+const APP_VERSION='3.14.0';
 document.getElementById('ver').textContent=APP_VERSION;
 
 /* ---------- feature flags ----------
@@ -7453,6 +7461,54 @@ function renderBackupLine(){
   el.className='tiny'+((days==null||days>30||(!shell&&STORAGE_PERSISTED===false))?' libwarn':'');
 }
 function savedCharts(){ try{ return JSON.parse(localStorage.getItem(LKEY_CHARTS))||[] }catch(e){ return [] } }
+/* ---------- the saved charts, kept where iOS will not clear them ----------
+   Capacitor's storage guide: "the OS will reclaim local storage from Web Views if
+   a device is running low on space". The saved charts and their notes are the one
+   thing here a person cannot get back, so in the store build every write is also
+   made to the native store (Capacitor Preferences, i.e. UserDefaults), and at
+   launch the newer of the two copies wins. Decided by Dafa on 10 Oct 2026, before
+   the first release, because now there is nobody's data to migrate.
+
+   localStorage stays the working copy, because every reader of the library reads
+   it synchronously, and the native store is asynchronous. Both copies carry the
+   time of the write, so a write that reached localStorage but not the native
+   store before the app was killed is not undone by an older native copy. Settings
+   are not mirrored: losing a theme is an annoyance, losing a chart is not. */
+const LKEY_CHARTS_AT='astrarium_charts_at';
+function nativePrefs(){
+  const C=typeof window!=='undefined'&&window.Capacitor;
+  return inStoreShell()&&C&&C.Plugins&&C.Plugins.Preferences||null;
+}
+function writeCharts(list){
+  const json=JSON.stringify(list), at=Date.now();
+  localStorage.setItem(LKEY_CHARTS,json);
+  localStorage.setItem(LKEY_CHARTS_AT,String(at));
+  const P=nativePrefs();
+  if(P) P.set({key:LKEY_CHARTS,value:JSON.stringify({at,charts:json})}).catch(()=>{});
+}
+/* Returns true when it changed the working copy, so the library is drawn again. */
+async function syncChartsWithNative(){
+  const P=nativePrefs(); if(!P) return false;
+  try{
+    const r=await P.get({key:LKEY_CHARTS});
+    const nat=r&&r.value?JSON.parse(r.value):null;
+    const local=localStorage.getItem(LKEY_CHARTS);
+    const localAt=parseInt(localStorage.getItem(LKEY_CHARTS_AT)||'0',10);
+    if(!nat){                                   // nothing native yet: seed it
+      if(local) await P.set({key:LKEY_CHARTS,value:JSON.stringify({at:localAt||Date.now(),charts:local})});
+      return false;
+    }
+    if(local===null||nat.at>localAt){           // cleared by iOS, or behind
+      if(nat.charts===local) return false;
+      localStorage.setItem(LKEY_CHARTS,nat.charts);
+      localStorage.setItem(LKEY_CHARTS_AT,String(nat.at));
+      return true;
+    }
+    if(localAt>nat.at)                          // a write the native copy missed
+      await P.set({key:LKEY_CHARTS,value:JSON.stringify({at:localAt,charts:local})});
+  }catch(e){}
+  return false;
+}
 function libRow(e,own){
   const nm=e._n!==undefined?e._n:(own?e.name:LX(e.name));
   const city=e._c!==undefined?e._c:(own?e.city:LX(e.city));
@@ -7689,7 +7745,7 @@ function loadChartEntry(e,own){
 document.getElementById('libList').addEventListener('click',function(ev){
   const del=ev.target.closest('button[data-del]');
   if(del){ ev.stopPropagation();
-    localStorage.setItem(LKEY_CHARTS,JSON.stringify(savedCharts().filter(x=>x.id!==del.dataset.del)));
+    writeCharts(savedCharts().filter(x=>x.id!==del.dataset.del));
     renderLibrary(); return; }
   const it=ev.target.closest('.libitem'); if(!it) return;
   const own=it.dataset.own==='1';
@@ -7718,7 +7774,7 @@ document.getElementById('saveChart').addEventListener('click',function(){
     lat:+document.getElementById('lat').value, lon:+document.getElementById('lng').value,
     tz:parseOffset(document.getElementById('tz').value), city:cityV, rr:'A', src:''});
   nameEl.value='';
-  localStorage.setItem(LKEY_CHARTS,JSON.stringify(list.slice(0,LIB_CAP)));
+  writeCharts(list.slice(0,LIB_CAP));
   renderLibrary(); renderBackupLine(); askPersistence();
 });
 
@@ -7788,7 +7844,7 @@ function csvToLib(text){
       note:g('note')||''});
     n++;
   }
-  localStorage.setItem(LKEY_CHARTS,JSON.stringify(list.slice(0,LIB_CAP)));
+  writeCharts(list.slice(0,LIB_CAP));
   return n;
 }
 document.getElementById('expCsv').addEventListener('click',async()=>{
@@ -7882,7 +7938,7 @@ document.getElementById('libList').addEventListener('change',e=>{
   const list=savedCharts(), row=list.find(x=>x.id===el.dataset.note);
   if(!row) return;
   row.note=el.value.trim();
-  localStorage.setItem(LKEY_CHARTS,JSON.stringify(list));
+  writeCharts(list);
   renderBackupLine();
 });
 document.getElementById('libFind').addEventListener('input',renderLibrary);
@@ -7891,6 +7947,10 @@ document.getElementById('libSort').addEventListener('change',function(){
 });
 fillLibSort();
 renderLibrary();
+/* In the store build the library may have been cleared by iOS while the app was
+   away, or a write may have missed the native copy; whichever copy is newer wins,
+   and the library is drawn again if it changed. A no-op on the web. */
+syncChartsWithNative().then(changed=>{ if(changed){ renderLibrary(); renderBackupLine(); } });
 renderBackupLine();
 if(savedCharts().length) askPersistence();
 document.getElementById('exportCard').addEventListener('toggle',fillExport);

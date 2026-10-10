@@ -69,8 +69,10 @@ if [ "$PROBE" = "1" ]; then
   echo "[sync] probe injected (simulator build only)"
 fi
 
-node_modules/.bin/cap copy ios >/dev/null
-echo "[sync] cap copy ios: done"
+# sync, not copy: copy moves the web files only, and a plugin added to package.json
+# would then be missing from the native project until somebody remembered update.
+node_modules/.bin/cap sync ios >/dev/null
+echo "[sync] cap sync ios: done"
 
 # Verify the bundle Xcode will actually use, not only www/.
 node - "$DST" "ios/App/App/public" "$PROBE" <<'CHECK'
