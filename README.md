@@ -583,7 +583,7 @@ mattered: before it did, a deliberately broken app passed every check. The runne
 for the city atlas to finish loading, or the atlas tests would silently check the inline
 seed instead.
 
-**315 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
+**320 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
 library, robustness over 1550-2250 and at polar latitudes, house systems (angles land
 on the cusps, cusps run round the circle without crossing, quadrant systems coincide at
 the equator, zero-latitude bodies get the same house from both methods), library data
@@ -605,6 +605,29 @@ themes, and interface wiring.
 The suite is falsified, not just green: reintroducing the sector alpha, collapsing the
 MC colour into the aspect colour, and the mean-apogee rate error above all make it fail
 by name.
+
+## The iOS build
+
+`mobile/` is the store shell: Capacitor 8, no plugins, and nothing in it but delivery.
+The product is `index.html`; `mobile/sync-web.sh` copies it and the files it loads
+into the bundle and refuses a bundle that is missing one of them, carries a test or
+tool, or references the published site. Versions come from `APP_VERSION` and nowhere
+else (`mobile/set-version.sh`), and `mobile/build-ipa.sh` archives and reads the result
+back. The icon is redrawn at 1024 px from measurements of the 512 by
+`mobile/draw-icon.py`, and the launch screen is the app's paper colour, not a logo.
+
+`mobile/run-sim.sh` builds for the simulator with a parity probe injected into the copy
+only: inside the shell it recomputes the golden structural digest and compares it with
+`parity.txt`. On 10 Oct 2026 all 253 lines, across the three ruler modes, matched byte
+for byte, with no service worker, no cache and no request outside the bundle. A chart
+and the language survive the app being backgrounded and killed.
+
+Found in the shell and fixed in the web app, where every one of them also lived:
+`<a download>` does nothing in WKWebView, so the library export now uses the share
+sheet and records an export only when one completed (it used to record a backup that
+had not been made); fields under 16 px made iOS zoom the page on focus; empty date
+fields collapsed; the Asc and Dsc labels were drawn off the wheel at phone width and,
+once moved in, under the zodiac band; the city list opened on its own at every launch.
 
 ## Known limitations
 

@@ -136,6 +136,33 @@ const frame=document.getElementById('app');
       document.getElementById('tz').value='+03:00';
       run();})()`); }catch(e){}
     try{ DEFAULT_RING=await W.eval('RING_MODE'); }catch(e){}
+    /* The store build's export, through a stand-in for the shell: window.Capacitor
+       and navigator.share are replaced, one share cancelled and one completed. */
+    try{ SHARE_CHECK=await W.eval(`(async()=>{const keepC=window.Capacitor, keepS=navigator.share;
+      const keepE=localStorage.getItem(LKEY_EXPORTED), kc=localStorage.getItem(LKEY_CHARTS), out={}, calls=[];
+      try{
+        if(!savedCharts().length) localStorage.setItem(LKEY_CHARTS,JSON.stringify([{id:'t',name:'t',y:2000,mo:1,d:1,t:12,lat:0,lon:0}]));
+        window.Capacitor={isNativePlatform:()=>true};
+        localStorage.removeItem(LKEY_EXPORTED); renderBackupLine();
+        out.never=document.getElementById('backupLine').textContent;
+        Object.defineProperty(navigator,'share',{configurable:true,value:f=>{calls.push(f); return Promise.reject(new Error('cancel'));}});
+        document.getElementById('expCsv').click();
+        await new Promise(r=>setTimeout(r,60));
+        out.afterCancel=localStorage.getItem(LKEY_EXPORTED);
+        out.sharedFile=calls[0]&&calls[0].files&&calls[0].files[0].name;
+        Object.defineProperty(navigator,'share',{configurable:true,value:()=>Promise.resolve()});
+        document.getElementById('expCsv').click();
+        await new Promise(r=>setTimeout(r,60));
+        out.afterDone=localStorage.getItem(LKEY_EXPORTED);
+      }catch(e){ out.error=e.message; }
+      finally{
+        if(keepC===undefined) delete window.Capacitor; else window.Capacitor=keepC;
+        if(keepS) Object.defineProperty(navigator,'share',{configurable:true,value:keepS}); else delete navigator.share;
+        if(keepE) localStorage.setItem(LKEY_EXPORTED,keepE); else localStorage.removeItem(LKEY_EXPORTED);
+        if(kc===null) localStorage.removeItem(LKEY_CHARTS); else localStorage.setItem(LKEY_CHARTS,kc);
+        renderBackupLine();
+      }
+      return out;})()`); }catch(e){ SHARE_CHECK={error:e.message}; }
     /* The asteroid file is a third of a megabyte and is fetched only when the
        switch is turned on, so nothing has loaded it by this point and the
        synchronous runner cannot wait for it. Loaded here, with the switch left
@@ -155,7 +182,7 @@ const frame=document.getElementById('app');
   },220));
   frame.src='./index.html?notacache='+Date.now();
 })();
-let SW_SRC='', PARITY_GOLD='', SWE_REF=null, ATLAS_REAL_BYTES=null, ATLAS_BAR=null, ATLAS_FAIL=null, DEFAULT_RING=null;
+let SHARE_CHECK=null, SW_SRC='', PARITY_GOLD='', SWE_REF=null, ATLAS_REAL_BYTES=null, ATLAS_BAR=null, ATLAS_FAIL=null, DEFAULT_RING=null;
 
 function run(){
   const W=frame.contentWindow, D=frame.contentDocument;
@@ -2058,6 +2085,99 @@ function run(){
 
   /* ---------- интерфейс ---------- */
   group('Интерфейс');
+  t('подписи Asc, Dsc, MC и IC целиком внутри колеса',()=>{
+    /* На телефоне колесо занимает всю ширину карточки, и подпись Asc,
+       выровненная наружу от левого края, рисовалась целиком за пределами
+       рисунка: в iOS-сборке от неё оставался розовый обрубок оси. Проверяется
+       рамка каждой подписи против рамки колеса, на выборке карт, в обоих
+       режимах: только натал и с внешним кольцом. */
+    const bad=ev(`(()=>{const out=[], keep=RING_MODE, S=380;
+      for(let i=0;i<CHART_LIBRARY.length;i+=97){
+        const e=CHART_LIBRARY[i], hh=e.t==null?12:e.t;
+        const c=computeChart(e.y,e.mo,e.d,hh,libTz(e),e.lat,e.lon,false);
+        for(const tr of [null, c]){
+          drawWheel(c,tr,null);
+          document.querySelectorAll('#wheel svg text[font-weight="500"]').forEach(t=>{
+            if(!/^(Asc|Dsc|MC|IC) /.test(t.textContent)) return;
+            const b=t.getBBox();
+            if(b.x<0||b.y<0||b.x+b.width>S||b.y+b.height>S)
+              out.push(e.id+' '+t.textContent+' x '+b.x.toFixed(0)+'..'+(b.x+b.width).toFixed(0));
+            /* Inside the box is not enough: drawn under the zodiac band, the
+               label was inside and still cut. Nothing may lie on top of it. */
+            const sv=t.ownerSVGElement;
+            if(sv.lastElementChild&&![...sv.children].slice([...sv.children].indexOf(t)+1)
+                .every(x=>x.tagName==='text'&&x.getAttribute('font-weight')==='500'))
+              out.push(e.id+' '+t.textContent+': drawn under something');
+          });
+        }
+      }
+      RING_MODE=keep; renderTransits(CURRENT);
+      return out;})()`);
+    return bad.length===0||bad.slice(0,4).join('; ');
+  });
+  t('догрузка атласа не открывает список городов сама',()=>{
+    /* После восстановления сохранённой карты поле города заполнено, а
+       печатающего нет. Догрузка атласа открывала список поверх формы при
+       каждом запуске. Обновлять его можно только тому, кто печатает. */
+    const r=ev(`(()=>{const el=document.getElementById('city'), box=document.getElementById('citylist');
+      const keep=el.value; el.value='Москва'; el.blur(); box.style.display='none';
+      refreshCityListAfterAtlas(); const idle=box.style.display;
+      el.focus(); refreshCityListAfterAtlas(); const typing=box.style.display;
+      el.blur(); box.style.display='none'; el.value=keep;
+      return {idle, typing};})()`);
+    if(r.idle==='block') return 'список открылся без фокуса';
+    return r.typing==='block'||'печатающему список не обновился';
+  });
+  t('плашка резервной копии не вылезает за карточку на телефоне',()=>{
+    const wasW=frame.style.width, wasH=frame.style.height;
+    frame.style.width='375px'; frame.style.height='812px'; void frame.offsetWidth;
+    const r=ev(`(()=>{const card=document.getElementById('libCard'), was=card.open;
+      const keep=localStorage.getItem(LKEY_EXPORTED); localStorage.removeItem(LKEY_EXPORTED);
+      const kc=localStorage.getItem(LKEY_CHARTS);
+      if(!savedCharts().length) localStorage.setItem(LKEY_CHARTS,JSON.stringify([{id:'t',name:'t',y:2000,mo:1,d:1,t:12,lat:0,lon:0}]));
+      card.open=true; renderBackupLine();
+      const el=document.getElementById('backupLine');
+      const out={right:el.getBoundingClientRect().right, cardRight:card.getBoundingClientRect().right,
+        text:el.textContent, cls:el.className};
+      card.open=was; if(keep) localStorage.setItem(LKEY_EXPORTED,keep);
+      if(kc===null) localStorage.removeItem(LKEY_CHARTS); else localStorage.setItem(LKEY_CHARTS,kc);
+      renderBackupLine(); return out;})()`);
+    frame.style.width=wasW; frame.style.height=wasH; void frame.offsetWidth;
+    if(!/libwarn/.test(r.cls)) return 'плашка не в режиме предупреждения: '+r.text;
+    return r.right<=r.cardRight-8||`правый край плашки ${r.right.toFixed(0)} при крае карточки ${r.cardRight.toFixed(0)}`;
+  });
+  t('в магазинной сборке плашка не говорит о браузере, а отправка записывается только завершённая',()=>{
+    /* Сборка iOS: <a download> в WKWebView молча ничего не делает, а приложение
+       записывало «последняя выгрузка: сегодня». Теперь там меню «Поделиться», и
+       отменённая отправка не записывается. Замер сделан в подготовке набора,
+       потому что отправка асинхронна, а прогон нет. */
+    const r=SHARE_CHECK;
+    if(!r) return 'замер не выполнен';
+    if(r.error) return 'исключение: '+r.error;
+    const bad=[];
+    if(/браузер|browser/i.test(r.never)) bad.push('плашка говорит о браузере: '+r.never);
+    if(!/iOS/.test(r.never)) bad.push('плашка не называет iOS: '+r.never);
+    if(!/\.csv$/.test(r.sharedFile||'')) bad.push('в меню ушёл не CSV: '+r.sharedFile);
+    if(r.afterCancel) bad.push('отменённая отправка записана как выгрузка');
+    if(!r.afterDone) bad.push('завершённая отправка не записана');
+    return bad.length===0||bad.join('; ');
+  });
+  t('поля ввода не мельче 16 px и не ниже 44 px',()=>{
+    /* Найдено в iOS-сборке 10 октября 2026: при фокусе на поле города iOS
+       увеличил страницу, и шапка уехала под часы и Dynamic Island. iOS делает
+       так с любым полем, где текст мельче 16 px, а у нас было 15. Там же
+       пустое поле даты схлопнулось до 18 pt. Проверяются все текстовые поля,
+       кроме флажков, радиокнопок и ползунка. */
+    const bad=ev(`(()=>{const out=[];
+      document.querySelectorAll('input').forEach(e=>{
+        if(['checkbox','radio','range','hidden','file'].includes(e.type)) return;
+        const cs=getComputedStyle(e), fs=parseFloat(cs.fontSize), mh=parseFloat(cs.minHeight)||0;
+        if(fs<16) out.push((e.id||e.type)+': шрифт '+fs+' px');
+        if(mh<44) out.push((e.id||e.type)+': минимум высоты '+mh+' px');
+      });
+      return out;})()`);
+    return bad.length===0||bad.slice(0,6).join('; ');
+  });
   // строим карту в приложении: часть проверок смотрит на отрисованный SVG
   D.getElementById('date').value='1985-11-03';
   D.getElementById('time').value='13:37';

@@ -1,0 +1,8 @@
+{
+  "appId": "space.dafa.astrotrip",
+  "appName": "AstroTrip",
+  "webDir": "www",
+  "ios": {
+    "contentInset": "never"
+  }
+}

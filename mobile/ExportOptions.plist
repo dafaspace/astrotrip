@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- app-store-connect, not development. This is the setting that makes the export
+         re-sign with the Apple Distribution certificate, and set get-task-allow to
+         false. An archive built
+         with Automatic signing is Development-signed; the EXPORT is where it becomes a
+         distributable build, which is why exporting matters and is not a file copy. -->
+    <key>method</key>
+    <string>app-store-connect</string>
+
+    <key>teamID</key>
+    <string>3T7QAQD48Q</string>
+
+    <!-- Let Xcode fetch or create the distribution profile rather than pinning one by
+         name. A pinned profile expires and the failure arrives months later, at the
+         worst moment, reading as a signing error rather than an expiry. -->
+    <key>signingStyle</key>
+    <string>automatic</string>
+
+    <!-- Symbols go up so crash reports come back symbolicated. Without this a crash from
+         a real user is a list of addresses. -->
+    <key>uploadSymbols</key>
+    <true/>
+
+    <!-- No bitcode: Apple stopped accepting it, and leaving it on is a rejected upload
+         with a confusing message. -->
+    <key>uploadBitcode</key>
+    <false/>
+
+    <key>destination</key>
+    <string>export</string>
+</dict>
+</plist>

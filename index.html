@@ -106,12 +106,31 @@ header p{margin:4px 0 0;color:var(--ink2);font-size:13px}
 .card{background:var(--paper2);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin:14px 0}
 .card h2{font-size:16px;margin:0 0 12px}
 label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--ink3);margin:0 0 4px}
+/* 16 px, not the body's 15. iOS zooms the page in on any field whose text is
+   under 16 px when it takes focus, and on 10 Oct 2026 the iOS build did exactly
+   that on the city field: the page enlarged and the header slid under the clock
+   and the Dynamic Island. Turning zoom off in the viewport would also take away
+   pinch-zoom, which the tri-wheel's small numbers need, so the size is the fix. */
 input,select{
   width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:10px;
-  background:var(--paper);color:var(--ink);font:inherit;font-variant-numeric:tabular-nums;
+  background:var(--paper);color:var(--ink);font:inherit;font-size:16px;font-variant-numeric:tabular-nums;
 }
+/* The 44 px touch floor for fields, set once. Text fields measured 42.5 px (a 22.5 px
+   line plus padding and border), and an empty date or time field in iOS WebKit has no
+   line at all and collapsed to 18 pt - seen in the iOS build on 10 Oct 2026. One floor
+   fixes both. Not checkboxes, radios or the time slider: they are inputs too, and a
+   minimum height would stretch them out of shape. */
+input:not([type=checkbox]):not([type=radio]):not([type=range]),select{min-height:44px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+/* iOS WebKit draws date and time fields with an intrinsic width of their own and
+   ignores width:100%, so in the two-column form the time field ran past the card's
+   right edge - seen first in the iOS build on 10 Oct 2026, and present in mobile
+   Safari all along. Without the native appearance they take the column's width,
+   and a grid column may shrink below its content only if told it may. */
+input[type=date],input[type=time]{-webkit-appearance:none;appearance:none;min-width:0;display:block}
+input[type=date]::-webkit-date-and-time-value,input[type=time]::-webkit-date-and-time-value{text-align:left}
+.grid>*,.grid3>*{min-width:0}
 button{font:inherit;cursor:pointer;border-radius:10px;border:1px solid var(--line);background:var(--paper3);color:var(--ink);padding:9px 14px}
 button.primary{background:var(--accentBtn);border-color:var(--accentBtn);color:var(--accentInk)}
 /* The language control was a native select until the app grew its own
@@ -446,6 +465,10 @@ details.unit .dt{padding:0 0 10px;color:var(--ink2);font-size:14px}
 .libname{font-weight:500}
 .libmeta{color:var(--ink3);font-size:12px}
 .libwarn{color:var(--ink3);font-size:11px;border:1px solid var(--line);border-radius:999px;padding:1px 7px;white-space:nowrap}
+/* The backup line borrows the warning look, but it is a sentence, not a tag: kept
+   on one line it ran out of the card on a phone, cut mid-word (iOS build,
+   10 Oct 2026). It wraps, and a pill's round ends do not suit two lines. */
+#backupLine.libwarn{white-space:normal;display:inline-block;border-radius:10px;padding:3px 9px}
 .libdel{margin-left:auto;color:var(--ink3);font-size:11px;background:none;border:none;cursor:pointer;padding:4px 6px}
 .libdel:hover{color:var(--hard)}
 .emptystate{color:var(--ink3);font-style:italic;padding:12px 0}
@@ -830,7 +853,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
 /* Bump together with CACHE in sw.js: the two are the same release, and the
    number on screen is how you tell from a phone which one you are looking at. */
-const APP_VERSION='3.12.2';
+const APP_VERSION='3.13.0';
 document.getElementById('ver').textContent=APP_VERSION;
 
 /* ---------- feature flags ----------
@@ -909,7 +932,7 @@ const STR = {
   era2:{ru:'Рождённые 1880-1919 · эпоха студий',en:'Born 1880-1919 · the studio era'},
   era3:{ru:'Рождённые 1920-1949',en:'Born 1920-1949'},
   era4:{ru:'Рождённые с 1950',en:'Born from 1950'},
-  tapdetail:{ru:'Коснитесь планеты для детали.',en:'Tap a planet for detail.'},
+  tapdetail:{ru:'Коснитесь планеты, чтобы увидеть подробности.',en:'Tap a planet for its details.'},
   positions:{ru:'Позиции',en:'Positions'},
   posnote:{ru:'Движок: VSOP87D, ELP82B и чебышёвская подгонка Плутона, целиком офлайн. Узлы средние. Чёрная Луна - средняя или истинная, на выбор; Селена считается по определению Swiss Ephemeris. Плутон надёжен на 1550-2250, дальше экстраполируется. Хирон - такая же подгонка, на 1600-2250: раньше решения JPL для него нет, и вне этого отрезка приложение его не показывает.',en:'Engine: VSOP87D, ELP82B and a Chebyshev fit for Pluto, fully offline. Nodes are mean. The Black Moon is mean or true, your choice; Selena follows the Swiss Ephemeris definition. Pluto is reliable over 1550-2250 and extrapolated beyond. Chiron is the same kind of fit, over 1600-2250: JPL has no solution for it earlier, and outside that span the app leaves it out.'},
   reading:{ru:'Разбор карты',en:'Reading'},
@@ -1023,6 +1046,13 @@ const STR = {
   bkToday:{ru:'Последняя выгрузка: сегодня',en:'Last export: today'},
   bkNotPersisted:{ru:'браузер не гарантирует сохранность этого хранилища',
     en:'the browser does not guarantee this storage'},
+  /* The store build is not a browser, and its risk is a different one. Capacitor's
+     own storage guide: "the OS will reclaim local storage from Web Views if a
+     device is running low on space". Said as that, not as the browser's. */
+  bkNeverNative:{ru:'Карты ни разу не выгружались. При нехватке места iOS может очистить это хранилище.',
+    en:'These charts have never been exported. iOS can clear this storage when the device runs low on space.'},
+  bkRiskNative:{ru:'при нехватке места iOS может очистить это хранилище',
+    en:'iOS can clear this storage when the device runs low on space'},
   chartNote:{ru:'Заметка к карте',en:'Chart note'},
   copied:{ru:'Скопировано',en:'Copied'},
   copyFail:{ru:'Не удалось скопировать',en:'Copy failed'},
@@ -2219,8 +2249,7 @@ function atlasLoad(immediate){
       if(!mine()) return;
       atlasParse(txt);
       atlasHide();
-      const el=document.getElementById('city');
-      if(el&&el.value) renderCityList(searchCities(el.value));
+      refreshCityListAfterAtlas();
     })
     .catch(()=>{
       clearTimeout(reveal);
@@ -5081,11 +5110,26 @@ function drawWheel(ch,tr,t3=TR3_CHART){
       s+=`<text x="${dx2.toFixed(1)}" y="${(dy2+3).toFixed(1)}" text-anchor="middle" font-size="9.5" fill="var(--ink3)" opacity="0.95">${Math.floor(rev(a)%30)+1}</text>`;
     }
   }
-  // angle labels outside
+  // angle labels outside - collected here, drawn last
+  let angleLabels='';
   [[cusps[0],'Asc','var(--axis)'],[cusps[6],'Dsc','var(--axis)'],[cusps[9],'MC','var(--mc)'],[cusps[3],'IC','var(--mc)']].forEach(([lon,lbl,col])=>{
     const [lx,ly]=polar(lon,rHouOut+1);
-    const dx=lx-C, anchor=Math.abs(dx)<30?'middle':(dx>0?'start':'end');
-    s+=`<text x="${lx.toFixed(1)}" y="${(ly+(ly>C?9:-3)).toFixed(1)}" text-anchor="${anchor}" font-size="10" font-weight="500" fill="${col}">${lbl} ${Math.floor(rev(lon)%30)+1}</text>`;
+    const dx=lx-C;
+    let anchor=Math.abs(dx)<30?'middle':(dx>0?'start':'end'), x=lx, y=ly+(ly>C?9:-3);
+    /* Near the left and right edges an outward label has nowhere to go: the
+       wheel fills the card on a phone, and "Asc 24" anchored outward from x=2
+       was drawn entirely outside the picture - on the iOS build, 10 Oct 2026,
+       only a pink stub of the axis was left. There it turns inward and sits
+       just above the axis line, on a paper halo, still at the axis it names. */
+    const inward=(anchor==='end'&&lx<46)||(anchor==='start'&&lx>S-46);
+    if(inward){ anchor=anchor==='end'?'start':'end'; x=anchor==='start'?Math.max(lx,3):Math.min(lx,S-3); y=ly-4; }
+    /* And the same at the top and bottom: an MC near the zenith put "MC 27"
+       above y=0. The test that found the horizontal case found this one in the
+       same run. The baseline is kept between the cap height and the bottom. */
+    y=Math.min(Math.max(y,10),S-3);
+    angleLabels+=`<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="${anchor}" font-size="10" font-weight="500"`
+      +` paint-order="stroke" stroke="var(--paper)" stroke-width="2.5" stroke-linejoin="round"`
+      +` fill="${col}">${lbl} ${Math.floor(rev(lon)%30)+1}</text>`;
   });
   // --- zodiac ring (12 x 30°) ---
   for(let i=0;i<12;i++){
@@ -5270,6 +5314,11 @@ function drawWheel(ch,tr,t3=TR3_CHART){
     s+=ringBand(tr,rTrG,'var(--accent)','trp',sepTr,tri?rMidScale-8:rZodIn-1);
     if(tri) s+=ringBand(t3,rTr,'var(--ring3)','trp3',sep3,rZodIn-1);
   }
+  /* The angle labels go on top of everything. Turned inward at the left and
+     right edges they overlap the zodiac band, and drawn before it, as they
+     were, the band covered their ends: "Asc 2" and "sc 28" on the iOS build,
+     with a test that checked only the bounding box saying all was well. */
+  s+=angleLabels;
   s+=`</svg>`;
   document.getElementById('wheel').innerHTML=s;
   document.querySelectorAll('#wheel .pl').forEach(g=>g.addEventListener('click',e=>{
@@ -6987,6 +7036,17 @@ function repaintDropdowns(){
 function upgradeAllSelects(){
   document.querySelectorAll('select').forEach(upgradeSelect);
 }
+/* When the full atlas lands, someone who started typing against the small seed
+   should see their list upgraded. Only them: the field also has a value after a
+   saved chart is restored, with nobody typing, and refreshing then opened the
+   list on its own over the form at every launch - seen in the iOS build on
+   10 Oct 2026, and in the web build all along. */
+function refreshCityListAfterAtlas(){
+  const el=document.getElementById('city'), box=document.getElementById('citylist');
+  if(!el||!el.value) return;
+  const typing=document.activeElement===el||(box&&box.style.display==='block');
+  if(typing) renderCityList(searchCities(el.value));
+}
 function renderCityList(items){
   const box=document.getElementById('citylist');
   if(!items.length){box.style.display='none';box.innerHTML='';return;}
@@ -7359,6 +7419,13 @@ const LKEY_CHARTS='astrarium_charts';
    account, a backend and somebody else holding the charts, and the whole point
    of this app is that nothing leaves the device. */
 const LKEY_EXPORTED='astrarium_exported';
+/* A function and not the NATIVE const, which is declared at the very end of the
+   script: this runs during start-up, before that line, and reading a const there
+   throws. Capacitor injects window.Capacitor before the page's scripts run. */
+function inStoreShell(){
+  const C=typeof window!=='undefined'&&window.Capacitor;
+  return !!(C&&(C.isNativePlatform?C.isNativePlatform():true));
+}
 let STORAGE_PERSISTED=null;
 function askPersistence(){
   if(!navigator.storage||!navigator.storage.persist) return;
@@ -7376,12 +7443,14 @@ function renderBackupLine(){
   const last=parseInt(localStorage.getItem(LKEY_EXPORTED)||'0',10);
   const days=last?Math.floor((Date.now()-last)/86400000):null;
   const bits=[];
-  if(days==null) bits.push(t('bkNever'));
+  const shell=inStoreShell();
+  if(days==null) bits.push(t(shell?'bkNeverNative':'bkNever'));
   else bits.push(days===0?t('bkToday'):t('bkLast').replace('{d}',days));
-  if(STORAGE_PERSISTED===false) bits.push(t('bkNotPersisted'));
+  if(shell){ if(days!=null) bits.push(t('bkRiskNative')); }
+  else if(STORAGE_PERSISTED===false) bits.push(t('bkNotPersisted'));
   el.textContent=bits.join(' · ');
   /* Loud only when it is actually at risk: never exported, or a month stale. */
-  el.className='tiny'+((days==null||days>30||STORAGE_PERSISTED===false)?' libwarn':'');
+  el.className='tiny'+((days==null||days>30||(!shell&&STORAGE_PERSISTED===false))?' libwarn':'');
 }
 function savedCharts(){ try{ return JSON.parse(localStorage.getItem(LKEY_CHARTS))||[] }catch(e){ return [] } }
 function libRow(e,own){
@@ -7722,7 +7791,18 @@ function csvToLib(text){
   localStorage.setItem(LKEY_CHARTS,JSON.stringify(list.slice(0,LIB_CAP)));
   return n;
 }
-document.getElementById('expCsv').addEventListener('click',()=>{
+document.getElementById('expCsv').addEventListener('click',async()=>{
+  /* In the store build <a download> does nothing: WKWebView ignores it. Measured
+     on the iOS build, 10 Oct 2026 - the button produced no file anywhere in the
+     app's container, and the line above it still said "last export: today". A
+     backup that is recorded and not made is worse than none. The share sheet
+     hands the file to Files, AirDrop or Mail, and only a share that completed
+     counts as an export; a cancelled one records nothing. */
+  if(inStoreShell()&&navigator.share){
+    const file=new File([libToCsv()],`astrotrip-charts-${todayStr()}.csv`,{type:'text/csv'});
+    try{ await navigator.share({files:[file]}); markExported(); }catch(e){}
+    return;
+  }
   const blob=new Blob([libToCsv()],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
