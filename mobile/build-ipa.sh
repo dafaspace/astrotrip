@@ -83,6 +83,16 @@ xcodebuild -exportArchive -archivePath "${OUT}/${NAME}.xcarchive" -exportPath "$
   || { echo "  EXPORT FAILED"; grep -E "error:" /tmp/astro-export.log | head -10; exit 1; }
 IPA=$(find "${OUT}/${NAME}" -name "*.ipa" | head -1)
 mv "$IPA" "${OUT}/${NAME}.ipa"; rm -rf "${OUT}/${NAME}"
-AUTH=$(codesign -dvvv "${OUT}/${NAME}.xcarchive/Products/Applications/App.app" 2>&1 | grep '^Authority=' | head -1)
-echo "  ok   ${OUT}/${NAME}.ipa ($(du -h "${OUT}/${NAME}.ipa" | cut -f1)), archive $AUTH"
+echo "  ok   ${OUT}/${NAME}.ipa ($(du -h "${OUT}/${NAME}.ipa" | cut -f1))"
+# The IPA's signature, not the archive's: the archive is Development-signed on
+# purpose, and the first version of this line printed that and looked like a fault.
+W=$(mktemp -d); unzip -q "${OUT}/${NAME}.ipa" -d "$W"
+IAPP=$(find "$W/Payload" -maxdepth 1 -name "*.app" | head -1)
+AUTH=$(codesign -dvvv "$IAPP" 2>&1 | grep '^Authority=' | head -1 | cut -d= -f2)
+case "$AUTH" in "Apple Distribution"*) echo "  ok   signed by $AUTH";;
+  *) echo "  FAIL signed by $AUTH (expected Apple Distribution)";; esac
+codesign -d --entitlements :- "$IAPP" 2>/dev/null | tr -d '\n\t ' | grep -q "<key>get-task-allow</key><false/>" \
+  && echo "  ok   get-task-allow false" || echo "  FAIL get-task-allow is not false"
+codesign --verify --deep --strict "$IAPP" && echo "  ok   signature verifies"
+rm -rf "$W"
 echo "Upload with Transporter, or Xcode > Organizer > Distribute App."
