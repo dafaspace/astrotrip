@@ -41,6 +41,22 @@ addEventListener('load',()=>setTimeout(async()=>{
     let canFiles=false;
     try{ canFiles=!!(navigator.canShare&&navigator.canShare({files:[new File(['a'],'a.csv',{type:'text/csv'})]})); }catch(e){}
     say('share '+(typeof navigator.share)+', share files '+canFiles);
+    const CP=window.Capacitor&&window.Capacitor.Plugins||{};
+    say('plugins '+['Filesystem','Share','Preferences','Keyboard'].map(k=>k+(CP[k]?'+':'-')).join(' '));
+    try{
+      const w=await CP.Filesystem.writeFile({path:'probe.csv',data:'a,b\n',directory:'CACHE',encoding:'utf8'});
+      say('filesystem write ok '+w.uri);
+      const cs=CP.Share.canShare?await CP.Share.canShare():null;
+      say('share canShare '+JSON.stringify(cs));
+    }catch(e){ say('filesystem/share ERROR '+(e&&(e.message||e.code)||e)); }
+    /* Every later share is logged with how it ended, so a sheet that does not
+       open says why instead of failing silently inside the app's catch. */
+    if(navigator.share){
+      const real=navigator.share.bind(navigator);
+      navigator.share=d=>{ say('share called, files '+(d&&d.files?d.files.map(f=>f.name+' '+f.type+' '+f.size).join(','):'none')
+        +', activation '+(navigator.userActivation?navigator.userActivation.isActive:'?'));
+        return real(d).then(r=>{say('share resolved'); return r;},e=>{say('share rejected '+(e&&e.name)+': '+(e&&e.message)); throw e;}); };
+    }
     say('done');
   }catch(e){ say('ERROR '+e.message); }
 },1500));
