@@ -167,13 +167,17 @@ const frame=document.getElementById('app');
       return out;})()`); }catch(e){ STORE_CHECK={error:e.message}; }
     /* The store build's export, through a stand-in for the shell: window.Capacitor
        and navigator.share are replaced, one share cancelled and one completed. */
-    try{ SHARE_CHECK=await W.eval(`(async()=>{const keepC=window.Capacitor, keepS=navigator.share;
+    try{ SHARE_CHECK=await W.eval(`(async()=>{const keepC=window.Capacitor, keepS=navigator.share, keepCS=navigator.canShare;
       const keepE=localStorage.getItem(LKEY_EXPORTED), kc=localStorage.getItem(LKEY_CHARTS), out={}, calls=[];
       try{
         if(!savedCharts().length) localStorage.setItem(LKEY_CHARTS,JSON.stringify([{id:'t',name:'t',y:2000,mo:1,d:1,t:12,lat:0,lon:0}]));
         window.Capacitor={isNativePlatform:()=>true};
         localStorage.removeItem(LKEY_EXPORTED); renderBackupLine();
         out.never=document.getElementById('backupLine').textContent;
+        /* canShare as iOS answers it. Desktop Chrome, where this suite runs,
+           says no to a CSV, and the code then took the web path and recorded a
+           cancelled share as an export. */
+        Object.defineProperty(navigator,'canShare',{configurable:true,value:()=>true});
         Object.defineProperty(navigator,'share',{configurable:true,value:f=>{calls.push(f); return Promise.reject(new Error('cancel'));}});
         document.getElementById('expCsv').click();
         await new Promise(r=>setTimeout(r,60));
@@ -183,10 +187,28 @@ const frame=document.getElementById('app');
         document.getElementById('expCsv').click();
         await new Promise(r=>setTimeout(r,60));
         out.afterDone=localStorage.getItem(LKEY_EXPORTED);
+        /* Android: the WebView has no navigator.share, so the file goes through
+           the Filesystem and Share plugins. Same two runs, cancel then done. */
+        delete navigator.share; Object.defineProperty(navigator,'share',{configurable:true,value:undefined});
+        localStorage.removeItem(LKEY_EXPORTED);
+        const pcalls=[]; let cancel=true;
+        window.Capacitor={isNativePlatform:()=>true, Plugins:{
+          Filesystem:{writeFile:o=>{pcalls.push(o); return Promise.resolve({uri:'file:///cache/'+o.path});}},
+          Share:{share:o=>{pcalls.push(o); return cancel?Promise.reject(new Error('cancel')):Promise.resolve({});}}}};
+        document.getElementById('expCsv').click();
+        await new Promise(r=>setTimeout(r,60));
+        out.plugAfterCancel=localStorage.getItem(LKEY_EXPORTED);
+        cancel=false;
+        document.getElementById('expCsv').click();
+        await new Promise(r=>setTimeout(r,60));
+        out.plugAfterDone=localStorage.getItem(LKEY_EXPORTED);
+        out.plugFile=pcalls[0]&&pcalls[0].path; out.plugData=pcalls[0]&&String(pcalls[0].data).split('\\r\\n')[0];
+        out.plugShared=pcalls[1]&&pcalls[1].files&&pcalls[1].files[0];
       }catch(e){ out.error=e.message; }
       finally{
         if(keepC===undefined) delete window.Capacitor; else window.Capacitor=keepC;
         if(keepS) Object.defineProperty(navigator,'share',{configurable:true,value:keepS}); else delete navigator.share;
+        if(keepCS) Object.defineProperty(navigator,'canShare',{configurable:true,value:keepCS}); else delete navigator.canShare;
         if(keepE) localStorage.setItem(LKEY_EXPORTED,keepE); else localStorage.removeItem(LKEY_EXPORTED);
         if(kc===null) localStorage.removeItem(LKEY_CHARTS); else localStorage.setItem(LKEY_CHARTS,kc);
         renderBackupLine();
@@ -567,6 +589,20 @@ function run(){
       LANG=k; return out;})()`);
     return miss.length===0||miss.join(', ');
   });
+  t('эталон не зависит от настроек пользователя и не меняет их',()=>{
+    /* На Android-эмуляторе были включены астероиды, Церера попала в эталон, и
+       проба сообщила о расхождении в правильной сборке. Здесь настройки
+       переключаются на непривычные, эталон обязан остаться прежним, а настройки
+       вернуться. */
+    const r=ev(`(()=>{const keep={HSYS,LILMODE,HOUSE_3D,ASTEROIDS};
+      const base=parityDigest();
+      HSYS='koch'; LILMODE='true'; HOUSE_3D=true; ASTEROIDS=true;
+      const odd=parityDigest(); const after={HSYS,LILMODE,HOUSE_3D,ASTEROIDS};
+      ({HSYS,LILMODE,HOUSE_3D,ASTEROIDS}=keep);
+      return {same:base===odd, restored:after.HSYS==='koch'&&after.LILMODE==='true'&&after.HOUSE_3D&&after.ASTEROIDS};})()`);
+    if(!r.same) return 'эталон изменился от настроек';
+    return r.restored||'настройки не вернулись после расчёта эталона';
+  });
   t('классический раздел эталона не изменился от появления режимов',()=>{
     /* Первые строки parity.txt - классический слой в том виде, в каком он был
        до режимов. Совпадение их с живым классическим расчётом и есть
@@ -921,7 +957,7 @@ function run(){
     /* На вебе человек приходит холодным, и строка отвечает "что это такое".
        В магазине на этот вопрос уже ответило описание, и к моменту запуска
        это абзац вертикального места над сгибом, потраченный на известное. */
-    const r=ev(`(()=>{const tag=document.querySelector('header p[data-i="tagline"]');
+    const r=ev(`(()=>{const tag=document.querySelector('p.tagline[data-i="tagline"]');
       if(!tag) return {missing:true};
       const web=tag.offsetHeight>0;
       document.documentElement.classList.add('native');
@@ -1453,8 +1489,13 @@ function run(){
       ||`порядок колонок ${cols.join(',')}`;
   });
   t('строка о резервной копии предупреждает и замолкает после выгрузки',()=>{
+    /* Браузер, которому отказали в постоянном хранилище, оставляет строку
+       тревожной и после выгрузки - так задумано. Здесь проверяется сама
+       выгрузка, поэтому ответ браузера на время замера убран: иначе тест
+       зависел от того, сохранял ли кто-то карту в этом профиле. */
     const r=ev(`(()=>{const keepC=localStorage.getItem('astrarium_charts');
-      const keepE=localStorage.getItem('astrarium_exported');
+      const keepE=localStorage.getItem('astrarium_exported'), keepP=STORAGE_PERSISTED;
+      STORAGE_PERSISTED=null;
       localStorage.removeItem('astrarium_exported');
       localStorage.setItem('astrarium_charts',JSON.stringify([{id:'tst2',name:'T',
         y:1985,mo:3,d:20,t:6.5,lat:55.75,lon:37.62,tz:3,city:'M',rr:'A',src:''}]));
@@ -1464,11 +1505,12 @@ function run(){
       markExported();
       const after={text:el.textContent, warn:el.className.includes('libwarn')};
       localStorage.removeItem('astrarium_charts');
+      renderLibrary(); renderBackupLine();
+      const empty=document.getElementById('backupLine').textContent;
       if(keepC!=null) localStorage.setItem('astrarium_charts',keepC);
       if(keepE!=null) localStorage.setItem('astrarium_exported',keepE);
       else localStorage.removeItem('astrarium_exported');
-      renderLibrary(); renderBackupLine();
-      const empty=document.getElementById('backupLine').textContent;
+      STORAGE_PERSISTED=keepP; renderLibrary(); renderBackupLine();
       return {never, after, empty};})()`);
     if(!r.never.text||!r.never.warn) return 'без выгрузки строка молчит или не предупреждает';
     if(r.after.warn) return 'после выгрузки строка всё ещё тревожная';
@@ -2119,7 +2161,14 @@ function run(){
       if(stored.length!==1) return 'в хранилище '+stored.length;
       if(stored[0].name!=='я') return 'имя не сохранилось: '+stored[0].name;
       if(Math.abs(stored[0].t-13.6167)>0.01) return 'время не сохранилось: '+stored[0].t;
-      if(D.getElementById('chartName').value!=='') return 'поле имени не очистилось';
+      /* Имя теперь принадлежит карте, а не кнопке: оно остаётся в поле и в
+         шапке карты, а кнопка говорит, что карта уже в библиотеке. */
+      if(D.getElementById('chartName').value!=='я') return 'имя пропало из поля';
+      if(!D.getElementById('saveChart').disabled) return 'после сохранения кнопка снова активна';
+      if(D.getElementById('saveChart').textContent!==ev(`t('savedBtn')`)) return 'кнопка не говорит «сохранено»';
+      set('time','13:38');
+      if(D.getElementById('saveChart').disabled) return 'правка не сняла отметку «сохранено»';
+      set('time','13:37');
       // имя не должно дублироваться местом
       const row=D.querySelector('#libList .libitem[data-own="1"]').textContent;
       if((row.match(/Санкт-Петербург/g)||[]).length>1) return 'город продублирован';
@@ -2229,11 +2278,14 @@ function run(){
     /* После восстановления сохранённой карты поле города заполнено, а
        печатающего нет. Догрузка атласа открывала список поверх формы при
        каждом запуске. Обновлять его можно только тому, кто печатает. */
+    /* Форма после построения убрана, а убранное поле фокус не берёт: для
+       замера она открывается и потом возвращается как была. */
     const r=ev(`(()=>{const el=document.getElementById('city'), box=document.getElementById('citylist');
+      const fc=document.getElementById('formCard'), wasHidden=fc.hidden; fc.hidden=false;
       const keep=el.value; el.value='Москва'; el.blur(); box.style.display='none';
       refreshCityListAfterAtlas(); const idle=box.style.display;
       el.focus(); refreshCityListAfterAtlas(); const typing=box.style.display;
-      el.blur(); box.style.display='none'; el.value=keep;
+      el.blur(); box.style.display='none'; el.value=keep; fc.hidden=wasHidden;
       return {idle, typing};})()`);
     if(r.idle==='block') return 'список открылся без фокуса';
     return r.typing==='block'||'печатающему список не обновился';
@@ -2266,10 +2318,18 @@ function run(){
     if(r.error) return 'исключение: '+r.error;
     const bad=[];
     if(/браузер|browser/i.test(r.never)) bad.push('плашка говорит о браузере: '+r.never);
-    if(!/iOS/.test(r.never)) bad.push('плашка не называет iOS: '+r.never);
+    /* Сборка общая для iOS и Android, поэтому платформу плашка не называет:
+       первая версия говорила «iOS», и Android показывал это дословно. */
+    if(/iOS|Android/.test(r.never)) bad.push('плашка называет платформу: '+r.never);
+    if(!/телефон|phone/.test(r.never)) bad.push('плашка не говорит, где хранятся карты: '+r.never);
     if(!/\.csv$/.test(r.sharedFile||'')) bad.push('в меню ушёл не CSV: '+r.sharedFile);
     if(r.afterCancel) bad.push('отменённая отправка записана как выгрузка');
     if(!r.afterDone) bad.push('завершённая отправка не записана');
+    if(!/\.csv$/.test(r.plugFile||'')) bad.push('Android: в файл ушёл не CSV: '+r.plugFile);
+    if(!/^name,date,time/.test(r.plugData||'')) bad.push('Android: в файле не CSV с заголовком: '+r.plugData);
+    if(!/\.csv$/.test(r.plugShared||'')) bad.push('Android: в меню ушёл не тот файл: '+r.plugShared);
+    if(r.plugAfterCancel) bad.push('Android: отменённая отправка записана как выгрузка');
+    if(!r.plugAfterDone) bad.push('Android: завершённая отправка не записана');
     return bad.length===0||bad.join('; ');
   });
   t('сохранённые карты дублируются в нативное хранилище и возвращаются после очистки',()=>{
@@ -2329,13 +2389,19 @@ function run(){
        так с любым полем, где текст мельче 16 px, а у нас было 15. Там же
        пустое поле даты схлопнулось до 18 pt. Проверяются все текстовые поля,
        кроме флажков, радиокнопок и ползунка. */
-    const bad=ev(`(()=>{const out=[];
+    /* С одной сохранённой картой, своей или временной: поле заметки рисуется
+       только под ней, и при пустой библиотеке его 12 px никто не видел. */
+    const bad=ev(`(()=>{const out=[], kc=localStorage.getItem(LKEY_CHARTS);
+      if(!savedCharts().length){ localStorage.setItem(LKEY_CHARTS,JSON.stringify([{id:'f',name:'f',y:2000,mo:1,d:1,t:12,lat:0,lon:0}])); renderLibrary(); }
+      if(!document.querySelector('#libList .libnote')) out.push('поле заметки не нарисовано');
       document.querySelectorAll('input').forEach(e=>{
         if(['checkbox','radio','range','hidden','file'].includes(e.type)) return;
         const cs=getComputedStyle(e), fs=parseFloat(cs.fontSize), mh=parseFloat(cs.minHeight)||0;
         if(fs<16) out.push((e.id||e.type)+': шрифт '+fs+' px');
         if(mh<44) out.push((e.id||e.type)+': минимум высоты '+mh+' px');
       });
+      if(kc===null) localStorage.removeItem(LKEY_CHARTS); else localStorage.setItem(LKEY_CHARTS,kc);
+      renderLibrary();
       return out;})()`);
     return bad.length===0||bad.slice(0,6).join('; ');
   });
@@ -2387,10 +2453,137 @@ function run(){
      before a chart exists. It once sat inside the results block, which is
      hidden until the first cast, and so could not be opened at all. */
   t('библиотека доступна до первого расчёта',()=>{
-    const card=D.getElementById('libCard');
-    if(!card) return 'блока нет';
-    if(card.closest('#results')) return 'спрятан внутри результатов';
-    return card.getBoundingClientRect().height>0 || 'нулевая высота';
+    /* Теперь это панель за кнопкой в шапке. Проверяется кнопка: она видна
+       всегда, и панель открывается с неё, а не только после расчёта. */
+    const card=D.getElementById('libCard'), btn=D.getElementById('libBtn');
+    if(!card||!btn) return 'блока или кнопки нет';
+    if(card.closest('#results')||btn.closest('#results')) return 'спрятан внутри результатов';
+    if(!btn.closest('header')) return 'кнопка не в шапке';
+    if(btn.getBoundingClientRect().height<44) return 'кнопка ниже 44 px';
+    btn.click();
+    const open=card.open, h=card.getBoundingClientRect().height;
+    ev(`closePanel('libCard')`);
+    if(!open) return 'панель не открылась';
+    return h>0 || 'открытая панель нулевой высоты';
+  });
+  /* ---------- раскладка 3.16 ----------
+     Сценарии с четырьмя персонажами (астролог с клиентами, исследователь,
+     любитель, человек с одной своей картой) свелись к одному: ввести данные,
+     увидеть карту, сохранить. Шапка ушла со 100 px до 56, имя встало к дате,
+     редкое ушло в настройки, библиотека открывается поверх страницы. */
+  t('шапка: две кнопки и 56 px на телефоне, тема и язык в настройках',()=>{
+    const wasW=frame.style.width; frame.style.width='375px'; void frame.offsetWidth;
+    const h=D.querySelector('header').offsetHeight;
+    frame.style.width=wasW; void frame.offsetWidth;
+    const bad=[];
+    if(h>57) bad.push('шапка '+h+' px');
+    if(!D.querySelector('header #libBtn')||!D.querySelector('header #setBtn')) bad.push('нет кнопок в шапке');
+    if(!D.querySelector('#setCard #themeSw')) bad.push('тема не в настройках');
+    if(!D.querySelector('#setCard #langSel')) bad.push('язык не в настройках');
+    for(const id of ['astOn','house3d','showSeconds'])
+      if(!D.querySelector('#setCard #'+id)) bad.push(id+' не в настройках');
+    return bad.length===0||bad.join('; ');
+  });
+  t('имя стоит в карточке рождения, над датой, и без примера про маму',()=>{
+    const f=D.getElementById('formCard'), n=D.getElementById('chartName'), d=D.getElementById('date');
+    if(!f.contains(n)) return 'имя не в карточке рождения';
+    if(!(n.compareDocumentPosition(d)&W.Node.DOCUMENT_POSITION_FOLLOWING)) return 'имя не перед датой';
+    if(n.placeholder) return 'в поле имени пример: '+n.placeholder;
+    const lab=f.querySelector('label[for="chartName"]');
+    return (lab&&lab.textContent===ev(`t('nameLabel')`))||'у поля имени нет подписи';
+  });
+  t('координаты и пояс свёрнуты в строку и раскрываются по нажатию',()=>{
+    const r=ev(`(()=>{const f=document.getElementById('geoFields'), b=document.getElementById('geoEdit');
+      const was=f.hidden; setGeoOpen(false); renderGeoSum();
+      const out={closed:f.hidden, sum:document.getElementById('geoSum').textContent};
+      b.click(); out.opened=!f.hidden; out.label=b.textContent;
+      b.click(); out.closedAgain=f.hidden; setGeoOpen(!was); return out;})()`);
+    const bad=[];
+    if(!r.closed) bad.push('поля открыты по умолчанию');
+    if(!/\d+[ns]\d{2} \d+[ew]\d{2} · UTC[+-]\d/.test(r.sum)) bad.push('в строке нет координат и пояса: '+r.sum);
+    if(!r.opened||!r.closedAgain) bad.push('кнопка не раскрывает и не сворачивает');
+    if(r.label!==ev(`t('hide')`)) bad.push('раскрытая кнопка не говорит «скрыть»');
+    return bad.length===0||bad.join('; ');
+  });
+  t('после построения форма уходит, карандаш её возвращает, крестик - данные карты',()=>{
+    const r=ev(`(()=>{const f=document.getElementById('formCard'), nm=document.getElementById('chartName');
+      const keep=nm.value, out={};
+      setFormOpen(false);
+      out.hiddenAfter=f.hidden; out.pencil=!document.getElementById('formEdit').hidden;
+      document.getElementById('formEdit').click();
+      out.shown=!f.hidden; out.cross=!document.getElementById('formClose').hidden;
+      out.pencilGone=document.getElementById('formEdit').hidden;
+      nm.value='не та карта';
+      document.getElementById('formClose').click();
+      out.restored=nm.value===keep; out.hiddenAgain=f.hidden;
+      nm.value=keep; return out;})()`);
+    const bad=Object.entries({hiddenAfter:'форма осталась после построения', pencil:'нет карандаша',
+      shown:'карандаш не открыл форму', cross:'нет крестика', pencilGone:'карандаш виден при открытой форме',
+      restored:'крестик не вернул данные карты', hiddenAgain:'крестик не убрал форму'})
+      .filter(([k])=>!r[k]).map(([,v])=>v);
+    return bad.length===0||bad.join('; ');
+  });
+  t('без карты форма не убирается и крестика нет',()=>{
+    const r=ev(`(()=>{const keep=CURRENT; CURRENT=null; setFormOpen(false);
+      const out={shown:!document.getElementById('formCard').hidden,
+        cross:!document.getElementById('formClose').hidden};
+      CURRENT=keep; setFormOpen(false); return out;})()`);
+    return (r.shown&&!r.cross)||JSON.stringify(r);
+  });
+  t('панель закрывается кнопкой «назад», Android и браузера',()=>{
+    const r=ev(`(()=>{openPanel('setCard');
+      const out={open:document.getElementById('setCard').open, state:history.state&&history.state.panel};
+      dispatchEvent(new PopStateEvent('popstate',{state:null}));
+      out.closed=!document.getElementById('setCard').open;
+      history.replaceState(null,''); return out;})()`);
+    if(!r.open) return 'панель не открылась';
+    if(r.state!=='setCard') return 'панель не оставила записи в истории';
+    return r.closed||'«назад» не закрыл панель';
+  });
+  t('у настройки с пояснением есть «i», и пояснение закрыто по умолчанию',()=>{
+    const notes=[...D.querySelectorAll('#setCard .setnote')];
+    if(notes.length<2) return 'пояснений '+notes.length;
+    for(const n of notes){
+      const b=n.previousElementSibling&&n.previousElementSibling.querySelector('button.info');
+      if(!b) return 'у пояснения нет кнопки: '+n.dataset.i;
+      if(!n.hidden) return 'пояснение открыто: '+n.dataset.i;
+      b.click(); const o=!n.hidden; b.click();
+      if(!o||!n.hidden) return 'кнопка не открывает пояснение: '+n.dataset.i;
+    }
+    return true;
+  });
+  t('система домов, Лилит и управители над колесом, кнопки называют себя',()=>{
+    const row=D.querySelector('#chartCard .metactl');
+    if(!row) return 'ряда нет';
+    const bad=[];
+    for(const id of ['hsys','lilmode','rulerSel'])
+      if(!row.querySelector('#'+id)) bad.push(id+' не над колесом');
+    const rb=D.getElementById('rulerSel').parentNode.querySelector('.ddbtn').textContent;
+    const word=ev(`t('rulersLabel')`).toLowerCase();
+    if(!rb.toLowerCase().startsWith(word)) bad.push('кнопка управителей не называет себя: '+rb);
+    if(D.getElementById('formCard').querySelector('select')) bad.push('в форме остались выпадающие списки');
+    return bad.length===0||bad.join('; ');
+  });
+  t('сохранённая карта отмечена на закладке, правка снимает отметку',()=>{
+    const K='astrarium_charts', backup=W.localStorage.getItem(K);
+    try{
+      const r=ev(`(()=>{const out={};
+        const name=document.getElementById('chartName'), keep=name.value;
+        name.value='закладка'; syncSaveBtn();
+        out.before=document.getElementById('saveQuick').classList.contains('on');
+        document.getElementById('saveChart').click();
+        out.after=document.getElementById('saveQuick').classList.contains('on');
+        out.disabled=document.getElementById('saveQuick').disabled;
+        name.value='закладка 2'; name.dispatchEvent(new Event('input'));
+        out.edited=document.getElementById('saveQuick').classList.contains('on');
+        name.value=keep; name.dispatchEvent(new Event('input')); return out;})()`);
+      if(r.before) return 'отмечена до сохранения';
+      if(!r.after||!r.disabled) return 'после сохранения не отмечена';
+      return !r.edited||'правка имени не сняла отметку';
+    } finally {
+      backup===null?W.localStorage.removeItem(K):W.localStorage.setItem(K,backup);
+      ev('renderLibrary()');
+    }
   });
   /* If these drift apart the number on screen names one release while the
      cache serves another, which is exactly the confusion it exists to end. */
@@ -3848,8 +4041,14 @@ function run(){
       /\d+[nsNS]\d{2}\s+\d+[ewEW]\d{2}/];
     const miss=need.filter(re=>!re.test(txt));
     if(miss.length) return `нет: ${miss.join(' ')} в "${txt.replace(/\n/g,' | ')}"`;
-    const hs=ev(`LX(HOUSE_SYSTEMS[CURRENT.houses.system])`);
-    return txt.includes(hs)||`система домов "${hs}" не названа`;
+    /* Система домов на экране - на своей кнопке под шапкой, на бумаге - в
+       третьей строке шапки, которая на экране скрыта. */
+    const hs=ev(`LX(HOUSE_SYSTEMS[HSYS])`);
+    const chip=D.querySelector('.metactl .dd #hsys').parentNode.querySelector('.ddbtn').textContent;
+    if(chip!==hs) return `на кнопке "${chip}", а не "${hs}"`;
+    const paper=D.querySelector('#chartMeta .printonly');
+    return (paper&&paper.textContent.includes(ev(`LX(HOUSE_SYSTEMS[CURRENT.houses.system])`)))
+      ||'в печатной строке система домов не названа';
   });
   t('координаты записаны как в эфемеридах',()=>{
     const r=ev(`[fmtGeo(59.9167,30.25), fmtGeo(-33.8688,-151.2093), fmtGeo(0,0)]`);
@@ -4050,7 +4249,9 @@ function run(){
     /* Ключи, которые реально попадают на экран. Разбор сюда не входит:
        он выключен и существует только по-русски. */
     const need=['tagline','birth','date','time','lat','lng','tz','cast','city','cityph','hint',
-      'libTitle','saveChart','namePh','libFind','libNote','noTime','rrKnown','delChart',
+      'libTitle','libFind','noTime','rrKnown','delChart','libShort','settings','themeLabel',
+      'langLabel','close','whatIs','nameLabel','saveBtn','savedBtn','saveToLib','edit','hide',
+      'editData','geoNone','setChartNote',
       'hsysLabel','lilLabel','lil_mean','lil_true','transittime','secondsLabel','needdata',
       'empty','natal','era1','era2','era3','era4','tapdetail','positions','posnote',
       'transitdate','scrubintro','stepLabel','u_sec','u_min','u_hour','u_day','u_week',

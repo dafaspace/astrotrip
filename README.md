@@ -351,9 +351,8 @@ does not move at all.
 ### Eight languages
 
 English, Spanish, French, Russian, German, Italian, Ukrainian, Georgian - the
-same set and the same order as Cinemail. English is the default; the header
-control shows only the current language and the rest are in its dropdown; the
-choice persists. A key missing from a language falls through to English, so a
+same set and the same order as Cinemail. English is the default; the language is
+chosen in the settings panel, each one by its own name, and the choice persists. A key missing from a language falls through to English, so a
 partial translation costs one string rather than the screen.
 
 The interpretation corpus is deliberately not translated: it exists in Russian
@@ -452,8 +451,11 @@ which is the difference between a picture and an instrument.
 **A header** carrying what the chart was cast from: name, place, date, weekday,
 time, UTC offset, coordinates in the `59n55 30e15` form, zodiac, house system
 and which Black Moon is in use. A screenshot without it cannot be checked.
-Every abbreviation in it exists to keep the block to three lines on a phone,
-because the wheel and the slider are budgeted against that screen.
+Every abbreviation in it exists to keep the block short on a phone, because the
+wheel and the slider are budgeted against that screen. On screen the house
+system, the Black Moon and the rulers are chips under the header, which a
+screenshot shows and a tap changes; on paper a third line of the header says the
+same thing.
 
 **Checked against ZET 9.** For 3 November 1985, 13:37, GMT+3, 59n55 30e15,
 Placidus, all twelve house cusps agree with ZET to the degree, and so does the
@@ -524,6 +526,36 @@ Searched as one folded string rather than 235k objects: building objects costs a
 90 MB of heap on a phone, while `indexOf` over a blob answers in a few milliseconds
 and allocates only for the eight rows shown.
 
+### Getting to a chart
+
+Four people were walked through the app before this layout was settled: an
+astrologer casting client after client, a researcher reading famous charts, an
+amateur casting a partner's chart, and someone with one chart of their own. All four
+do the same three things - enter who, when and where, see the chart, keep it - and
+the old page put the name and the save button a card below the form, behind three
+calculation options with a paragraph each. Measured at 375x812: the form was 949 px
+tall with the cast button at 939, under a 100 px sticky header.
+
+Now the header is 56 px and holds two buttons, **Library** and **Settings**. The
+birth-data card asks for a name (optional, with no example), the date and time, and
+the city; the coordinates and the UTC offset come from the city and sit as one line
+that opens into the three fields when they need correcting. **Cast** and **Save**
+stand side by side. The card is 388 px with the cast button at 486, and once a chart
+is cast it steps aside entirely: the chart's own header already names who, when and
+where, so a folded summary would have said it twice. A pencil on the chart brings the
+card back, a cross puts it away again without touching the chart, and a bookmark saves
+the chart and fills in once it is in the library, so a save is something you can see.
+
+The house system, the Black Moon and the rulers are chips over the wheel, because
+they change the wheel and what is said about it, and set in the form they could only
+be judged after casting. The library and the settings open as panels over the page.
+The library has its search on top and the CSV backup at the bottom, always in view:
+with a thousand charts in it, a backup line after the list would be a thousand rows
+away. The settings hold what is set once - theme, language, asteroids, houses by
+latitude, arcseconds - each on one line with an "i" for its paragraph. A panel adds
+a history entry, so the Android back button, a browser's back and Escape close it
+rather than leaving the app.
+
 ### The chart library
 
 1019 charts - composers, musicians and painters - each with a Rodden rating and a
@@ -583,7 +615,7 @@ mattered: before it did, a deliberately broken app passed every check. The runne
 for the city atlas to finish loading, or the atlas tests would silently check the inline
 seed instead.
 
-**331 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
+**341 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
 library, robustness over 1550-2250 and at polar latitudes, house systems (angles land
 on the cusps, cusps run round the circle without crossing, quadrant systems coincide at
 the equator, zero-latitude bodies get the same house from both methods), library data

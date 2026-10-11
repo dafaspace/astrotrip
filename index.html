@@ -94,14 +94,19 @@ body{
   padding:0 env(safe-area-inset-right) calc(60px + env(safe-area-inset-bottom)) env(safe-area-inset-left);
 }
 h1,h2,h3,.serif{font-family:'Literata',Georgia,"Times New Roman",serif;font-weight:500}
-header{padding:calc(20px + env(safe-area-inset-top)) 20px 8px;max-width:760px;margin:0 auto;display:flex;align-items:flex-start;gap:12px}
+/* 56 px on a phone: the 44 px buttons plus 6 above and below. */
+header{padding:calc(6px + env(safe-area-inset-top)) 20px 6px;max-width:760px;margin:0 auto;display:flex;align-items:center;gap:8px}
 header .ht{flex:1}
 header h1{font-size:26px;margin:0;letter-spacing:.2px}
 /* Version rides the title so it is obvious from a phone whether the build in
    front of you is the one that was just deployed. */
 header h1 .ver{font-size:11px;font-weight:400;letter-spacing:.04em;color:var(--ink3);
   vertical-align:.55em;margin-left:5px;font-feature-settings:'tnum' 1}
-header p{margin:4px 0 0;color:var(--ink2);font-size:13px}
+.tagline{margin:6px 0 0;color:var(--ink2);font-size:13px}
+.hbtn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:44px;
+  padding:0 12px;background:var(--paper2);color:var(--ink2);font-size:14px;flex:none;line-height:1}
+.hbtn svg{width:18px;height:18px;flex:none}
+.hbtn.ico{width:44px;padding:0}
 .wrap{max-width:760px;margin:0 auto;padding:0 20px}
 .card{background:var(--paper2);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin:14px 0}
 .card h2{font-size:16px;margin:0 0 12px}
@@ -144,8 +149,8 @@ button.primary{background:var(--accentBtn);border-color:var(--accentBtn);color:v
    siblings: same height, radius and vertical rhythm. Only the horizontal
    padding differs, because an icon and a two-letter label are not the same
    width. Before this they stood 28px against 33.5px and looked misaligned. */
-.lang button{min-height:32px;display:inline-flex;align-items:center;justify-content:center}
-.lang.theme button{padding:0 10px;color:var(--ink2)}
+.lang button{min-height:42px;display:inline-flex;align-items:center;justify-content:center}
+.lang.theme button{padding:0 10px;min-width:52px;color:var(--ink2)}
 .lang.theme button.on{color:var(--accentInk)}
 .mono,.deg{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
 svg{display:block;width:100%;height:auto;touch-action:manipulation}
@@ -287,7 +292,7 @@ button.ico:disabled{opacity:.4;cursor:default}
     --fire:#f0d9cc; --earth:#cfe8c9; --air:#ece2b6; --water:#cfe4ee;
   }
   html,body{background:#fff;color:#000}
-  header, #formCard, #libCard, #emptycard, #orbCard, #relocCard, #transitsCard,
+  header, .tagline, dialog.panel, .metactl, .setnote, #formCard, #libCard, #emptycard, #orbCard, #relocCard, #transitsCard,
   .scrub, .ringrow, .detail, .noprint, .foot{ display:none !important; }
   .card{border:none;box-shadow:none;padding:0;margin:0 0 10mm;background:#fff}
   .card.fold>summary{list-style:none;cursor:auto}
@@ -299,6 +304,7 @@ button.ico:disabled{opacity:.4;cursor:default}
      including whichever one happens to be tapped, so printing the panel as
      well would put the same facts on the page twice. */
   #printFactsCard{display:block !important;break-before:page;page-break-before:always}
+  .printonly{display:block !important}
   .planet-row{break-inside:avoid}
   .gridwrap{overflow:visible}
   h2{font-size:14pt}
@@ -316,7 +322,7 @@ button.ico:disabled{opacity:.4;cursor:default}
 /* The header pair: this one is a 34px chip beside the theme switch, not a
    44px form control. */
 .dd.langsel{width:auto;flex:none}
-.dd.langsel .ddbtn{min-height:34px;padding:4px 26px 4px 10px;font-size:13px;
+.dd.langsel .ddbtn{min-height:44px;padding:4px 26px 4px 12px;font-size:14px;
   background:var(--paper2);letter-spacing:.04em;
   background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),
     linear-gradient(135deg,currentColor 50%,transparent 50%);
@@ -448,12 +454,15 @@ html.native #printBtn{display:none}
 .foot h2{font-size:14px;color:var(--ink3);font-weight:500}
 /* The note sits under its row rather than inside it: the row is already a
    grid of five things on a 375 px phone, and a sixth would squeeze the name. */
-.libnote{width:100%;font-size:12px;min-height:34px;margin:-4px 0 8px;padding:4px 8px}
+/* 16 px and 44 high like every other field: at 12 px iOS zoomed the page the
+   moment a note was tapped. It only showed once the library held a saved chart,
+   which is why the field check missed it until a real one was saved. */
+.libnote{width:100%;font-size:16px;min-height:44px;margin:-4px 0 8px;padding:6px 10px}
 /* The tagline answers "what is this" for someone who lands on the web page
    cold. In the store build the listing has already answered it, and by the
    time the app opens it is a paragraph of vertical space above the fold on a
    phone, spent on something the reader already knows. */
-html.native header p[data-i="tagline"]{display:none}
+html.native .tagline{display:none}
 a{color:var(--accent)}
 .citywrap{position:relative}
 .citylist{position:absolute;left:0;right:0;top:100%;margin-top:4px;background:var(--paper);border:1px solid var(--line);border-radius:10px;max-height:220px;overflow:auto;z-index:20;box-shadow:0 8px 20px rgba(0,0,0,.14);display:none}
@@ -483,6 +492,98 @@ details.unit .dt{padding:0 0 10px;color:var(--ink2);font-size:14px}
 .libdel{margin-left:auto;color:var(--ink3);font-size:11px;background:none;border:none;cursor:pointer;padding:4px 6px}
 .libdel:hover{color:var(--hard)}
 .emptystate{color:var(--ink3);font-style:italic;padding:12px 0}
+
+/* The hidden attribute has to win. The UA's display:none is the weakest rule
+   on the page, and any class that sets display - button.ico does - quietly
+   overrides it: the form's close button showed with no chart to go back to. */
+[hidden]{display:none !important}
+/* ---------- the birth-data card ---------- */
+#formCard .cardhead{margin:-6px 0 6px}
+#formCard .cardhead h2{margin:0}
+/* Coordinates and offset as one line under the city: they come from it, and
+   three fields you have to look past were the form's tallest part. */
+.geoline{display:flex;align-items:center;gap:6px;min-height:44px;font-size:13px;color:var(--ink3);
+  font-variant-numeric:tabular-nums}
+.geoline span{flex:1;min-width:0}
+#geoFields{margin:0 0 4px}
+/* A text button: the action is minor and sits inside a sentence. The 44 px
+   comes from height, not from a box drawn round it. */
+.linkbtn{background:none;border:none;color:var(--accent);padding:0 4px;min-height:44px;
+  display:inline-flex;align-items:center;font-size:13px;flex:none}
+.formbtns{display:flex;gap:10px;margin-top:6px}
+.formbtns button{min-height:44px;display:inline-flex;align-items:center;justify-content:center;line-height:1}
+.formbtns .primary{flex:1.4}
+.formbtns #saveChart{flex:1}
+/* ---------- the chart card's head ---------- */
+.charthead{margin:-6px -8px 0 0;gap:0}
+.charthead h2{margin:0}
+.charthead .ico,#formClose{border:none;background:none}
+#saveQuick.on svg{fill:currentColor}
+#saveQuick.on{color:var(--accent);opacity:1}
+/* Chips, not form fields: they read as part of the chart's description and
+   only open when touched. The pill is 32 px for the eye; the ::after reaches
+   to 44 px for the thumb, and the row gap is wide enough that two reaches
+   never overlap. */
+.metactl{display:flex;flex-wrap:wrap;align-items:center;gap:12px 6px;margin:0 0 10px}
+.metactl>.tiny{margin-right:2px}
+.metactl .dd{width:auto;flex:none;max-width:100%}
+.metactl .ddbtn{min-height:32px;padding:4px 24px 4px 10px;font-size:13px;border-radius:999px;
+  background-color:var(--paper2);position:relative;
+  background-position:calc(100% - 13px) 52%,calc(100% - 8px) 52%}
+.metactl .ddbtn::after{content:'';position:absolute;left:0;right:0;top:-6px;bottom:-6px}
+.metactl .dd.lil .ddbtn::before{content:'\26B8';font-family:'Astro','Inter',sans-serif;margin-right:4px}
+.metactl .info{margin:0 0 0 -6px;border:none;background:none;height:32px;position:relative}
+.metactl .info::after{content:'';position:absolute;left:0;right:0;top:-6px;bottom:-6px}
+.setnote{margin:0 0 10px;line-height:1.45}
+.printonly{display:none}
+/* ---------- panels: the library and the settings ----------
+   Full screen on a phone, a sheet in the middle on a wide screen. A <dialog>
+   so the page under it is inert, Escape closes it, and focus comes back. */
+dialog.panel{position:fixed;inset:0;margin:0;padding:0;border:none;width:100%;height:100%;
+  max-width:100%;max-height:100%;background:var(--paper);color:var(--ink);z-index:50}
+dialog.panel::backdrop{background:rgba(10,8,16,.42)}
+dialog.panel[open]{animation:panelIn 200ms cubic-bezier(.2,.7,.2,1) both}
+@keyframes panelIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){dialog.panel[open]{animation:none}}
+.panelin{display:flex;flex-direction:column;height:100%;box-sizing:border-box;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+.panelin:focus{outline:none}
+.panelhead{display:flex;align-items:center;gap:8px;min-height:56px;padding:0 8px 0 20px;flex:none}
+.panelhead h2{margin:0;font-size:18px}
+.panelhead button[data-close]{margin-left:auto;border:none;background:none}
+.panelsearch{display:flex;gap:8px;padding:0 20px 10px;flex:none}
+.panelsearch input{flex:1;min-width:0}
+.panelsort{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 20px 6px;flex:none}
+.panelsort .dd{width:auto;flex:none}
+.panelsort .ddbtn{min-height:32px;padding:4px 24px 4px 10px;font-size:13px;border-radius:999px;
+  background-color:var(--paper2);position:relative;
+  background-position:calc(100% - 13px) 52%,calc(100% - 8px) 52%}
+.panelsort .ddbtn::after{content:'';position:absolute;left:0;right:0;top:-6px;bottom:-6px}
+.panelsort .ddlist{left:auto;right:0}
+.panelbody{flex:1;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:0 20px 12px}
+.panelfoot{flex:none;border-top:1px solid var(--line);padding:10px 20px 12px;display:flex;flex-direction:column;gap:8px}
+.panelfoot .row{display:flex;gap:10px;flex-wrap:wrap}
+.panelfoot .row button{flex:1;min-height:44px;display:inline-flex;align-items:center;justify-content:center;line-height:1}
+.panelfoot #backupLine:empty{display:none}
+@media (min-width:700px){
+  dialog.panel{inset:0;margin:auto;width:min(760px,calc(100% - 40px));height:min(86vh,900px);
+    border:1px solid var(--line);border-radius:16px;overflow:hidden}
+  /* fit-content, not auto: a fixed box pinned on all four sides stretches an
+     auto height to the whole window, and the settings sheet came out mostly
+     empty. Visible overflow so the language list can open past its bottom. */
+  dialog.panel#setCard{width:min(520px,calc(100% - 40px));height:fit-content;max-height:86vh;overflow:visible}
+  #setCard .panelin{height:auto}
+  #setCard .panelbody{overflow:visible}
+}
+.setrow{display:flex;align-items:center;gap:10px;min-height:52px;border-bottom:1px solid var(--line)}
+.setrow:last-of-type{border-bottom:none}
+.setlab{flex:1;font-size:15px}
+.setrow .chk{flex:1;display:flex;align-items:center;gap:10px;margin:0;min-height:44px;
+  text-transform:none;letter-spacing:0;font-size:15px;color:var(--ink);cursor:pointer}
+.setrow .chk input{width:20px;height:20px;flex:none;margin:0}
+.setrow .info{border:none;background:none;flex:none}
+.setrow + .setnote{margin:-2px 0 10px}
+.setfoot{margin:14px 0 6px;line-height:1.45}
 
 /* ---------- craft layer (Apple design principles) ----------
    Scope note: this is a reading surface driven by taps, not drags. So the
@@ -580,11 +681,35 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 }
 </style>
 
+<!-- Two buttons and nothing else. The header used to carry the tagline, the theme
+     switch and the language list: 100 px of a 812 px phone, sticky, spent on
+     things a person sets once. The library and the settings each open a panel
+     over the page, so neither pushes the form or the wheel down. -->
 <header>
   <div class="ht">
     <h1>AstroTrip<span class="ver" id="ver"></span></h1>
-    <p data-i="tagline"></p>
   </div>
+  <button type="button" class="hbtn" id="libBtn" aria-haspopup="dialog">
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M4 4.5h4.5v15H4zM8.5 6.5H13v13H8.5zM14.2 6.9l4.1-1.4 4.2 12.6-4.1 1.4z"/></svg>
+    <span data-i="libShort"></span>
+  </button>
+  <button type="button" class="hbtn ico" id="setBtn" aria-haspopup="dialog" data-i-title="settings">
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2.2"/><circle cx="8" cy="17" r="2.2"/></svg>
+  </button>
+</header>
+
+<!-- The settings panel. Things set once and then left: how the app looks, which
+     language, and three calculation options that each need a paragraph to
+     explain. The paragraph is behind an "i" so the switch itself is one line. -->
+<dialog class="panel" id="setCard" aria-labelledby="setTitle">
+  <div class="panelin" tabindex="-1">
+    <div class="panelhead">
+      <h2 id="setTitle" data-i="settings"></h2>
+      <button type="button" class="ico" data-close data-i-title="close">
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <div class="panelbody">
+      <div class="setrow"><span class="setlab" data-i="themeLabel"></span>
   <div class="lang theme" id="themeSw">
     <!-- Both glyphs are drawn about (8,8) on the same 16 grid: the sun spans 13
          units tip to tip, the crescent 12.4. The sun is allowed the wider span
@@ -592,16 +717,89 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
          would make the moon look the larger of the two. -->
     <button data-theme-set="light" title="Светлая" aria-label="Светлая тема"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="3.1"/><g stroke-linecap="round"><path d="M8 3.1V1.5M8 12.9v1.6M3.1 8H1.5M12.9 8h1.6M4.54 4.54 3.4 3.4M11.46 11.46l1.14 1.14M11.46 4.54 12.6 3.4M4.54 11.46 3.4 12.6"/></g></svg></button><button data-theme-set="dark" title="Тёмная" aria-label="Тёмная тема"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M14.2 8.54A6.2 6.2 0 1 1 7.46 1.8 4.82 4.82 0 0 0 14.2 8.54z" stroke-linejoin="round"/></svg></button>
   </div>
-  <!-- Eight languages will not fit as buttons on a phone, and the same order
-       as Cinemail keeps the family consistent. -->
-  <select id="langSel" class="langsel" aria-label="Language"></select>
-</header>
+      </div>
+      <!-- Eight languages will not fit as buttons on a phone, and the same order
+           as Cinemail keeps the family consistent. -->
+      <div class="setrow"><span class="setlab" data-i="langLabel"></span>
+        <select id="langSel" class="langsel" aria-label="Language"></select></div>
+      <div class="setrow">
+        <label class="chk"><input id="astOn" type="checkbox"><span data-i="asteroids"></span>
+          <span class="tiny" id="astState"></span></label>
+        <button type="button" class="ico info" aria-expanded="false" data-i-title="whatIs">
+          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.6v.1"/></svg></button>
+      </div>
+      <div class="tiny setnote" data-i="asteroidsNote" hidden></div>
+      <div class="setrow">
+        <label class="chk"><input id="house3d" type="checkbox"><span data-i="house3d"></span></label>
+        <button type="button" class="ico info" aria-expanded="false" data-i-title="whatIs">
+          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.6v.1"/></svg></button>
+      </div>
+      <div class="tiny setnote" data-i="house3dNote" hidden></div>
+      <div class="setrow">
+        <label class="chk"><input id="showSeconds" type="checkbox"><span data-i="secondsLabel"></span></label>
+      </div>
+      <div class="tiny setfoot" data-i="setChartNote"></div>
+    </div>
+  </div>
+</dialog>
+
+<!-- The library panel. Search and sort at the top, the backup at the bottom and
+     always in view: with a thousand charts in the list, a backup line placed
+     after them would be a thousand rows away. -->
+<dialog class="panel" id="libCard" aria-labelledby="libTitleH">
+  <div class="panelin" tabindex="-1">
+    <div class="panelhead">
+      <h2 id="libTitleH" data-i="libTitle"></h2>
+      <button type="button" class="ico" data-close data-i-title="close">
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <!-- Search and sort rather than folders or tags: a hundred and fifty
+         entries already carry three axes of their own - name, date, place -
+         and a folder tree would force one of them to win permanently. -->
+    <div class="panelsearch">
+      <input id="libFind" type="search" autocomplete="off">
+    </div>
+    <!-- The sort is a chip beside the count, not a field beside the search:
+         sharing a row, the two cut the search hint down to "Name, place, ye". -->
+    <div class="panelsort">
+      <span class="tiny" id="libCount"></span>
+      <select id="libSort"></select>
+    </div>
+    <div class="panelbody"><div id="libList"></div></div>
+    <div class="panelfoot">
+      <div class="tiny" id="backupLine"></div>
+      <div class="row">
+        <!-- CSV, not a private blob: the point of a personal database is that you
+             can open it in a spreadsheet, fix a birth time and put it back. -->
+        <button id="expCsv" data-i="exportCsv"></button>
+        <button id="impCsv" data-i="importCsv"></button>
+        <input id="impFile" type="file" accept=".csv,text/csv" hidden>
+      </div>
+    </div>
+  </div>
+</dialog>
 
 <div class="wrap">
 
+  <!-- On the web a stranger arrives cold and this answers "what is this". In
+       the store build the listing already has, so it is hidden there. -->
+  <p class="tagline" data-i="tagline"></p>
+
+  <!-- Who, when and where, in the order a person is asked them, and the two
+       things you do with the answer side by side. The name used to live in the
+       library, a screen below, with an example about "mum" for a placeholder.
+       Coordinates and the UTC offset come from the city, so they are a line
+       you can open rather than three fields you have to look past. Once a chart
+       is cast the card steps aside: the chart's own header names who and when,
+       and its pencil brings the card back. -->
   <div class="card" id="formCard">
-    <h2 data-i="birth"></h2>
-    <div class="grid">
+    <div class="cardhead">
+      <h2 data-i="birth"></h2><span class="sp"></span>
+      <button type="button" class="ico" id="formClose" data-i-title="close" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <div><label for="chartName" data-i="nameLabel"></label><input id="chartName" type="text" autocomplete="off"></div>
+    <div class="grid" style="margin-top:10px">
       <div><label data-i="date"></label><input id="date" type="date"></div>
       <div><label data-i="time"></label><input id="time" type="time"></div>
     </div>
@@ -618,64 +816,23 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
       <div class="tiny dim" id="atlasNote"></div>
       <button id="atlasRetry" hidden></button>
     </div>
-    <div class="grid3" style="margin-top:10px">
-      <div><label data-i="lat"></label><input id="lat" type="number" step="0.0001"></div>
-      <div><label data-i="lng"></label><input id="lng" type="number" step="0.0001"></div>
-      <div><label data-i="tz"></label><input id="tz" type="text" placeholder="+03:00"></div>
+    <div class="geoline">
+      <span id="geoSum"></span>
+      <button type="button" class="linkbtn" id="geoEdit" aria-expanded="false" aria-controls="geoFields"></button>
     </div>
-    <label style="display:flex;align-items:center;gap:7px;margin-top:10px;text-transform:none;font-size:13px;color:var(--ink2);cursor:pointer">
-      <input id="showSeconds" type="checkbox" style="width:auto"><span data-i="secondsLabel"></span>
-    </label>
-    <label class="chk" style="display:flex;align-items:center;gap:8px;min-height:44px">
-      <input id="house3d" type="checkbox" style="width:auto"><span data-i="house3d"></span>
-    </label>
-    <div class="tiny" data-i="house3dNote" style="margin:-4px 0 4px"></div>
-    <label class="chk" style="display:flex;align-items:center;gap:8px;min-height:44px">
-      <input id="astOn" type="checkbox" style="width:auto"><span data-i="asteroids"></span>
-      <span class="tiny" id="astState"></span>
-    </label>
-    <div class="tiny" data-i="asteroidsNote" style="margin:-4px 0 4px"></div>
-    <div class="grid" style="margin-top:10px">
-      <div><label data-i="hsysLabel"></label><select id="hsys"></select></div>
-      <div><label data-i="lilLabel"></label><select id="lilmode"></select></div>
-      <!-- A full row: in a half-width column "Современные" and its Georgian were cut
-           on a phone, and the note below it is about this control alone anyway. -->
-      <div style="grid-column:1/-1"><label data-i="rulersLabel"></label><select id="rulerSel"></select></div>
+    <div id="geoFields" hidden>
+      <div class="grid3">
+        <div><label data-i="lat"></label><input id="lat" type="number" step="0.0001"></div>
+        <div><label data-i="lng"></label><input id="lng" type="number" step="0.0001"></div>
+        <div><label data-i="tz"></label><input id="tz" type="text" placeholder="+03:00"></div>
+      </div>
+      <div class="tiny" data-i="hint" style="margin-top:6px"></div>
     </div>
-    <div class="tiny" data-i="rulersNote" style="margin:6px 0 0"></div>
-    <div style="margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+    <div class="formbtns">
       <button class="primary" id="calc" data-i="cast"></button>
-      <span class="tiny" data-i="hint"></span>
+      <button id="saveChart"></button>
     </div>
   </div>
-
-  <!-- The library sits with the form, not with the results: it is the way you
-       avoid filling the form, so hiding it behind a cast chart made it
-       unreachable on a fresh open. -->
-  <details class="card fold" id="libCard">
-    <summary><h2 data-i="libTitle"></h2><span class="tiny" id="libCount"></span></summary>
-    <div class="tiny" id="backupLine" style="margin:0 0 10px"></div>
-    <!-- The name gets its own line: beside the button its placeholder was cut
-         off mid-word on a phone. -->
-    <input id="chartName" style="margin-bottom:10px">
-    <div class="row" style="margin-bottom:10px">
-      <button id="saveChart" data-i="saveChart"></button>
-      <!-- CSV, not a private blob: the point of a personal database is that you
-           can open it in a spreadsheet, fix a birth time and put it back. -->
-      <button id="expCsv" data-i="exportCsv"></button>
-      <button id="impCsv" data-i="importCsv"></button>
-      <input id="impFile" type="file" accept=".csv,text/csv" hidden>
-    </div>
-    <div class="row" style="margin-bottom:10px"><span class="tiny" data-i="libNote"></span></div>
-    <!-- Search and sort rather than folders or tags: a hundred and fifty
-         entries already carry three axes of their own - name, date, place -
-         and a folder tree would force one of them to win permanently. -->
-    <div class="row" style="margin-bottom:10px;gap:8px">
-      <input id="libFind" type="search" autocomplete="off" style="flex:1;min-width:130px">
-      <select id="libSort" style="width:auto;flex:none"></select>
-    </div>
-    <div id="libList"></div>
-  </details>
 
   <div id="results" style="display:none">
 
@@ -685,10 +842,30 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
          moment, slider and step controls are sized to fit one phone screen
          together. -->
     <div class="card" id="chartCard">
-      <h2 id="charttitle"></h2>
+      <!-- The pencil brings the birth-data card back; the bookmark keeps this
+           chart in the library, and fills in once it is there. -->
+      <div class="cardhead charthead">
+        <h2 id="charttitle"></h2><span class="sp"></span>
+        <button type="button" class="ico noprint" id="formEdit" data-i-title="editData">
+          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M15.5 4.8l3.7 3.7L8.6 19.1 4.2 20l.9-4.4z"/></svg></button>
+        <button type="button" class="ico noprint" id="saveQuick">
+          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M6.5 3.8h11v16.4L12 16l-5.5 4.2z"/></svg></button>
+      </div>
       <!-- The data the chart was cast from, on the chart. A printed wheel has
            always carried it, and without it a screenshot is unverifiable. -->
       <div class="chartmeta" id="chartMeta"></div>
+      <!-- How the chart is read, where the chart is. These three change the
+           wheel and the text under it, so they sit over it rather than in the
+           form, where they had to be set before you could see what they did. -->
+      <div class="metactl">
+        <span class="tiny" data-i="tropical"></span>
+        <select id="hsys" data-i-title="hsysLabel"></select>
+        <select id="lilmode" class="lil" data-i-title="lilLabel"></select>
+        <select id="rulerSel" data-i-title="rulersLabel"></select>
+        <button type="button" class="ico info" aria-expanded="false" data-i-title="whatIs">
+          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.6v.1"/></svg></button>
+      </div>
+      <div class="tiny setnote" data-i="rulersNote" hidden></div>
       <div class="ringrow">
         <label class="ringlab" for="ringSel" data-i="ringLabel"></label>
         <select id="ringSel"></select>
@@ -882,7 +1059,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
 /* Bump together with CACHE in sw.js: the two are the same release, and the
    number on screen is how you tell from a phone which one you are looking at. */
-const APP_VERSION='3.15.1';
+const APP_VERSION='3.16.0';
 document.getElementById('ver').textContent=APP_VERSION;
 
 /* ---------- feature flags ----------
@@ -910,8 +1087,11 @@ const FEATURES={interpretation:false};
 /* Two-letter labels, the same ones Cinemail shows, because the control has to
    display exactly one language - the current one - and "\u0423\u043a\u0440\u0430\u0457\u043d\u0441\u044c\u043a\u0430" beside the
    theme switch is a third of a phone's header. The rest live in the dropdown. */
-const LANGS=[['en','EN'],['es','ES'],['fr','FR'],['ru','RU'],
-  ['de','DE'],['it','IT'],['uk','UA'],['ka','KA']];
+/* Each language by its own name. The two-letter codes were for a chip in the
+   header; in the settings panel there is room, and "KA" says nothing to a
+   reader who would recognise ქართული at once. */
+const LANGS=[['en','English'],['es','Español'],['fr','Français'],['ru','Русский'],
+  ['de','Deutsch'],['it','Italiano'],['uk','Українська'],['ka','ქართული']];
 const LANG_CODES=LANGS.map(l=>l[0]);
 let LANG = LANG_CODES.includes(localStorage.getItem('astrarium_lang'))
   ? localStorage.getItem('astrarium_lang') : 'en';
@@ -1080,13 +1260,16 @@ const STR = {
   bkToday:{ru:'Последняя выгрузка: сегодня',en:'Last export: today'},
   bkNotPersisted:{ru:'браузер не гарантирует сохранность этого хранилища',
     en:'the browser does not guarantee this storage'},
-  /* The store build is not a browser, and its risk is a different one. Capacitor's
-     own storage guide: "the OS will reclaim local storage from Web Views if a
-     device is running low on space". Said as that, not as the browser's. */
-  bkNeverNative:{ru:'Карты ни разу не выгружались. При нехватке места iOS может очистить это хранилище.',
-    en:'These charts have never been exported. iOS can clear this storage when the device runs low on space.'},
-  bkRiskNative:{ru:'при нехватке места iOS может очистить это хранилище',
-    en:'iOS can clear this storage when the device runs low on space'},
+  /* The store build is not a browser, and its risk is a different one. Since
+     v3.14.0 the saved charts are mirrored to the platform's own store and come back
+     if the web storage is cleared, so "the system may clear this" is no longer
+     true. What is still true, on iOS and Android alike: they are on this phone
+     only, and they go with the app. The first wording named iOS, and the Android
+     build showed it word for word. */
+  bkNeverNative:{ru:'Карты ни разу не выгружались. Они хранятся только на этом телефоне и пропадут, если удалить приложение.',
+    en:'These charts have never been exported. They are kept on this phone only and go if the app is deleted.'},
+  bkRiskNative:{ru:'карты хранятся только на этом телефоне',
+    en:'the charts are kept on this phone only'},
   chartNote:{ru:'Заметка к карте',en:'Chart note'},
   copied:{ru:'Скопировано',en:'Copied'},
   copyFail:{ru:'Не удалось скопировать',en:'Copy failed'},
@@ -1163,7 +1346,25 @@ const STR = {
   lasttime:{ru:'В прошлый раз',en:'Last time'}, noaspects:{ru:'Крупных аспектов в орбисе нет.',en:'No major aspects within orb.'},
   notransits:{ru:'Сейчас транзитов в орбисе нет.',en:'No transits within orb right now.'},
   learnempty:{ru:'Оцените несколько транзитов выше. Движок строит приватную модель того, как циклы реально проживаются именно вами, ранжирование и тон подстраиваются целиком на этом устройстве.',en:'Rate a few transits above. The engine builds a private model of how cycles actually land for you, ranking and tone adapt entirely on this device.'},
-  foot:{ru:'Положения сверены с JPL Horizons на всех картах библиотеки: расхождение меньше четырёх секунд дуги, для XX века меньше половины. Атлас городов - GeoNames, CC BY 4.0. После первой загрузки ничто здесь не выходит в сеть.',en:'Positions are checked against JPL Horizons on every chart in the library, agreeing to within four arcseconds and to half of one for the twentieth century. City atlas from GeoNames, CC BY 4.0. After the first load nothing here contacts the network.'}
+  foot:{ru:'Положения сверены с JPL Horizons на всех картах библиотеки: расхождение меньше четырёх секунд дуги, для XX века меньше половины. Атлас городов - GeoNames, CC BY 4.0. После первой загрузки ничто здесь не выходит в сеть.',en:'Positions are checked against JPL Horizons on every chart in the library, agreeing to within four arcseconds and to half of one for the twentieth century. City atlas from GeoNames, CC BY 4.0. After the first load nothing here contacts the network.'},
+  /* The layout of 3.16: a header with two buttons, the library and the settings
+     as panels, the name in the birth-data card. The other six languages are
+     added to their packs after I18N, in the same release. */
+  libShort:{ru:'Библиотека',en:'Library'},
+  settings:{ru:'Настройки',en:'Settings'},
+  themeLabel:{ru:'Тема',en:'Theme'},
+  langLabel:{ru:'Язык',en:'Language'},
+  close:{ru:'Закрыть',en:'Close'},
+  whatIs:{ru:'Пояснение',en:'Explanation'},
+  nameLabel:{ru:'Имя (необязательно)',en:'Name (optional)'},
+  saveBtn:{ru:'Сохранить',en:'Save'},
+  savedBtn:{ru:'Сохранено',en:'Saved'},
+  saveToLib:{ru:'Сохранить в библиотеку',en:'Save to the library'},
+  edit:{ru:'изменить',en:'edit'},
+  hide:{ru:'скрыть',en:'hide'},
+  editData:{ru:'Изменить данные рождения',en:'Edit the birth data'},
+  geoNone:{ru:'Координаты и пояс возьмутся из города',en:'Coordinates and offset come from the city'},
+  setChartNote:{ru:'Система домов, Чёрная Луна и управители переключаются над колесом карты.',en:'House system, Black Moon and rulers are switched above the chart wheel.'},
 };
 /* ---------- the six added languages ----------
    Language-major, one block per language, because that is how a translator
@@ -1496,6 +1697,110 @@ const I18N={
     foot:"პოზიციები შედარებულია JPL Horizons-თან ბიბლიოთეკის ყველა რუკაზე: სხვაობა ოთხ რკალის წამზე ნაკლებია, მეოცე საუკუნისთვის კი ნახევარზე ნაკლები. ქალაქების ატლასი - GeoNames, CC BY 4.0. პირველი ჩატვირთვის შემდეგ აქედან ქსელში არაფერი გადის.",
   },
 };
+/* The 3.16 layout: header, panels and the birth-data card, language-major like
+   the packs above. */
+Object.assign(I18N.es,{
+  libShort:"Biblioteca",
+  settings:"Ajustes",
+  themeLabel:"Tema",
+  langLabel:"Idioma",
+  close:"Cerrar",
+  whatIs:"Explicación",
+  nameLabel:"Nombre (opcional)",
+  saveBtn:"Guardar",
+  savedBtn:"Guardada",
+  saveToLib:"Guardar en la biblioteca",
+  edit:"editar",
+  hide:"ocultar",
+  editData:"Editar los datos de nacimiento",
+  geoNone:"Las coordenadas y el desfase salen de la ciudad",
+  setChartNote:"El sistema de casas, la Luna Negra y los regentes se cambian sobre la rueda de la carta."
+});
+Object.assign(I18N.fr,{
+  libShort:"Bibliothèque",
+  settings:"Réglages",
+  themeLabel:"Thème",
+  langLabel:"Langue",
+  close:"Fermer",
+  whatIs:"Explication",
+  nameLabel:"Nom (facultatif)",
+  saveBtn:"Enregistrer",
+  savedBtn:"Enregistrée",
+  saveToLib:"Enregistrer dans la bibliothèque",
+  edit:"modifier",
+  hide:"masquer",
+  editData:"Modifier les données de naissance",
+  geoNone:"Les coordonnées et le décalage viennent de la ville",
+  setChartNote:"Le système de maisons, la Lune noire et les maîtres se changent au-dessus de la roue."
+});
+Object.assign(I18N.de,{
+  libShort:"Bibliothek",
+  settings:"Einstellungen",
+  themeLabel:"Darstellung",
+  langLabel:"Sprache",
+  close:"Schließen",
+  whatIs:"Erklärung",
+  nameLabel:"Name (optional)",
+  saveBtn:"Speichern",
+  savedBtn:"Gespeichert",
+  saveToLib:"In der Bibliothek speichern",
+  edit:"ändern",
+  hide:"ausblenden",
+  editData:"Geburtsdaten ändern",
+  geoNone:"Koordinaten und Versatz kommen aus dem Ort",
+  setChartNote:"Häusersystem, Schwarzer Mond und Herrscher werden über dem Chartrad umgeschaltet."
+});
+Object.assign(I18N.it,{
+  libShort:"Biblioteca",
+  settings:"Impostazioni",
+  themeLabel:"Tema",
+  langLabel:"Lingua",
+  close:"Chiudi",
+  whatIs:"Spiegazione",
+  nameLabel:"Nome (facoltativo)",
+  saveBtn:"Salva",
+  savedBtn:"Salvata",
+  saveToLib:"Salva nella biblioteca",
+  edit:"modifica",
+  hide:"nascondi",
+  editData:"Modifica i dati di nascita",
+  geoNone:"Coordinate e scarto arrivano dalla città",
+  setChartNote:"Sistema di case, Luna Nera e governatori si cambiano sopra la ruota della carta."
+});
+Object.assign(I18N.uk,{
+  libShort:"Бібліотека",
+  settings:"Налаштування",
+  themeLabel:"Тема",
+  langLabel:"Мова",
+  close:"Закрити",
+  whatIs:"Пояснення",
+  nameLabel:"Ім’я (необов’язково)",
+  saveBtn:"Зберегти",
+  savedBtn:"Збережено",
+  saveToLib:"Зберегти в бібліотеку",
+  edit:"змінити",
+  hide:"сховати",
+  editData:"Змінити дані народження",
+  geoNone:"Координати й пояс візьмуться з міста",
+  setChartNote:"Система домів, Чорний Місяць і управителі перемикаються над колом карти."
+});
+Object.assign(I18N.ka,{
+  libShort:"ბიბლიოთეკა",
+  settings:"პარამეტრები",
+  themeLabel:"თემა",
+  langLabel:"ენა",
+  close:"დახურვა",
+  whatIs:"განმარტება",
+  nameLabel:"სახელი (არასავალდებულო)",
+  saveBtn:"შენახვა",
+  savedBtn:"შენახულია",
+  saveToLib:"ბიბლიოთეკაში შენახვა",
+  edit:"შეცვლა",
+  hide:"დამალვა",
+  editData:"დაბადების მონაცემების შეცვლა",
+  geoNone:"კოორდინატები და სარტყელი ქალაქიდან აიღება",
+  setChartNote:"სახლების სისტემა, შავი მთვარე და მმართველები რუკის წრის ზემოთ გადაირთვება."
+});
 /* STR holds the two languages the app was written in, key-major, which is how
    they were edited. I18N holds the six added afterwards, language-major, which
    is how a translator reads them. Lookup order: added pack, then STR for this
@@ -2319,6 +2624,11 @@ function formatOffset(h){
   const sign=h<0?'-':'+', a=Math.abs(h); let hh=Math.floor(a+1e-9), mm=Math.round((a-hh)*60);
   if(mm===60){mm=0;hh++;}
   return sign+String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0');
+}
+/* UTC+3 rather than UTC+03:00 when the offset is whole: the chart header and
+   the coordinates line both have one line on a phone to spend. */
+function utcLabel(tz){
+  return tz===Math.trunc(tz)?`UTC${tz<0?'-':'+'}${Math.abs(tz)}`:`UTC${formatOffset(tz)}`;
 }
 function parseOffset(str){
   const m=/^\s*([+-])?\s*(\d{1,2})(?::?(\d{2}))?\s*$/.exec(str||'');
@@ -5956,9 +6266,18 @@ const PARITY_CHARTS=[
    changed nothing in the classical layer. The other two follow, each under a
    header line. */
 function parityDigest(){
-  return [parityFor('classical'),
-    '== rulers:modern\n'+parityFor('modern'),
-    '== rulers:both\n'+parityFor('both')].join('\n--\n');
+  /* Pinned to the settings parity.txt was generated with, and put back after.
+     Without this the digest read whatever the person had chosen: on the Android
+     emulator on 11 Oct 2026 asteroids had been switched on, Ceres appeared in the
+     digest, and the probe reported a mismatch in a build that was correct. The
+     test suite never saw it because it clears the settings before every run. */
+  const keep={HSYS,LILMODE,HOUSE_3D,ASTEROIDS};
+  HSYS='placidus'; LILMODE='mean'; HOUSE_3D=false; ASTEROIDS=false;
+  try{
+    return [parityFor('classical'),
+      '== rulers:modern\n'+parityFor('modern'),
+      '== rulers:both\n'+parityFor('both')].join('\n--\n');
+  }finally{ ({HSYS,LILMODE,HOUSE_3D,ASTEROIDS}=keep); }
 }
 function parityFor(mode){
   const S=['Ari','Tau','Gem','Cnc','Leo','Vir','Lib','Sco','Sgr','Cap','Aqr','Psc'];
@@ -6766,6 +7085,7 @@ function updateTzAuto(){
   const [hh,mi]=tv.split(':').map(Number);
   const off=ianaOffset(SELECTED_CITY.z,y,mo,da,hh,mi);
   if(off!=null) document.getElementById('tz').value=formatOffset(off);
+  renderGeoSum();
 }
 /* ---------- chart balance ----------
    Counts, and only counts. Which element is short is a fact about the chart;
@@ -7131,6 +7451,9 @@ function upgradeSelect(sel){
        shows the full one. */
     const o=sel.selectedOptions[0];
     btn.textContent=o?(o.dataset.short||o.textContent):'';
+    /* A chip shows only the value, so the name of what it sets rides along as
+       a tooltip. The labels are stored in capitals for the form; not here. */
+    if(sel.title) btn.title=sel.title.charAt(0)+sel.title.slice(1).toLowerCase();
     list.innerHTML=[...sel.options].map((o,i)=>
       `<div class="ddopt${o.selected?' on':''}" role="option" data-i="${i}" tabindex="-1">${o.textContent}</div>`).join('');
     list.querySelectorAll('.ddopt').forEach(el=>el.addEventListener('click',()=>{
@@ -7200,6 +7523,7 @@ function selectCity(c){
   document.getElementById('lng').value=c.lon;
   document.getElementById('citylist').style.display='none';
   updateTzAuto();
+  renderGeoSum(); syncSaveBtn();
 }
 function applyStatic(){
   document.querySelectorAll('[data-i]').forEach(el=>el.textContent=t(el.dataset.i));
@@ -7245,7 +7569,7 @@ function renderChartMeta(ch,y,mo,da,hh,mi,tz){
      375px phone: no brackets round the offset, no minutes when the offset has
      none, and the date, weekday and time run together the way a printed chart
      writes them. */
-  const off=tz===Math.trunc(tz)?`UTC${tz<0?'-':'+'}${Math.abs(tz)}`:`UTC${formatOffset(tz)}`;
+  const off=utcLabel(tz);
   const line1=[
     `<b>${String(da).padStart(2,'0')}.${String(mo).padStart(2,'0')}.${y}</b>`
       +` ${weekdayName(y,mo,da)} <b>${pad2(hh)}:${pad2(mi)}</b> ${off}`,
@@ -7277,8 +7601,10 @@ function renderChartMeta(ch,y,mo,da,hh,mi,tz){
     const pe=partnerEntry();
     if(pe) who=(who||t('natal'))+' &amp; <b>'+partnerName(pe)+'</b>';
   }
-  el.innerHTML=[who, line1, line2]
-    .filter(Boolean).map(x=>`<div>${x}</div>`).join('');
+  /* The third line is for paper. On screen the chips under it say the same
+     thing and can be changed; printed, the chips are gone and this stays. */
+  el.innerHTML=[who, line1].filter(Boolean).map(x=>`<div>${x}</div>`).join('')
+    +`<div class="printonly">${line2}</div>`;
 }
 function scrollChartIntoView(){
   const card=document.getElementById('chartCard'), hdr=document.querySelector('header');
@@ -7314,7 +7640,7 @@ function restoreForm(){
   FORM_FIELDS.forEach(id=>{const e=document.getElementById(id);
     if(e&&o[id]!=null&&o[id]!=='') e.value=o[id];});
   if(o.__city&&typeof SELECTED_CITY!=='undefined') SELECTED_CITY=o.__city;
-  syncSaveBtn&&syncSaveBtn();
+  syncSaveBtn(); renderGeoSum();
   return !!(o.date&&o.time);
 }
 
@@ -7322,7 +7648,11 @@ function run(){
   const dv=document.getElementById('date').value, tv=document.getElementById('time').value;
   const lat=parseFloat(document.getElementById('lat').value), lng=parseFloat(document.getElementById('lng').value);
   const tz=parseOffset(document.getElementById('tz').value);
-  if(!dv||!tv||isNaN(lat)||isNaN(lng)||isNaN(tz)){ alert(t('needdata')); return; }
+  if(!dv||!tv||isNaN(lat)||isNaN(lng)||isNaN(tz)){
+    /* The coordinates are behind a line now, so a chart that fails on them has
+       to show where they are, or the message names fields nobody can see. */
+    if(dv&&tv) setGeoOpen(true);
+    alert(t('needdata')); return false; }
   const [y,mo,da]=dv.split('-').map(Number);
   const [hh,mi]=tv.split(':').map(Number);
   /* Kept so the same moment can be recast at another place. Relocation is
@@ -7336,9 +7666,7 @@ function run(){
   BIRTH_MS=utcMs(y,mo,da,0,0,0)+Math.round((hh+mi/60-tz)*3600000);
   document.getElementById('results').style.display='';
   document.getElementById('emptycard').style.display='none';
-  const hs=HOUSE_SYSTEMS[CURRENT.houses.system];
-  document.getElementById('charttitle').textContent=
-    `${t('natal')} · ${(hs?LX(hs):CURRENT.houses.system)}`;
+  document.getElementById('charttitle').textContent=chartTitle(CURRENT);
   renderPositions(CURRENT); renderBalance(CURRENT); renderChartMeta(CURRENT,y,mo,da,hh,mi,tz);
   fillExport();
   saveForm();
@@ -7352,6 +7680,16 @@ function run(){
      in. The header is sticky and translucent, so the offset is measured rather
      than written down: it changes with the language and the window width. */
   scrollChartIntoView();
+  syncSaveBtn();
+  return true;
+}
+/* The house system is on its chip under the title, so the title names it only
+   when the chart could not use the one asked for - Placidus and Koch beyond the
+   polar circle, which fall back to equal houses. Then the two disagree on
+   purpose, and the title is the one that is true. */
+function chartTitle(ch){
+  const sys=ch.houses.system, hs=HOUSE_SYSTEMS[sys];
+  return sys===HSYS ? t('natal') : `${t('natal')} · ${hs?LX(hs):sys}`;
 }
 let CAST_ARGS=null, RELOC=null;
 /* Recast the same instant at another place. Only the angles and the houses
@@ -7365,9 +7703,7 @@ function applyRelocation(){
   const lat=RELOC?RELOC.lat:a.lat, lng=RELOC?RELOC.lon:a.lng;
   CURRENT=computeChart(a.y,a.mo,a.da,a.hh+a.mi/60,a.tz,lat,lng);
   ISO=null; CONF_ISO=null;
-  const hs=HOUSE_SYSTEMS[CURRENT.houses.system];
-  document.getElementById('charttitle').textContent=
-    `${t('natal')} · ${(hs?LX(hs):CURRENT.houses.system)}`;
+  document.getElementById('charttitle').textContent=chartTitle(CURRENT);
   renderPositions(CURRENT); renderBalance(CURRENT);
   renderChartMeta(CURRENT,a.y,a.mo,a.da,a.hh,a.mi,a.tz);
   renderTransits(CURRENT);
@@ -7380,7 +7716,9 @@ function renderRelocBrief(){
 /* Birth moment in UTC ms, so the scrubber can jump back to it. Held apart from
    the chart because a chart is positions and a moment is a clock reading. */
 let BIRTH_MS=null;
-document.getElementById('calc').addEventListener('click',run);
+/* A cast from the button puts the form away; a recast from a chip or the
+   language does not, because whoever opened the form is still in it. */
+document.getElementById('calc').addEventListener('click',()=>{ if(run()) setFormOpen(false); });
 document.getElementById('reset').addEventListener('click',()=>{localStorage.removeItem(LKEY);if(CURRENT)renderTransits(CURRENT);});
 
 /* ---- scrubber wiring ---- */
@@ -7450,6 +7788,7 @@ document.getElementById('langSel').addEventListener('change',e=>{
   applyStatic(); fillHsys(); fillLil(); fillRulers(); renderOrbs(); fillScrubUnit(); renderRingSwitch();
   setPlaying(PLAYING); fillNamePh(); fillLibSort(); renderLibrary();
   upgradeAllSelects(); repaintDropdowns();
+  renderGeoSum(); setGeoOpen(!document.getElementById('geoFields').hidden);
   if(CURRENT)run();
 });
 fillLangSel();
@@ -7465,7 +7804,9 @@ document.getElementById('tz').addEventListener('input',()=>{TZ_AUTO=false;});
    houses, which is why the title reports the system actually used, not the one
    requested. */
 function fillNamePh(){
-  const el=document.getElementById('chartName'); if(el) el.placeholder=t('namePh');
+  /* No example. "For example, mum" was a guess at who the user is, and the
+     label above the field already says what goes in it. */
+  const el=document.getElementById('chartName'); if(el) el.placeholder='';
 }
 function fillHsys(){
   const sel=document.getElementById('hsys');
@@ -7487,7 +7828,10 @@ document.getElementById('lilmode').addEventListener('change',e=>{
 });
 function fillRulers(){
   const sel=document.getElementById('rulerSel');
-  sel.innerHTML=RULER_MODES.map(m=>`<option value="${m}"${m===RULER_MODE?' selected':''}>${t('rulers_'+m)}</option>`).join('');
+  /* The closed chip says what it is as well as which: "Modern" alone, among
+     three chips over a wheel, does not say modern what. */
+  const lab=t('rulersLabel'), name=lab.charAt(0)+lab.slice(1).toLowerCase();
+  sel.innerHTML=RULER_MODES.map(m=>`<option value="${m}" data-short="${name}: ${t('rulers_'+m).toLowerCase()}"${m===RULER_MODE?' selected':''}>${t('rulers_'+m)}</option>`).join('');
 }
 /* No recast: the positions do not change, only what is read from them. The
    facts are cached per mode, so switching back is instant. */
@@ -7856,6 +8200,7 @@ function renderLibrary(){
      than as one more empty fold to skip. */
   const c=document.getElementById('libCount');
   if(c) c.textContent=libCountText(hit.length, all.length);
+  syncSaveBtn();
 }
 function loadChartEntry(e,own){
   const tz=own?e.tz:libTz(e);
@@ -7866,12 +8211,15 @@ function loadChartEntry(e,own){
   document.getElementById('lng').value=e.lon;
   document.getElementById('tz').value=formatOffset(tz);
   document.getElementById('city').value=own?e.city:LX(e.city);
+  /* The name comes along: it heads the chart, and a saved chart loaded back
+     should read as saved rather than offer to be saved a second time. */
+  document.getElementById('chartName').value=own?(e.name||''):LX(e.name);
   TZ_AUTO=false;
-  /* Fold the list away, otherwise picking a chart leaves the whole library
+  /* Close the panel, otherwise picking a chart leaves the whole library
      between you and the wheel you just asked for. */
-  const card=document.getElementById('libCard'); if(card) card.open=false;
+  closePanel('libCard');
   /* Setting .value does not fire input, so the save button has to be told. */
-  syncSaveBtn();
+  syncSaveBtn(); renderGeoSum();
   document.getElementById('calc').click();
 }
 document.getElementById('libList').addEventListener('click',function(ev){
@@ -7885,29 +8233,53 @@ document.getElementById('libList').addEventListener('click',function(ev){
               : CHART_LIBRARY.find(x=>x.id===it.dataset.id);
   if(e) loadChartEntry(e,own);
 });
-/* Without a date and a time there is nothing to save, and a button that does
-   nothing when pressed reads as broken rather than as unavailable. */
-function syncSaveBtn(){
-  const b=document.getElementById('saveChart'); if(!b) return;
-  b.disabled=!(document.getElementById('date').value && document.getElementById('time').value);
+const formVal=id=>((document.getElementById(id)||{}).value||'').trim();
+/* What a chart saved from the form is called: its name, or the city, or the
+   date, so that no row in the library is blank. */
+function formSaveName(){
+  const nm=formVal('chartName'); if(nm) return nm;
+  const city=formVal('city'), d=formVal('date');
+  if(city||!d) return city;
+  const p=d.split('-').map(Number); return `${p[2]}.${p[1]}.${p[0]}`;
 }
-['date','time'].forEach(id=>document.getElementById(id).addEventListener('input',syncSaveBtn));
+/* Whether the form already stands in the library. Compared by value, so a chart
+   loaded from the library reads as saved, and the first edit undoes that. */
+function formIsSaved(){
+  const d=formVal('date'), tm=formVal('time'); if(!d||!tm) return false;
+  const p=d.split('-').map(Number), q=tm.split(':').map(Number), h=q[0]+q[1]/60;
+  const lat=parseFloat(formVal('lat')), lon=parseFloat(formVal('lng')), nm=formSaveName();
+  return savedCharts().some(e=>e.y===p[0]&&e.mo===p[1]&&e.d===p[2]&&e.t!=null
+    &&Math.abs(e.t-h)<1/120&&Math.abs(e.lat-lat)<1e-4&&Math.abs(e.lon-lon)<1e-4&&e.name===nm);
+}
+/* Without a date and a time there is nothing to save, and a button that does
+   nothing when pressed reads as broken rather than as unavailable. Once saved,
+   both buttons say so: with the library in a panel, a save that changes
+   nothing on screen would be a save nobody can see happened. */
+function syncSaveBtn(){
+  const b=document.getElementById('saveChart'), q=document.getElementById('saveQuick');
+  if(!b) return;
+  const can=!!(formVal('date')&&formVal('time')), saved=can&&formIsSaved();
+  b.disabled=!can||saved;
+  b.textContent=t(saved?'savedBtn':'saveBtn');
+  if(q){ q.disabled=saved; q.classList.toggle('on',saved);
+    const l=t(saved?'savedBtn':'saveToLib'); q.title=l; q.setAttribute('aria-label',l); }
+}
+FORM_FIELDS.forEach(id=>document.getElementById(id).addEventListener('input',()=>{
+  syncSaveBtn(); if(id==='lat'||id==='lng'||id==='tz') renderGeoSum(); }));
 syncSaveBtn();
+document.getElementById('saveQuick').addEventListener('click',()=>document.getElementById('saveChart').click());
 document.getElementById('saveChart').addEventListener('click',function(){
   const d=document.getElementById('date').value, tm=document.getElementById('time').value;
   if(!d||!tm) return;
   const p=d.split('-').map(Number), q=tm.split(':').map(Number);
-  const cityV=(document.getElementById('city').value||'').trim();
-  const nameEl=document.getElementById('chartName');
-  const nm=(nameEl.value||'').trim()||cityV||`${p[2]}.${p[1]}.${p[0]}`;
+  const cityV=formVal('city'), nm=formSaveName();
   const list=savedCharts();
   list.unshift({id:'u'+Date.now(), name:nm,
     y:p[0], mo:p[1], d:p[2], t:q[0]+q[1]/60,
     lat:+document.getElementById('lat').value, lon:+document.getElementById('lng').value,
     tz:parseOffset(document.getElementById('tz').value), city:cityV, rr:'A', src:''});
-  nameEl.value='';
   writeCharts(list.slice(0,LIB_CAP));
-  renderLibrary(); renderBackupLine(); askPersistence();
+  renderLibrary(); renderBackupLine(); askPersistence(); syncSaveBtn();
 });
 
 /* ---------- CSV exchange ----------
@@ -7986,9 +8358,28 @@ document.getElementById('expCsv').addEventListener('click',async()=>{
      backup that is recorded and not made is worse than none. The share sheet
      hands the file to Files, AirDrop or Mail, and only a share that completed
      counts as an export; a cancelled one records nothing. */
-  if(inStoreShell()&&navigator.share){
-    const file=new File([libToCsv()],`astrotrip-charts-${todayStr()}.csv`,{type:'text/csv'});
+  /* Two paths, one per platform, because neither works on both. iOS goes
+     through Web Share, which opens the sheet there; Capacitor's Share plugin
+     wrote the file on iOS but opened no sheet. Android's WebView has no Web
+     Share at all (Android 16, WebView 133: navigator.share undefined), so there
+     the file is written to the app's cache by the Filesystem plugin and handed
+     to the sheet by the Share plugin. Without either, the <a download> below
+     wrote nothing on Android while the line above said "last export: today" -
+     the fault the iOS build had first. */
+  const fname=`astrotrip-charts-${todayStr()}.csv`;
+  if(inStoreShell()&&navigator.share&&navigator.canShare&&
+     navigator.canShare({files:[new File(['a'],'a.csv',{type:'text/csv'})]})){
+    const file=new File([libToCsv()],fname,{type:'text/csv'});
     try{ await navigator.share({files:[file]}); markExported(); }catch(e){}
+    return;
+  }
+  const CP=inStoreShell()&&window.Capacitor&&window.Capacitor.Plugins;
+  if(CP&&CP.Filesystem&&CP.Share){
+    try{
+      const w=await CP.Filesystem.writeFile({path:fname,data:libToCsv(),directory:'CACHE',encoding:'utf8'});
+      await CP.Share.share({title:fname,files:[w.uri]});
+      markExported();                     // only a share that completed counts
+    }catch(e){}
     return;
   }
   const blob=new Blob([libToCsv()],{type:'text/csv;charset=utf-8'});
@@ -8116,7 +8507,98 @@ document.getElementById('exportCard').addEventListener('toggle',fillExport);
         renderTransits(CURRENT); fillExport(); if(ISO) showDetail(ISO,CURRENT); }
     }); }
 }
-if(restoreForm()) run();
+/* ---------- the birth-data card ----------
+   Open while there is no chart, out of the way once there is one. The chart's
+   header already says who, when and where, so a folded summary of the form
+   above it would have said the same thing twice. */
+function renderGeoSum(){
+  const el=document.getElementById('geoSum'); if(!el) return;
+  const lat=parseFloat(formVal('lat')), lng=parseFloat(formVal('lng')), tz=parseOffset(formVal('tz'));
+  el.textContent=isNaN(lat)||isNaN(lng) ? t('geoNone')
+    : fmtGeo(lat,lng)+(isNaN(tz)?'':' · '+utcLabel(tz));
+}
+function setGeoOpen(open){
+  const f=document.getElementById('geoFields'), b=document.getElementById('geoEdit');
+  f.hidden=!open; b.setAttribute('aria-expanded',String(open)); b.textContent=t(open?'hide':'edit');
+}
+document.getElementById('geoEdit').addEventListener('click',()=>
+  setGeoOpen(document.getElementById('geoFields').hidden));
+/* What the form held when it was opened over a chart, so that closing it
+   without casting puts the chart's own data back. Otherwise the bookmark on
+   the chart would save half-edited fields under the chart's name. */
+let FORM_SNAP=null;
+function snapForm(){
+  const o={}; FORM_FIELDS.forEach(id=>o[id]=formVal(id));
+  return {o, city:SELECTED_CITY, auto:TZ_AUTO};
+}
+function setFormOpen(open){
+  if(!CURRENT) open=true;                   // nothing cast yet: the form is the page
+  const card=document.getElementById('formCard');
+  if(open&&card.hidden) FORM_SNAP=snapForm();
+  if(!open) FORM_SNAP=null;
+  card.hidden=!open;
+  document.getElementById('formClose').hidden=!(open&&CURRENT);
+  document.getElementById('formEdit').hidden=open;
+  document.getElementById('saveQuick').hidden=open;
+  if(!open){ setGeoOpen(false); scrollChartIntoView(); }
+}
+document.getElementById('formEdit').addEventListener('click',()=>{
+  setFormOpen(true);
+  const hdr=document.querySelector('header'), card=document.getElementById('formCard');
+  window.scrollTo(0,Math.max(0,card.getBoundingClientRect().top+window.scrollY-(hdr?hdr.offsetHeight:0)-8));
+});
+document.getElementById('formClose').addEventListener('click',()=>{
+  const s=FORM_SNAP;
+  if(s){ FORM_FIELDS.forEach(id=>{document.getElementById(id).value=s.o[id];});
+    SELECTED_CITY=s.city; TZ_AUTO=s.auto; renderGeoSum(); syncSaveBtn(); }
+  setFormOpen(false);
+});
+
+/* ---------- panels ----------
+   Each opens over the page and adds a history entry, so the Android back
+   button, a browser's back and Escape all close it rather than leaving the app
+   or the page. */
+function openPanel(id,byPointer){
+  const d=document.getElementById(id); if(!d||d.open) return;
+  closeDropdown();
+  if(id==='libCard'){ renderLibrary(); renderBackupLine(); }
+  if(typeof d.showModal==='function') d.showModal(); else d.setAttribute('open','');
+  /* showModal focuses the first control, and WebKit draws its ring even after a
+     tap: the close button opened outlined in the iOS build. Opened by a finger
+     or a mouse, focus goes to the panel itself, which has no ring and still
+     keeps Escape and the tab order inside. From the keyboard it stays put. */
+  if(byPointer){ const pin=d.querySelector('.panelin'); if(pin) pin.focus({preventScroll:true}); }
+  try{ history.pushState({panel:id},''); }catch(e){}
+}
+function closePanel(id){
+  const d=document.getElementById(id); if(!d||!d.open) return;
+  if(typeof d.close==='function') d.close(); else d.removeAttribute('open');
+}
+document.querySelectorAll('dialog.panel').forEach(d=>{
+  d.addEventListener('close',()=>{
+    closeDropdown();
+    if(history.state&&history.state.panel===d.id) history.back();
+  });
+  d.addEventListener('click',e=>{
+    if(e.target===d||e.target.closest('[data-close]')) closePanel(d.id);
+  });
+});
+addEventListener('popstate',()=>
+  document.querySelectorAll('dialog.panel[open]').forEach(d=>closePanel(d.id)));
+/* detail is 0 for a click made with Enter or Space, the click count otherwise. */
+document.getElementById('libBtn').addEventListener('click',e=>openPanel('libCard',e.detail>0));
+document.getElementById('setBtn').addEventListener('click',e=>openPanel('setCard',e.detail>0));
+/* An "i" opens the note that follows its row. One handler for all of them. */
+document.addEventListener('click',e=>{
+  const b=e.target.closest('button.info'); if(!b) return;
+  const row=b.closest('.setrow,.metactl'), note=row&&row.nextElementSibling;
+  if(!note||!note.classList.contains('setnote')) return;
+  note.hidden=!note.hidden; b.setAttribute('aria-expanded',String(!note.hidden));
+});
+renderGeoSum(); setGeoOpen(false);
+
+if(restoreForm()&&run()) setFormOpen(false);
+else setFormOpen(true);
 /* iOS does not reload the page when the app returns from the background, so
    nothing else would write the form back; and when it does reclaim the app,
    the last thing written is what comes back. */
