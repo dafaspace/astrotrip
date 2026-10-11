@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Before Android 12 this is the whole launch screen; from 12 on the system draws the
+     app icon on windowSplashScreenBackground instead. Both are the paper colour. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/launch_background"/>
+</shape>

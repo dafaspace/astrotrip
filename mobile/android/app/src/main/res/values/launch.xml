@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The app's paper colour, so the launch is the first screen with nothing on it
+         yet, not somebody else's logo. Light here, dark in values-night. -->
+    <color name="launch_background">#F9F7F3</color>
+</resources>

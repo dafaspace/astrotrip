@@ -71,13 +71,13 @@ fi
 
 # sync, not copy: copy moves the web files only, and a plugin added to package.json
 # would then be missing from the native project until somebody remembered update.
-node_modules/.bin/cap sync ios >/dev/null
-echo "[sync] cap sync ios: done"
+node_modules/.bin/cap sync >/dev/null
+echo "[sync] cap sync ios android: done"
 
 # Verify the bundle Xcode will actually use, not only www/.
-node - "$DST" "ios/App/App/public" "$PROBE" <<'CHECK'
+node - "$DST" "ios/App/App/public" "android/app/src/main/assets/public" "$PROBE" <<'CHECK'
 const fs=require('fs'), path=require('path');
-const [www, pub, probe]=process.argv.slice(2);
+const [www, pub, apub, probe]=process.argv.slice(2);
 const html=fs.readFileSync(path.join(www,'index.html'),'utf8');
 const refs=new Set();
 const add=p=>{ p=String(p).split('?')[0].split('#')[0].replace(/^\.\//,'');
@@ -89,7 +89,7 @@ for(const m of html.matchAll(/'(\.\/[a-z0-9_.-]+\.js)\?v=/gi)) add(m[1]);
 // Loaded only by the web build, guarded by NATIVE in index.html.
 for(const webOnly of ['sw.js','manifest.json','icon-192.png','apple-touch-icon.png']) refs.delete(webOnly);
 let bad=0;
-for(const dir of [www,pub]){
+for(const dir of [www,pub,apub].filter(d=>fs.existsSync(d))){
   const missing=[...refs].filter(p=>!fs.existsSync(path.join(dir,p)));
   if(missing.length){ bad=1; console.error(`[verify] FAIL: ${dir} lacks ${missing.join(', ')}`); }
   else console.log(`[verify] ok: ${dir} has all ${refs.size} files the app loads`);
@@ -98,7 +98,7 @@ for(const dir of [www,pub]){
 const forbidden=['test.html','tools-parity.html','tools-parity.sh','tools-asteroids.mjs',
   'tools-astro-font.py','tools-swe-reference.py','swe_reference.json','README.md','MARKET.md','sw.js'];
 if(probe!=='1') forbidden.push('parity.txt','probe.js');
-for(const dir of [www,pub]){
+for(const dir of [www,pub,apub].filter(d=>fs.existsSync(d))){
   const present=forbidden.filter(f=>fs.existsSync(path.join(dir,f)));
   if(present.length){ bad=1; console.error(`[verify] FAIL: ${dir} carries ${present.join(', ')}`); }
   if(probe!=='1' && /probe\.js/.test(fs.readFileSync(path.join(dir,'index.html'),'utf8'))){
