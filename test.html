@@ -2552,17 +2552,51 @@ function run(){
     }
     return true;
   });
-  t('система домов, Лилит и управители над колесом, кнопки называют себя',()=>{
+  /* Над колесом остаётся то, что меняют, глядя на карту: система домов
+     (в каком доме планета на куспиде по Коху). Лилит там сказана текстом,
+     потому что её вариант должен быть на скриншоте. Управители колеса не
+     меняют вовсе, а орбисы, Лилит и управители - это настройка школы, один
+     раз, и она вся в одном месте. */
+  t('над колесом система домов и Лилит текстом, школа целиком в настройках',()=>{
     const row=D.querySelector('#chartCard .metactl');
     if(!row) return 'ряда нет';
-    const bad=[];
-    for(const id of ['hsys','lilmode','rulerSel'])
-      if(!row.querySelector('#'+id)) bad.push(id+' не над колесом');
-    const rb=D.getElementById('rulerSel').parentNode.querySelector('.ddbtn').textContent;
-    const word=ev(`t('rulersLabel')`).toLowerCase();
-    if(!rb.toLowerCase().startsWith(word)) bad.push('кнопка управителей не называет себя: '+rb);
+    const bad=[], set=D.getElementById('setCard');
+    if(!row.querySelector('#hsys')) bad.push('системы домов нет над колесом');
+    if(row.querySelectorAll('select').length!==1) bad.push('над колесом не один переключатель');
+    const lil=D.getElementById('lilText').textContent;
+    if(!lil.includes(ev(`t(LILMODE==='true'?'m_true':'m_mean')`))) bad.push('Лилит не названа над колесом: '+lil);
+    for(const id of ['hsysSet','lilmode','rulerSel','orbCard','astOn','house3d'])
+      if(!set.querySelector('#'+id)) bad.push(id+' не в настройках');
+    if(D.querySelector('#results #orbCard')) bad.push('орбисы остались среди результатов');
     if(D.getElementById('formCard').querySelector('select')) bad.push('в форме остались выпадающие списки');
     return bad.length===0||bad.join('; ');
+  });
+  t('система домов над колесом и в настройках - одно значение',()=>{
+    const r=ev(`(()=>{const keep=HSYS, a=document.getElementById('hsys'), b=document.getElementById('hsysSet');
+      b.value='koch'; b.dispatchEvent(new Event('change'));
+      const out={hs:HSYS, chip:a.value, chipBtn:a.parentNode.querySelector('.ddbtn').textContent,
+        title:document.getElementById('charttitle').textContent};
+      a.value=keep; a.dispatchEvent(new Event('change'));
+      out.back=b.value===keep&&HSYS===keep; return out;})()`);
+    if(r.hs!=='koch') return 'настройка не дошла до расчёта';
+    if(r.chip!=='koch') return 'кнопка над колесом не последовала';
+    if(r.chipBtn!==ev(`LX(HOUSE_SYSTEMS.koch)`)) return 'на кнопке над колесом '+r.chipBtn;
+    return r.back||'обратный путь, от кнопки к настройке, не сработал';
+  });
+  t('карточка планеты называет управителей и ведёт к их строке в настройках',()=>{
+    const r=ev(`(()=>{showDetail('Moon',CURRENT);
+      const line=document.querySelector('#detail .rulersline'), b=line&&line.querySelector('[data-open-set]');
+      const out={text:line&&line.textContent, copy:COPY_SOURCES.detail()};
+      if(b){ b.click(); const set=document.getElementById('setCard');
+        out.open=set.open; out.flash=!!set.querySelector('.setrow.flash #rulerSel');
+        closePanel('setCard'); }
+      return out;})()`);
+    const want=ev(`t('setRulers')+': '+t('rulers_'+RULER_MODE).toLowerCase()`);
+    if(!r.text||!r.text.includes(want)) return 'строки нет или она другая: '+r.text;
+    if(!r.open) return 'настройки не открылись';
+    if(!r.flash) return 'строка управителей не отмечена';
+    if(/Копировать|Copy\b|изменить|\bedit\b/.test(r.copy)) return 'в копию попали подписи кнопок';
+    return r.copy.includes(want)||'в копии нет схемы управителей';
   });
   t('сохранённая карта отмечена на закладке, правка снимает отметку',()=>{
     const K='astrarium_charts', backup=W.localStorage.getItem(K);
@@ -3131,12 +3165,16 @@ function run(){
     return r.ok||'портрет пуст при включённых минорных';
   });
   t('в списке орбисов ничего не обрезано и строки не ниже 44 px',()=>{
-    const r=ev(`(()=>{document.getElementById('orbCard').open=true;
+    /* Орбисы теперь в панели настроек: она открывается без модальности, чтобы
+       не трогать историю, и закрывается после замера. */
+    const r=ev(`(()=>{const set=document.getElementById('setCard');
+      set.open=true; document.getElementById('orbCard').open=true;
       const rows=[...document.querySelectorAll('.orbrow')];
       return {rows:rows.length,
         clipped:[...document.querySelectorAll('.orbrow .nm')]
           .filter(e=>e.scrollWidth>e.clientWidth+1).map(e=>e.textContent),
         short:rows.filter(r=>r.getBoundingClientRect().height<44).length};})()`);
+    ev(`(()=>{document.getElementById('orbCard').open=false; document.getElementById('setCard').open=false;})()`);
     if(r.rows!==13) return `строк ${r.rows}`;   // аспекты, орбис точек, орбис средних точек
     if(r.clipped.length) return `обрезано: ${r.clipped.join(', ')}`;
     return r.short===0||`${r.short} строк ниже 44 px`;
@@ -4251,7 +4289,7 @@ function run(){
     const need=['tagline','birth','date','time','lat','lng','tz','cast','city','cityph','hint',
       'libTitle','libFind','noTime','rrKnown','delChart','libShort','settings','themeLabel',
       'langLabel','close','whatIs','nameLabel','saveBtn','savedBtn','saveToLib','edit','hide',
-      'editData','geoNone','setChartNote',
+      'editData','geoNone','setCalc','setView','setHsys','setLil','setRulers',
       'hsysLabel','lilLabel','lil_mean','lil_true','transittime','secondsLabel','needdata',
       'empty','natal','era1','era2','era3','era4','tapdetail','positions','posnote',
       'transitdate','scrubintro','stepLabel','u_sec','u_min','u_hour','u_day','u_week',

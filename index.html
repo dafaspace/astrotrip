@@ -152,6 +152,10 @@ button.primary{background:var(--accentBtn);border-color:var(--accentBtn);color:v
 .lang button{min-height:42px;display:inline-flex;align-items:center;justify-content:center}
 .lang.theme button{padding:0 10px;min-width:52px;color:var(--ink2)}
 .lang.theme button.on{color:var(--accentInk)}
+/* 18 px like every other icon here. The global svg rule stretches an icon to its
+   button's width, and once the switch moved into the settings with 52 px buttons
+   the sun and the moon came out at 32. */
+.lang.theme button svg{width:18px;height:18px;flex:none}
 .mono,.deg{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
 svg{display:block;width:100%;height:auto;touch-action:manipulation}
 /* Inter, not a platform symbol font. The Astro face carries symbols only, and
@@ -531,9 +535,6 @@ details.unit .dt{padding:0 0 10px;color:var(--ink2);font-size:14px}
   background-color:var(--paper2);position:relative;
   background-position:calc(100% - 13px) 52%,calc(100% - 8px) 52%}
 .metactl .ddbtn::after{content:'';position:absolute;left:0;right:0;top:-6px;bottom:-6px}
-.metactl .dd.lil .ddbtn::before{content:'\26B8';font-family:'Astro','Inter',sans-serif;margin-right:4px}
-.metactl .info{margin:0 0 0 -6px;border:none;background:none;height:32px;position:relative}
-.metactl .info::after{content:'';position:absolute;left:0;right:0;top:-6px;bottom:-6px}
 .setnote{margin:0 0 10px;line-height:1.45}
 .printonly{display:none}
 /* ---------- panels: the library and the settings ----------
@@ -583,7 +584,21 @@ dialog.panel[open]{animation:panelIn 200ms cubic-bezier(.2,.7,.2,1) both}
 .setrow .chk input{width:20px;height:20px;flex:none;margin:0}
 .setrow .info{border:none;background:none;flex:none}
 .setrow + .setnote{margin:-2px 0 10px}
-.setfoot{margin:14px 0 6px;line-height:1.45}
+.setsec{font-size:12px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);
+  margin:18px 0 2px;font-family:inherit}
+.setsec:first-child{margin-top:4px}
+/* Selects in a settings row: the value on the right, sized to itself, the same
+   44 px as every other control in the panel. */
+.setrow .dd{width:auto;flex:none;max-width:62%}
+.setrow .dd .ddbtn{min-height:44px;padding:4px 26px 4px 12px;font-size:14px;background-color:var(--paper2)}
+.setrow .ddlist{left:auto;right:0}
+.setfold{border-bottom:1px solid var(--line)}
+.setfold>summary{min-height:52px}
+.setfold>summary .setlab{flex:none}
+.setfold[open]>summary{margin-bottom:4px}
+/* Arriving from the planet card at the rulers row: the row says where you are. */
+.setrow.flash{background:var(--paper3);transition:background .6s}
+.rulersline{display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin:2px 0 4px}
 
 /* ---------- craft layer (Apple design principles) ----------
    Scope note: this is a reading surface driven by taps, not drags. So the
@@ -709,6 +724,45 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
         <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
     </div>
     <div class="panelbody">
+      <!-- How the chart is calculated: what an astrologer sets once for their
+           school and then leaves. The house system is also a chip over the
+           wheel, because it is the one choice people compare on a live chart -
+           a planet on a cusp - and the chip and this row are the same value. -->
+      <h3 class="setsec" data-i="setCalc"></h3>
+      <div class="setrow"><span class="setlab" data-i="setHsys"></span><select id="hsysSet"></select></div>
+      <div class="setrow"><span class="setlab" data-i="setLil"></span><select id="lilmode" class="lil"></select></div>
+      <div class="setrow"><span class="setlab" data-i="setRulers"></span><select id="rulerSel"></select>
+        <button type="button" class="ico info" aria-expanded="false" data-i-title="whatIs">
+          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.6v.1"/></svg></button>
+      </div>
+      <div class="tiny setnote" data-i="rulersNote" hidden></div>
+      <!-- Which aspects count, and how wide. Folded, because the defaults are
+           the five majors and most people never open it; but the orb is the thing
+           astrologers actually disagree about, so it has to be reachable. It sat
+           among the results, a scroll away from everything else a school sets. -->
+      <details class="fold setfold" id="orbCard">
+        <summary><span class="setlab" data-i="aspects"></span><span class="tiny" id="orbBrief"></span></summary>
+        <div id="orbList"></div>
+        <div class="row" style="margin-top:10px">
+          <button id="orbReset" data-i="orbReset"></button>
+        </div>
+        <div class="tiny" style="margin:8px 0 10px" data-i="orbNote"></div>
+      </details>
+      <div class="setrow">
+        <label class="chk"><input id="astOn" type="checkbox"><span data-i="asteroids"></span>
+          <span class="tiny" id="astState"></span></label>
+        <button type="button" class="ico info" aria-expanded="false" data-i-title="whatIs">
+          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.6v.1"/></svg></button>
+      </div>
+      <div class="tiny setnote" data-i="asteroidsNote" hidden></div>
+      <div class="setrow">
+        <label class="chk"><input id="house3d" type="checkbox"><span data-i="house3d"></span></label>
+        <button type="button" class="ico info" aria-expanded="false" data-i-title="whatIs">
+          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.6v.1"/></svg></button>
+      </div>
+      <div class="tiny setnote" data-i="house3dNote" hidden></div>
+
+      <h3 class="setsec" data-i="setView"></h3>
       <div class="setrow"><span class="setlab" data-i="themeLabel"></span>
   <div class="lang theme" id="themeSw">
     <!-- Both glyphs are drawn about (8,8) on the same 16 grid: the sun spans 13
@@ -723,22 +777,8 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
       <div class="setrow"><span class="setlab" data-i="langLabel"></span>
         <select id="langSel" class="langsel" aria-label="Language"></select></div>
       <div class="setrow">
-        <label class="chk"><input id="astOn" type="checkbox"><span data-i="asteroids"></span>
-          <span class="tiny" id="astState"></span></label>
-        <button type="button" class="ico info" aria-expanded="false" data-i-title="whatIs">
-          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.6v.1"/></svg></button>
-      </div>
-      <div class="tiny setnote" data-i="asteroidsNote" hidden></div>
-      <div class="setrow">
-        <label class="chk"><input id="house3d" type="checkbox"><span data-i="house3d"></span></label>
-        <button type="button" class="ico info" aria-expanded="false" data-i-title="whatIs">
-          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.6v.1"/></svg></button>
-      </div>
-      <div class="tiny setnote" data-i="house3dNote" hidden></div>
-      <div class="setrow">
         <label class="chk"><input id="showSeconds" type="checkbox"><span data-i="secondsLabel"></span></label>
       </div>
-      <div class="tiny setfoot" data-i="setChartNote"></div>
     </div>
   </div>
 </dialog>
@@ -854,18 +894,18 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
       <!-- The data the chart was cast from, on the chart. A printed wheel has
            always carried it, and without it a screenshot is unverifiable. -->
       <div class="chartmeta" id="chartMeta"></div>
-      <!-- How the chart is read, where the chart is. These three change the
-           wheel and the text under it, so they sit over it rather than in the
-           form, where they had to be set before you could see what they did. -->
+      <!-- How the chart is read, on the chart. The house system is the one
+           calculation choice people change while looking at a chart - which
+           house is a planet on the cusp in, by Koch - so it is a chip here.
+           The Black Moon variant is said, not offered: it is set once per
+           school, but a screenshot has to show it, since the two differ by up
+           to a sign. Rulers and orbs live in the settings: the rulers never
+           change the wheel at all, only the planet card. -->
       <div class="metactl">
         <span class="tiny" data-i="tropical"></span>
         <select id="hsys" data-i-title="hsysLabel"></select>
-        <select id="lilmode" class="lil" data-i-title="lilLabel"></select>
-        <select id="rulerSel" data-i-title="rulersLabel"></select>
-        <button type="button" class="ico info" aria-expanded="false" data-i-title="whatIs">
-          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.6v.1"/></svg></button>
+        <span class="tiny" id="lilText"></span>
       </div>
-      <div class="tiny setnote" data-i="rulersNote" hidden></div>
       <div class="ringrow">
         <label class="ringlab" for="ringSel" data-i="ringLabel"></label>
         <select id="ringSel"></select>
@@ -982,18 +1022,6 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
       <div id="printFacts"></div>
     </section>
 
-    <!-- Which aspects count, and how wide. Collapsed, because the defaults are
-         the five majors and most people never open it; but the orb is the thing
-         astrologers actually disagree about, so it has to be reachable. -->
-    <details class="card fold" id="orbCard">
-      <summary><h2 data-i="aspects"></h2><span class="tiny" id="orbBrief"></span></summary>
-      <div id="orbList"></div>
-      <div class="row" style="margin-top:10px">
-        <button id="orbReset" data-i="orbReset"></button>
-      </div>
-      <div class="tiny" style="margin-top:8px" data-i="orbNote"></div>
-    </details>
-
     <!-- Element, modality and hemisphere tallies. Counts only, no verdict:
          the number is checkable, "you lack earth" is not. -->
     <details class="card fold" id="balCard">
@@ -1059,7 +1087,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
 /* Bump together with CACHE in sw.js: the two are the same release, and the
    number on screen is how you tell from a phone which one you are looking at. */
-const APP_VERSION='3.16.0';
+const APP_VERSION='3.16.1';
 document.getElementById('ver').textContent=APP_VERSION;
 
 /* ---------- feature flags ----------
@@ -1364,7 +1392,11 @@ const STR = {
   hide:{ru:'скрыть',en:'hide'},
   editData:{ru:'Изменить данные рождения',en:'Edit the birth data'},
   geoNone:{ru:'Координаты и пояс возьмутся из города',en:'Coordinates and offset come from the city'},
-  setChartNote:{ru:'Система домов, Чёрная Луна и управители переключаются над колесом карты.',en:'House system, Black Moon and rulers are switched above the chart wheel.'},
+  setCalc:{ru:'Расчёт',en:'Calculation'},
+  setView:{ru:'Вид',en:'Display'},
+  setHsys:{ru:'Система домов',en:'House system'},
+  setLil:{ru:'Чёрная Луна',en:'Black Moon'},
+  setRulers:{ru:'Управители',en:'Rulers'},
 };
 /* ---------- the six added languages ----------
    Language-major, one block per language, because that is how a translator
@@ -1714,7 +1746,11 @@ Object.assign(I18N.es,{
   hide:"ocultar",
   editData:"Editar los datos de nacimiento",
   geoNone:"Las coordenadas y el desfase salen de la ciudad",
-  setChartNote:"El sistema de casas, la Luna Negra y los regentes se cambian sobre la rueda de la carta."
+  setCalc:"Cálculo",
+  setView:"Visualización",
+  setHsys:"Sistema de casas",
+  setLil:"Luna Negra",
+  setRulers:"Regentes"
 });
 Object.assign(I18N.fr,{
   libShort:"Bibliothèque",
@@ -1731,7 +1767,11 @@ Object.assign(I18N.fr,{
   hide:"masquer",
   editData:"Modifier les données de naissance",
   geoNone:"Les coordonnées et le décalage viennent de la ville",
-  setChartNote:"Le système de maisons, la Lune noire et les maîtres se changent au-dessus de la roue."
+  setCalc:"Calcul",
+  setView:"Affichage",
+  setHsys:"Système de maisons",
+  setLil:"Lune noire",
+  setRulers:"Maîtres"
 });
 Object.assign(I18N.de,{
   libShort:"Bibliothek",
@@ -1748,7 +1788,11 @@ Object.assign(I18N.de,{
   hide:"ausblenden",
   editData:"Geburtsdaten ändern",
   geoNone:"Koordinaten und Versatz kommen aus dem Ort",
-  setChartNote:"Häusersystem, Schwarzer Mond und Herrscher werden über dem Chartrad umgeschaltet."
+  setCalc:"Berechnung",
+  setView:"Anzeige",
+  setHsys:"Häusersystem",
+  setLil:"Schwarzer Mond",
+  setRulers:"Herrscher"
 });
 Object.assign(I18N.it,{
   libShort:"Biblioteca",
@@ -1765,7 +1809,11 @@ Object.assign(I18N.it,{
   hide:"nascondi",
   editData:"Modifica i dati di nascita",
   geoNone:"Coordinate e scarto arrivano dalla città",
-  setChartNote:"Sistema di case, Luna Nera e governatori si cambiano sopra la ruota della carta."
+  setCalc:"Calcolo",
+  setView:"Visualizzazione",
+  setHsys:"Sistema di case",
+  setLil:"Luna Nera",
+  setRulers:"Governatori"
 });
 Object.assign(I18N.uk,{
   libShort:"Бібліотека",
@@ -1782,7 +1830,11 @@ Object.assign(I18N.uk,{
   hide:"сховати",
   editData:"Змінити дані народження",
   geoNone:"Координати й пояс візьмуться з міста",
-  setChartNote:"Система домів, Чорний Місяць і управителі перемикаються над колом карти."
+  setCalc:"Розрахунок",
+  setView:"Вигляд",
+  setHsys:"Система домів",
+  setLil:"Чорний Місяць",
+  setRulers:"Управителі"
 });
 Object.assign(I18N.ka,{
   libShort:"ბიბლიოთეკა",
@@ -1799,7 +1851,11 @@ Object.assign(I18N.ka,{
   hide:"დამალვა",
   editData:"დაბადების მონაცემების შეცვლა",
   geoNone:"კოორდინატები და სარტყელი ქალაქიდან აიღება",
-  setChartNote:"სახლების სისტემა, შავი მთვარე და მმართველები რუკის წრის ზემოთ გადაირთვება."
+  setCalc:"გათვლა",
+  setView:"ჩვენება",
+  setHsys:"სახლების სისტემა",
+  setLil:"შავი მთვარე",
+  setRulers:"მმართველები"
 });
 /* STR holds the two languages the app was written in, key-major, which is how
    they were edited. I18N holds the six added afterwards, language-major, which
@@ -6023,7 +6079,12 @@ const COPY_SOURCES={
   configurations:()=>configurationLines(CURRENT).join('\n'),
   midpoints:()=>midpointHits(CURRENT)
     .map(h=>`${PN(h.body)} = ${PN(h.a)}/${PN(h.b)}, ${t('orb')} ${h.orb.toFixed(2)}°`).join('\n'),
-  detail:()=>document.getElementById('detail').innerText
+  /* Buttons are hidden for the read: "Copy" and "edit" are controls, and they
+     ended up in the pasted text. innerText needs them hidden, not removed, to
+     keep the line breaks it reads from the layout. */
+  detail:()=>{ const el=document.getElementById('detail'), bs=[...el.querySelectorAll('button')];
+    bs.forEach(b=>b.style.display='none');
+    try{ return el.innerText; } finally{ bs.forEach(b=>b.style.display=''); } }
 };
 document.addEventListener('click',e=>{
   const b=e.target.closest('[data-copy]'); if(!b) return;
@@ -6346,6 +6407,10 @@ function showDetail(p,ch){
   let html=`<div style="font-size:16px"><span class="af">${GLYPH[p]}</span> <b>${PN(p)}</b> - <span class="deg">${f.html}</span>${rx}, ${t('house')} ${hs}${spd}</div>`;
   if(LX(PLANET_FN)[p]) html+=`<div class="tiny" style="margin:4px 0 8px">${LX(PLANET_FN)[p]}</div>`;
   html+=structureBlock(ch,p);
+  /* The dispositors above depend on the ruler scheme, and the switch is in the
+     settings now, so the card names the scheme and leads to it. */
+  html+=`<div class="tiny rulersline"><span>${t('setRulers')}: ${t('rulers_'+RULER_MODE).toLowerCase()}</span>`
+    +`<button type="button" class="linkbtn noprint" data-open-set="rulerSel">${t('edit')}</button></div>`;
   html+=`<div class="sfact"><div class="lbl">${t('sfAspects')}</div></div>`;
   html+= asps.length? asps.sort((a,b)=>a.orb-b.orb).map(a=>{
       const other=a.p1===p?a.p2:a.p1;
@@ -7562,6 +7627,8 @@ let META_ARGS=null;
 function renderChartMeta(ch,y,mo,da,hh,mi,tz){
   META_ARGS=[ch,y,mo,da,hh,mi,tz];
   const el=document.getElementById('chartMeta'); if(!el) return;
+  const lt=document.getElementById('lilText');
+  if(lt) lt.innerHTML=`<span class="af">${GLYPH.Lilith}</span> ${t(LILMODE==='true'?'m_true':'m_mean')}`;
   const name=(document.getElementById('chartName').value||'').trim();
   const city=(document.getElementById('city').value||'').trim();
   const hs=HOUSE_SYSTEMS[ch.houses.system];
@@ -7808,15 +7875,20 @@ function fillNamePh(){
      label above the field already says what goes in it. */
   const el=document.getElementById('chartName'); if(el) el.placeholder='';
 }
+/* Two controls, one value: the chip over the wheel and the row in the settings.
+   Whichever is changed, the other follows before anything is recast. */
+const HSYS_SELECTS=['hsys','hsysSet'];
 function fillHsys(){
-  const sel=document.getElementById('hsys');
-  sel.innerHTML=Object.entries(HOUSE_SYSTEMS)
+  const html=Object.entries(HOUSE_SYSTEMS)
     .map(([k,v])=>`<option value="${k}"${k===HSYS?' selected':''}>${LX(v)}</option>`).join('');
+  HSYS_SELECTS.forEach(id=>{ const sel=document.getElementById(id); if(sel) sel.innerHTML=html; });
 }
-document.getElementById('hsys').addEventListener('change',e=>{
+HSYS_SELECTS.forEach(id=>document.getElementById(id).addEventListener('change',e=>{
   HSYS=e.target.value; localStorage.setItem('astrarium_hsys',HSYS);
+  HSYS_SELECTS.forEach(o=>{ const sel=document.getElementById(o);
+    if(sel&&sel!==e.target){ sel.value=HSYS; if(sel._ddPaint) sel._ddPaint(); } });
   if(CURRENT) run();
-});
+}));
 function fillLil(){
   const sel=document.getElementById('lilmode');
   sel.innerHTML=[['mean','lil_mean'],['true','lil_true']]
@@ -7828,10 +7900,7 @@ document.getElementById('lilmode').addEventListener('change',e=>{
 });
 function fillRulers(){
   const sel=document.getElementById('rulerSel');
-  /* The closed chip says what it is as well as which: "Modern" alone, among
-     three chips over a wheel, does not say modern what. */
-  const lab=t('rulersLabel'), name=lab.charAt(0)+lab.slice(1).toLowerCase();
-  sel.innerHTML=RULER_MODES.map(m=>`<option value="${m}" data-short="${name}: ${t('rulers_'+m).toLowerCase()}"${m===RULER_MODE?' selected':''}>${t('rulers_'+m)}</option>`).join('');
+  sel.innerHTML=RULER_MODES.map(m=>`<option value="${m}"${m===RULER_MODE?' selected':''}>${t('rulers_'+m)}</option>`).join('');
 }
 /* No recast: the positions do not change, only what is read from them. The
    facts are cached per mode, so switching back is instant. */
@@ -8585,13 +8654,28 @@ document.querySelectorAll('dialog.panel').forEach(d=>{
 });
 addEventListener('popstate',()=>
   document.querySelectorAll('dialog.panel[open]').forEach(d=>closePanel(d.id)));
+/* Going back to close a panel must not also move the page. With the default
+   'auto' the browser restores the scroll it saved when the panel opened, and it
+   did, once: a jump to the planet card made while the settings were closing was
+   undone a moment later. The page never navigates, so nothing is lost. */
+if('scrollRestoration' in history) history.scrollRestoration='manual';
 /* detail is 0 for a click made with Enter or Space, the click count otherwise. */
 document.getElementById('libBtn').addEventListener('click',e=>openPanel('libCard',e.detail>0));
 document.getElementById('setBtn').addEventListener('click',e=>openPanel('setCard',e.detail>0));
+/* A link from elsewhere to one settings row: the panel opens there, and the
+   row is marked for a moment so the eye lands on it. */
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-open-set]'); if(!b) return;
+  openPanel('setCard',e.detail>0);
+  const ctl=document.getElementById(b.dataset.openSet), row=ctl&&ctl.closest('.setrow');
+  if(!row) return;
+  row.scrollIntoView({block:'center'});
+  row.classList.add('flash'); setTimeout(()=>row.classList.remove('flash'),1400);
+});
 /* An "i" opens the note that follows its row. One handler for all of them. */
 document.addEventListener('click',e=>{
   const b=e.target.closest('button.info'); if(!b) return;
-  const row=b.closest('.setrow,.metactl'), note=row&&row.nextElementSibling;
+  const row=b.closest('.setrow'), note=row&&row.nextElementSibling;
   if(!note||!note.classList.contains('setnote')) return;
   note.hidden=!note.hidden; b.setAttribute('aria-expanded',String(!note.hidden));
 });

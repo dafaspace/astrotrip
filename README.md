@@ -453,9 +453,8 @@ time, UTC offset, coordinates in the `59n55 30e15` form, zodiac, house system
 and which Black Moon is in use. A screenshot without it cannot be checked.
 Every abbreviation in it exists to keep the block short on a phone, because the
 wheel and the slider are budgeted against that screen. On screen the house
-system, the Black Moon and the rulers are chips under the header, which a
-screenshot shows and a tap changes; on paper a third line of the header says the
-same thing.
+system is a chip under the header and the Black Moon variant is named beside it;
+on paper a third line of the header says the same thing.
 
 **Checked against ZET 9.** For 3 November 1985, 13:37, GMT+3, 59n55 30e15,
 Placidus, all twelve house cusps agree with ZET to the degree, and so does the
@@ -546,15 +545,26 @@ where, so a folded summary would have said it twice. A pencil on the chart bring
 card back, a cross puts it away again without touching the chart, and a bookmark saves
 the chart and fills in once it is in the library, so a save is something you can see.
 
-The house system, the Black Moon and the rulers are chips over the wheel, because
-they change the wheel and what is said about it, and set in the form they could only
-be judged after casting. The library and the settings open as panels over the page.
-The library has its search on top and the CSV backup at the bottom, always in view:
-with a thousand charts in it, a backup line after the list would be a thousand rows
-away. The settings hold what is set once - theme, language, asteroids, houses by
-latitude, arcseconds - each on one line with an "i" for its paragraph. A panel adds
-a history entry, so the Android back button, a browser's back and Escape close it
-rather than leaving the app.
+What sits at the chart and what goes into the settings was decided the same way,
+by what each scenario touches. Today's transits, a new client, a solar return, a
+couple's synastry - the daily work - touch the chart type and the time slider and no
+calculation setting at all. Of the calculation settings, only the house system is
+changed while looking at a chart (which house is a planet on the cusp in, by Koch),
+so it is the one chip over the wheel; the same value is also a row in the settings.
+The Black Moon variant is named beside it as text, because a screenshot has to show
+it. The rulers never change the wheel - the drawing does not read them - only the
+planet card, which names the scheme in use and links to it. Everything a school sets
+once is in one place: the settings' Calculation section holds the house system, the
+Black Moon, the rulers, aspects and orbs, asteroids and houses by latitude, and the
+Display section holds theme, language and arcseconds. Before, that one task was
+spread over chips above the wheel, a folded card among the results and the panel.
+
+The library and the settings open as panels over the page. The library has its
+search on top and the CSV backup at the bottom, always in view: with a thousand
+charts in it, a backup line after the list would be a thousand rows away. Each
+setting is one line with an "i" for its paragraph. A panel adds a history entry, so
+the Android back button, a browser's back and Escape close it rather than leaving
+the app, and closing it never moves the page.
 
 ### The chart library
 
@@ -615,7 +625,7 @@ mattered: before it did, a deliberately broken app passed every check. The runne
 for the city atlas to finish loading, or the atlas tests would silently check the inline
 seed instead.
 
-**341 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
+**343 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
 library, robustness over 1550-2250 and at polar latitudes, house systems (angles land
 on the cusps, cusps run round the circle without crossing, quadrant systems coincide at
 the equator, zero-latitude bodies get the same house from both methods), library data
