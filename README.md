@@ -566,6 +566,18 @@ setting is one line with an "i" for its paragraph. A panel adds a history entry,
 the Android back button, a browser's back and Escape close it rather than leaving
 the app, and closing it never moves the page.
 
+### The way back
+
+Anything that throws away what was on screen offers it back for eight seconds, in one
+line at the bottom with an Undo: a deleted chart returns to its place in the library,
+the chart replaced by a new cast or a library pick comes back (and Undo again goes
+forward), an imported CSV is taken out whole, and reset orbs return to the school's
+own. Found by reading the code against Nielsen's third heuristic, user control and
+freedom, on 13 Oct 2026; the delete had been immediate, with no question and no way
+back, on an 11 px target. Undo rather than a confirmation dialog, because a question
+before every delete gets answered without being read. The app has no external links,
+so there is nothing that can carry a person out of it.
+
 ### The chart library
 
 1019 charts - composers, musicians and painters - each with a Rodden rating and a
@@ -625,7 +637,7 @@ mattered: before it did, a deliberately broken app passed every check. The runne
 for the city atlas to finish loading, or the atlas tests would silently check the inline
 seed instead.
 
-**343 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
+**348 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
 library, robustness over 1550-2250 and at polar latitudes, house systems (angles land
 on the cusps, cusps run round the circle without crossing, quadrant systems coincide at
 the equator, zero-latitude bodies get the same house from both methods), library data

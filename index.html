@@ -493,7 +493,11 @@ details.unit .dt{padding:0 0 10px;color:var(--ink2);font-size:14px}
    on one line it ran out of the card on a phone, cut mid-word (iOS build,
    10 Oct 2026). It wraps, and a pill's round ends do not suit two lines. */
 #backupLine.libwarn{white-space:normal;display:inline-block;border-radius:10px;padding:3px 9px}
-.libdel{margin-left:auto;color:var(--ink3);font-size:11px;background:none;border:none;cursor:pointer;padding:4px 6px}
+/* 44 px tall for the thumb, pulled back into the row by the negative margin so
+   the row keeps its height. It was 11 px text in a 4 px pad: the smallest
+   target in the app on the one control that destroys something. */
+.libdel{margin:-12px 0 -12px auto;color:var(--ink3);font-size:13px;background:none;border:none;cursor:pointer;
+  padding:0 8px;min-height:44px;display:inline-flex;align-items:center}
 .libdel:hover{color:var(--hard)}
 .emptystate{color:var(--ink3);font-style:italic;padding:12px 0}
 
@@ -584,6 +588,16 @@ dialog.panel[open]{animation:panelIn 200ms cubic-bezier(.2,.7,.2,1) both}
 .setrow .chk input{width:20px;height:20px;flex:none;margin:0}
 .setrow .info{border:none;background:none;flex:none}
 .setrow + .setnote{margin:-2px 0 10px}
+.toast{position:fixed;left:16px;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));z-index:70;
+  max-width:520px;margin:0 auto;display:flex;align-items:center;gap:10px;
+  padding:6px 6px 6px 16px;border-radius:14px;background:var(--ink);color:var(--paper);
+  box-shadow:0 8px 24px rgba(0,0,0,.22);font-size:14px;line-height:1.35}
+.toast span{flex:1;min-width:0}
+.toast button{flex:none;min-height:44px;padding:0 14px;border:none;background:none;
+  color:var(--paper);font-weight:600;display:inline-flex;align-items:center;line-height:1}
+.toast:not([hidden]){animation:toastIn 180ms cubic-bezier(.2,.7,.2,1) both}
+@keyframes toastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.toast:not([hidden]){animation:none}}
 .setsec{font-size:12px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);
   margin:18px 0 2px;font-family:inherit}
 .setsec:first-child{margin-top:4px}
@@ -818,6 +832,15 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
     </div>
   </div>
 </dialog>
+
+<!-- The way back. One line at the bottom, for a few seconds, after anything that
+     threw away what was on screen: a deleted chart, the chart that was replaced,
+     an import, the orbs reset. Moved into an open panel while one is open,
+     because a modal panel makes everything outside it unreachable. -->
+<div class="toast" id="toast" role="status" aria-live="polite" hidden>
+  <span id="toastText"></span>
+  <button type="button" id="toastBtn" hidden></button>
+</div>
 
 <div class="wrap">
 
@@ -1087,7 +1110,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
 /* Bump together with CACHE in sw.js: the two are the same release, and the
    number on screen is how you tell from a phone which one you are looking at. */
-const APP_VERSION='3.16.1';
+const APP_VERSION='3.16.2';
 document.getElementById('ver').textContent=APP_VERSION;
 
 /* ---------- feature flags ----------
@@ -1284,7 +1307,8 @@ const STR = {
     en:'These charts have never been exported. A browser can clear them without warning.'},
   /* Two phrases, not one with a word substituted into it: "сегодня дн. назад"
      is what one template produced, and the same trap exists in English. */
-  bkLast:{ru:'Последняя выгрузка: {d} дн. назад',en:'Last export: {d} days ago'},
+  /* {d} is the count with its word, from PLURAL_DAY: "1 days ago" was on screen. */
+  bkLast:{ru:'Последняя выгрузка: {d} назад',en:'Last export: {d} ago'},
   bkToday:{ru:'Последняя выгрузка: сегодня',en:'Last export: today'},
   bkNotPersisted:{ru:'браузер не гарантирует сохранность этого хранилища',
     en:'the browser does not guarantee this storage'},
@@ -1392,6 +1416,10 @@ const STR = {
   hide:{ru:'скрыть',en:'hide'},
   editData:{ru:'Изменить данные рождения',en:'Edit the birth data'},
   geoNone:{ru:'Координаты и пояс возьмутся из города',en:'Coordinates and offset come from the city'},
+  undo:{ru:'Вернуть',en:'Undo'},
+  chartDeleted:{ru:'Карта удалена',en:'Chart deleted'},
+  prevChart:{ru:'Прошлая карта',en:'Previous chart'},
+  orbsReset:{ru:'Орбисы сброшены',en:'Orbs reset'},
   setCalc:{ru:'Расчёт',en:'Calculation'},
   setView:{ru:'Вид',en:'Display'},
   setHsys:{ru:'Система домов',en:'House system'},
@@ -1750,7 +1778,11 @@ Object.assign(I18N.es,{
   setView:"Visualización",
   setHsys:"Sistema de casas",
   setLil:"Luna Negra",
-  setRulers:"Regentes"
+  setRulers:"Regentes",
+  undo:"Deshacer",
+  chartDeleted:"Carta eliminada",
+  prevChart:"Carta anterior",
+  orbsReset:"Orbes restablecidos"
 });
 Object.assign(I18N.fr,{
   libShort:"Bibliothèque",
@@ -1771,7 +1803,11 @@ Object.assign(I18N.fr,{
   setView:"Affichage",
   setHsys:"Système de maisons",
   setLil:"Lune noire",
-  setRulers:"Maîtres"
+  setRulers:"Maîtres",
+  undo:"Annuler",
+  chartDeleted:"Carte supprimée",
+  prevChart:"Carte précédente",
+  orbsReset:"Orbes réinitialisés"
 });
 Object.assign(I18N.de,{
   libShort:"Bibliothek",
@@ -1792,7 +1828,11 @@ Object.assign(I18N.de,{
   setView:"Anzeige",
   setHsys:"Häusersystem",
   setLil:"Schwarzer Mond",
-  setRulers:"Herrscher"
+  setRulers:"Herrscher",
+  undo:"Rückgängig",
+  chartDeleted:"Chart gelöscht",
+  prevChart:"Vorheriges Chart",
+  orbsReset:"Orben zurückgesetzt"
 });
 Object.assign(I18N.it,{
   libShort:"Biblioteca",
@@ -1813,7 +1853,11 @@ Object.assign(I18N.it,{
   setView:"Visualizzazione",
   setHsys:"Sistema di case",
   setLil:"Luna Nera",
-  setRulers:"Governatori"
+  setRulers:"Governatori",
+  undo:"Annulla",
+  chartDeleted:"Carta eliminata",
+  prevChart:"Carta precedente",
+  orbsReset:"Orbi ripristinati"
 });
 Object.assign(I18N.uk,{
   libShort:"Бібліотека",
@@ -1834,7 +1878,11 @@ Object.assign(I18N.uk,{
   setView:"Вигляд",
   setHsys:"Система домів",
   setLil:"Чорний Місяць",
-  setRulers:"Управителі"
+  setRulers:"Управителі",
+  undo:"Повернути",
+  chartDeleted:"Карту видалено",
+  prevChart:"Попередня карта",
+  orbsReset:"Орбіси скинуто"
 });
 Object.assign(I18N.ka,{
   libShort:"ბიბლიოთეკა",
@@ -1855,7 +1903,11 @@ Object.assign(I18N.ka,{
   setView:"ჩვენება",
   setHsys:"სახლების სისტემა",
   setLil:"შავი მთვარე",
-  setRulers:"მმართველები"
+  setRulers:"მმართველები",
+  undo:"დაბრუნება",
+  chartDeleted:"რუკა წაიშალა",
+  prevChart:"წინა რუკა",
+  orbsReset:"ორბისები საწყისზე დაბრუნდა"
 });
 /* STR holds the two languages the app was written in, key-major, which is how
    they were edited. I18N holds the six added afterwards, language-major, which
@@ -7784,8 +7836,28 @@ function renderRelocBrief(){
    the chart because a chart is positions and a moment is a clock reading. */
 let BIRTH_MS=null;
 /* A cast from the button puts the form away; a recast from a chip or the
-   language does not, because whoever opened the form is still in it. */
-document.getElementById('calc').addEventListener('click',()=>{ if(run()) setFormOpen(false); });
+   language does not, because whoever opened the form is still in it.
+   A new chart replaces the one on screen, which may be a client's chart typed
+   in a minute ago and never saved, so the one before is offered back. Only when
+   it was a different moment or place: a recast of the same chart under a new
+   name replaces nothing. */
+let LAST_CAST=null;
+const sameCast=(a,b)=>['date','time','lat','lng','tz'].every(k=>a.o[k]===b.o[k]);
+document.getElementById('calc').addEventListener('click',()=>{
+  const prev=CURRENT&&LAST_CAST?LAST_CAST:null;
+  if(!run()) return;
+  setFormOpen(false);
+  const now=snapForm(); LAST_CAST=now;
+  if(prev&&!sameCast(prev,now)){
+    const p=prev.o, name=p.chartName||p.city||p.date.split('-').reverse().join('.');
+    toast(`${t('prevChart')}: ${name}`, t('undo'), ()=>{
+      FORM_FIELDS.forEach(id=>{ document.getElementById(id).value=p[id]; });
+      SELECTED_CITY=prev.city; TZ_AUTO=prev.auto;
+      renderGeoSum(); syncSaveBtn();
+      document.getElementById('calc').click();
+    });
+  }
+});
 document.getElementById('reset').addEventListener('click',()=>{localStorage.removeItem(LKEY);if(CURRENT)renderTransits(CURRENT);});
 
 /* ---- scrubber wiring ---- */
@@ -7998,7 +8070,7 @@ function renderBackupLine(){
   const bits=[];
   const shell=inStoreShell();
   if(days==null) bits.push(t(shell?'bkNeverNative':'bkNever'));
-  else bits.push(days===0?t('bkToday'):t('bkLast').replace('{d}',days));
+  else bits.push(days===0?t('bkToday'):t('bkLast').replace('{d}',days+' '+pluralOf(days,PLURAL_DAY)));
   if(shell){ if(days!=null) bits.push(t('bkRiskNative')); }
   else if(STORAGE_PERSISTED===false) bits.push(t('bkNotPersisted'));
   el.textContent=bits.join(' · ');
@@ -8205,6 +8277,13 @@ const PLURAL={
   ru:['карта','карты','карт'], de:['Chart','Charts'], it:['carta','carte'],
   uk:['карта','карти','карт'], ka:['რუკა']
 };
+/* Days, in the case each language's "ago" takes: German "vor" wants the
+   dative plural, Georgian "წინ" the genitive. */
+const PLURAL_DAY={
+  en:['day','days'], es:['día','días'], fr:['jour','jours'],
+  ru:['день','дня','дней'], de:['Tag','Tagen'], it:['giorno','giorni'],
+  uk:['день','дні','днів'], ka:['დღის']
+};
 const PLURAL_ASPECT={
   en:['aspect','aspects'], es:['aspecto','aspectos'], fr:['aspect','aspects'],
   ru:['аспект','аспекта','аспектов'], de:['Aspekt','Aspekte'], it:['aspetto','aspetti'],
@@ -8293,9 +8372,19 @@ function loadChartEntry(e,own){
 }
 document.getElementById('libList').addEventListener('click',function(ev){
   const del=ev.target.closest('button[data-del]');
+  /* No confirmation dialog: one tap deletes, and the deletion can be taken back
+     for a few seconds. A question before every delete gets answered without
+     being read; a way back works even after the wrong answer. */
   if(del){ ev.stopPropagation();
-    writeCharts(savedCharts().filter(x=>x.id!==del.dataset.del));
-    renderLibrary(); return; }
+    const list=savedCharts(), i=list.findIndex(x=>x.id===del.dataset.del); if(i<0) return;
+    const gone=list[i];
+    writeCharts(list.filter((_,k)=>k!==i)); renderLibrary(); renderBackupLine();
+    toast(`${t('chartDeleted')}: ${gone.name}`, t('undo'), ()=>{
+      const now=savedCharts(); if(now.some(x=>x.id===gone.id)) return;
+      now.splice(Math.min(i,now.length),0,gone);
+      writeCharts(now); renderLibrary(); renderBackupLine();
+    });
+    return; }
   const it=ev.target.closest('.libitem'); if(!it) return;
   const own=it.dataset.own==='1';
   const e=own ? savedCharts().find(x=>x.id===it.dataset.id)
@@ -8500,8 +8589,15 @@ document.getElementById('printBtn').addEventListener('click',()=>{
      because a hidden control with no explanation is its own bug report. */
 });
 document.getElementById('orbReset').addEventListener('click',()=>{
+  const before=JSON.stringify(ORBS);
   ASPECT_DEFS.forEach(a=>ORBS[a.name]={on:!a.minor,orb:a.orb});
   saveOrbs(); rebuildAspects(); redrawAspects();
+  /* A school's orbs are typed in one by one; a reset should not cost that again. */
+  if(before!==JSON.stringify(ORBS)) toast(t('orbsReset'), t('undo'), ()=>{
+    const b=JSON.parse(before);
+    ASPECT_DEFS.forEach(a=>{ if(b[a.name]) ORBS[a.name]=b[a.name]; });
+    saveOrbs(); rebuildAspects(); redrawAspects();
+  });
 });
 document.getElementById('atlasRetry').addEventListener('click',()=>{
   document.getElementById('atlasRetry').hidden=true;
@@ -8511,14 +8607,22 @@ document.getElementById('atlasRetry').addEventListener('click',()=>{
   atlasProgress(0);
   atlasLoad(true);
 });
+/* The file's text in, the library updated, the result said. Kept apart from
+   the file picker so the same path can be run without one. */
+function importCsvText(txt){
+  const before=savedCharts();
+  const n=csvToLib(txt);
+  if(n<0){ toast(t('importBad')); return n; }
+  renderLibrary(); renderBackupLine();
+  /* The wrong file imported is a hundred rows to delete one by one. */
+  toast(t('importDone')+n, t('undo'), n>0?()=>{
+    writeCharts(before); renderLibrary(); renderBackupLine(); }:null);
+  return n;
+}
 document.getElementById('impCsv').addEventListener('click',()=>document.getElementById('impFile').click());
 document.getElementById('impFile').addEventListener('change',function(){
   const f=this.files&&this.files[0]; if(!f) return;
-  f.text().then(txt=>{
-    const n=csvToLib(txt);
-    alert(n<0?t('importBad'):t('importDone')+n);
-    if(n>0) renderLibrary();
-  }).catch(()=>alert(t('importBad')));
+  f.text().then(importCsvText).catch(()=>toast(t('importBad')));
   this.value='';
 });
 /* Живой поиск: перерисовка списка из 150 строк занимает доли миллисекунды,
@@ -8623,6 +8727,29 @@ document.getElementById('formClose').addEventListener('click',()=>{
   setFormOpen(false);
 });
 
+/* ---------- the way back ----------
+   One line, one button, a few seconds. Only one at a time: a new one replaces
+   the old, and its way back with it, which is what a person expects - the last
+   thing done is the one being undone. */
+let TOAST_T=null, TOAST_UNDO=null;
+function toast(text,undoLabel,undo){
+  const el=document.getElementById('toast'), b=document.getElementById('toastBtn');
+  const host=document.querySelector('dialog.panel[open]')||document.body;
+  if(el.parentNode!==host) host.appendChild(el);
+  document.getElementById('toastText').textContent=text;
+  TOAST_UNDO=undo||null;
+  b.hidden=!undo; b.textContent=undo?undoLabel:'';
+  el.hidden=false;
+  clearTimeout(TOAST_T); TOAST_T=setTimeout(hideToast,undo?8000:4000);
+}
+function hideToast(){
+  clearTimeout(TOAST_T); TOAST_UNDO=null;
+  document.getElementById('toast').hidden=true;
+}
+document.getElementById('toastBtn').addEventListener('click',()=>{
+  const u=TOAST_UNDO; hideToast(); if(u) u();
+});
+
 /* ---------- panels ----------
    Each opens over the page and adds a history entry, so the Android back
    button, a browser's back and Escape all close it rather than leaving the app
@@ -8646,6 +8773,8 @@ function closePanel(id){
 document.querySelectorAll('dialog.panel').forEach(d=>{
   d.addEventListener('close',()=>{
     closeDropdown();
+    /* A way back offered inside the panel stays on screen after it closes. */
+    const tst=document.getElementById('toast'); if(d.contains(tst)) document.body.appendChild(tst);
     if(history.state&&history.state.panel===d.id) history.back();
   });
   d.addEventListener('click',e=>{
@@ -8681,7 +8810,7 @@ document.addEventListener('click',e=>{
 });
 renderGeoSum(); setGeoOpen(false);
 
-if(restoreForm()&&run()) setFormOpen(false);
+if(restoreForm()&&run()){ setFormOpen(false); LAST_CAST=snapForm(); }
 else setFormOpen(true);
 /* iOS does not reload the page when the app returns from the background, so
    nothing else would write the form back; and when it does reclaim the app,

@@ -1517,6 +1517,26 @@ function run(){
     if(/дн\. назад|days ago/.test(r.after.text)) return 'сразу после выгрузки сказано «дней назад»: '+r.after.text;
     return r.empty===''||'на пустой библиотеке строка что-то говорит: '+r.empty;
   });
+  t('давность выгрузки склоняется: 1 день, 3 дня, 5 дней',()=>{
+    /* На iOS было «Last export: 1 days ago». */
+    const r=ev(`(()=>{const kc=localStorage.getItem(LKEY_CHARTS), ke=localStorage.getItem(LKEY_EXPORTED), kl=LANG, out={};
+      try{
+        localStorage.setItem(LKEY_CHARTS,JSON.stringify([{id:'d',name:'d',y:2000,mo:1,d:1,t:12,lat:0,lon:0}]));
+        for(const [lang,d] of [['en',1],['en',3],['ru',1],['ru',3],['ru',5]]){
+          LANG=lang; localStorage.setItem(LKEY_EXPORTED,String(Date.now()-d*86400000-3600000));
+          renderBackupLine(); out[lang+d]=document.getElementById('backupLine').textContent;
+        }
+      } finally {
+        LANG=kl;
+        if(kc===null) localStorage.removeItem(LKEY_CHARTS); else localStorage.setItem(LKEY_CHARTS,kc);
+        if(ke===null) localStorage.removeItem(LKEY_EXPORTED); else localStorage.setItem(LKEY_EXPORTED,ke);
+        renderBackupLine();
+      }
+      return out;})()`);
+    const want={en1:/1 day ago/, en3:/3 days ago/, ru1:/1 день назад/, ru3:/3 дня назад/, ru5:/5 дней назад/};
+    const bad=Object.entries(want).filter(([k,re])=>!re.test(r[k])).map(([k])=>k+': '+r[k]);
+    return bad.length===0||bad.join('; ');
+  });
   t('приложение просит браузер не вытеснять хранилище',()=>{
     /* Единственная настоящая защита от «очистить данные сайта» и от
        семидневного вытеснения в Safari, и стоит она двух строк. */
@@ -2597,6 +2617,109 @@ function run(){
     if(!r.flash) return 'строка управителей не отмечена';
     if(/Копировать|Copy\b|изменить|\bedit\b/.test(r.copy)) return 'в копию попали подписи кнопок';
     return r.copy.includes(want)||'в копии нет схемы управителей';
+  });
+  /* ---------- путь назад ----------
+     Правило из корневого CLAUDE.md, 13 окт 2026: действие, которое уводит или
+     выбрасывает то, что было на экране, даёт видимый возврат в одно касание.
+     Здесь четыре таких места, найденные по коду: удаление своей карты, замена
+     карты на экране новой, загрузка CSV и сброс орбисов. */
+  t('удалённую карту можно вернуть на её место',()=>{
+    const r=ev(`(()=>{const kc=localStorage.getItem(LKEY_CHARTS), out={};
+      try{
+        writeCharts([{id:'a',name:'Первая',y:2000,mo:1,d:1,t:12,lat:0,lon:0},
+          {id:'b',name:'Вторая',y:2001,mo:1,d:1,t:12,lat:0,lon:0},
+          {id:'c',name:'Третья',y:2002,mo:1,d:1,t:12,lat:0,lon:0}]);
+        renderLibrary();
+        document.querySelector('#libList button[data-del="b"]').click();
+        out.after=savedCharts().map(e=>e.id).join('');
+        out.text=document.getElementById('toastText').textContent;
+        out.shown=!document.getElementById('toast').hidden;
+        document.getElementById('toastBtn').click();
+        out.back=savedCharts().map(e=>e.id).join('');
+        out.hidden=document.getElementById('toast').hidden;
+        out.rowH=(()=>{renderLibrary(); const b=document.querySelector('#libList button[data-del]');
+          const set=document.getElementById('libCard'), was=set.open; set.open=true;
+          const h=b.getBoundingClientRect().height; set.open=was; return h;})();
+      } finally {
+        if(kc===null) localStorage.removeItem(LKEY_CHARTS); else localStorage.setItem(LKEY_CHARTS,kc);
+        renderLibrary(); renderBackupLine(); hideToast();
+      }
+      return out;})()`);
+    if(r.after!=='ac') return 'не удалилась: '+r.after;
+    if(!r.shown||!r.text.includes('Вторая')) return 'нет строки с именем удалённой: '+r.text;
+    if(r.back!=='abc') return 'вернулась не на своё место: '+r.back;
+    if(!r.hidden) return 'после возврата строка осталась';
+    return r.rowH>=44||'кнопка «удалить» ниже 44 px: '+r.rowH;
+  });
+  t('новая карта вместо прежней: прежнюю можно вернуть',()=>{
+    const r=ev(`(()=>{const ids=FORM_FIELDS, keep={}, out={};
+      ids.forEach(id=>keep[id]=document.getElementById(id).value);
+      const kc=SELECTED_CITY, ka=TZ_AUTO;
+      const set=o=>Object.entries(o).forEach(([k,v])=>document.getElementById(k).value=v);
+      try{
+        set({chartName:'Прежняя',date:'1990-05-05',time:'10:00',lat:'55.75',lng:'37.62',tz:'+04:00',city:'Москва'});
+        document.getElementById('calc').click(); hideToast();
+        const before=CURRENT.pos.Sun.lon;
+        set({chartName:'Новая',date:'1991-06-06',time:'11:00',lat:'59.93',lng:'30.34',tz:'+04:00',city:'Ленинград'});
+        document.getElementById('calc').click();
+        out.text=document.getElementById('toastText').textContent;
+        out.moved=CURRENT.pos.Sun.lon!==before;
+        document.getElementById('toastBtn').click();
+        out.name=document.getElementById('chartName').value;
+        out.same=Math.abs(CURRENT.pos.Sun.lon-before)<1e-9;
+        out.formHidden=document.getElementById('formCard').hidden;
+        /* То же имя, тот же момент: ничего не заменено, и предлагать нечего. */
+        hideToast(); document.getElementById('chartName').value='Переименованная';
+        document.getElementById('calc').click();
+        out.renameToast=!document.getElementById('toast').hidden;
+      } finally {
+        hideToast(); set(keep); SELECTED_CITY=kc; TZ_AUTO=ka;
+        document.getElementById('calc').click(); hideToast();
+      }
+      return out;})()`);
+    if(!r.moved) return 'новая карта не построилась';
+    if(!/Прежняя/.test(r.text)) return 'строка не называет прежнюю карту: '+r.text;
+    if(r.name!=='Прежняя'||!r.same) return 'вернулась не та карта: '+r.name;
+    if(!r.formHidden) return 'после возврата форма открыта';
+    return !r.renameToast||'переименование той же карты предложило вернуть «прежнюю»';
+  });
+  t('загруженный CSV можно отменить целиком',()=>{
+    const r=ev(`(()=>{const kc=localStorage.getItem(LKEY_CHARTS), out={};
+      try{
+        writeCharts([{id:'z',name:'Своя',y:2000,mo:1,d:1,t:12,lat:0,lon:0}]); renderLibrary();
+        const csv='name,date,time,utc_offset,latitude,longitude,city\\r\\nA,1950-01-01,10:00,+01:00,48.85,2.35,Paris\\r\\nB,1960-02-02,11:00,+01:00,52.52,13.40,Berlin\\r\\n';
+        importCsvText(csv);
+        out.n=savedCharts().length; out.text=document.getElementById('toastText').textContent;
+        document.getElementById('toastBtn').click();
+        out.back=savedCharts().map(e=>e.name).join(',');
+      } finally {
+        if(kc===null) localStorage.removeItem(LKEY_CHARTS); else localStorage.setItem(LKEY_CHARTS,kc);
+        renderLibrary(); renderBackupLine(); hideToast();
+      }
+      return out;})()`);
+    if(r.n!==3) return 'загрузилось не 2: всего '+r.n;
+    if(!/2/.test(r.text)) return 'строка не говорит, сколько загружено: '+r.text;
+    return r.back==='Своя'||'после отмены в библиотеке: '+r.back;
+  });
+  t('сброшенные орбисы можно вернуть',()=>{
+    const r=ev(`(()=>{const keep=JSON.stringify(ORBS), out={};
+      try{
+        ORBS.trine.orb=3.5; ORBS.quintile.on=true; saveOrbs(); rebuildAspects();
+        document.getElementById('orbReset').click();
+        out.reset=ORBS.trine.orb!==3.5&&!ORBS.quintile.on;
+        out.shown=!document.getElementById('toast').hidden;
+        document.getElementById('toastBtn').click();
+        out.back=ORBS.trine.orb===3.5&&ORBS.quintile.on;
+        out.saved=JSON.parse(localStorage.getItem(ORB_KEY)).trine.orb===3.5;
+      } finally {
+        const k=JSON.parse(keep); ASPECT_DEFS.forEach(a=>ORBS[a.name]=k[a.name]);
+        saveOrbs(); rebuildAspects(); redrawAspects(); hideToast();
+      }
+      return out;})()`);
+    if(!r.reset) return 'сброс не сработал';
+    if(!r.shown) return 'нет строки с возвратом';
+    if(!r.back) return 'орбисы не вернулись';
+    return r.saved||'вернулись, но не сохранились';
   });
   t('сохранённая карта отмечена на закладке, правка снимает отметку',()=>{
     const K='astrarium_charts', backup=W.localStorage.getItem(K);
