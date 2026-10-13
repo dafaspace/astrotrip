@@ -1110,7 +1110,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
 /* Bump together with CACHE in sw.js: the two are the same release, and the
    number on screen is how you tell from a phone which one you are looking at. */
-const APP_VERSION='3.16.3';
+const APP_VERSION='3.17.0';
 document.getElementById('ver').textContent=APP_VERSION;
 
 /* ---------- feature flags ----------
@@ -1178,9 +1178,7 @@ const STR = {
   lilLabel:{ru:'ЧЁРНАЯ ЛУНА',en:'BLACK MOON'},
   retrograde:{ru:'ретроградный',en:'retrograde'},
   m_mean:{ru:'средняя',en:'mean'}, m_true:{ru:'истинная',en:'true'},
-  dailymotion:{ru:'за сутки',en:'per day'},
   tropical:{ru:'тропический',en:'tropical'},
-  geocentric:{ru:'геоцентрическая',en:'geocentric'},
   lil_mean:{ru:'Средняя (Лилит)',en:'Mean (Lilith)'},
   /* What the button shows once chosen. "Средняя (Лилит)" came out "Средняя (Ли…"
      in its half-width column on a phone; the list keeps the full names and the
@@ -1277,7 +1275,6 @@ const STR = {
   gridInner:{ru:'вниз',en:'down'},
   gridOuter:{ru:'внешнее кольцо',en:'outer ring'},
   gridOuterSyn:{ru:'партнёр',en:'partner'},
-  sfStructure:{ru:'Структура',en:'Structure'},
   sfDispositor:{ru:'Диспозитор',en:'Dispositor'},
   sfCycle:{ru:'Цикл диспозиторов',en:'Dispositor cycle'},
   sfFinal:{ru:'Конечный диспозитор',en:'Final dispositor'},
@@ -1299,7 +1296,6 @@ const STR = {
     en:'House by latitude as well (3D, Placidus only)'},
   house3dNote:{ru:'Обычные программы ставят тело в дом только по долготе, и колесо рисует его так же. Включённая опция учитывает ещё и эклиптическую широту: на 4% положений ответ меняется, чаще всего у Плутона. Тогда глиф на колесе и номер дома в тексте могут разойтись.',
     en:'Ordinary programs place a body by longitude alone, and the wheel draws it that way. With this on, ecliptic latitude counts too: about 4% of placements change, most often Pluto. The glyph on the wheel and the house number in the text can then disagree.'},
-  house3dOn:{ru:'дома с учётом широты',en:'houses by latitude'},
   pointOrb:{ru:'Узлы, Лилит, Селена',en:'Nodes, Lilith, Selena'},
   aboutTitle:{ru:'Источники и точность',en:'Sources and accuracy'},
   copy:{ru:'Копировать',en:'Copy'},
@@ -1417,6 +1413,27 @@ const STR = {
   editData:{ru:'Изменить данные рождения',en:'Edit the birth data'},
   geoNone:{ru:'Координаты и пояс возьмутся из города',en:'Coordinates and offset come from the city'},
   undo:{ru:'Вернуть',en:'Undo'},
+  /* Phrases that were written into the code as ru-or-en branches, so every other
+     language got the English one. Values for ru and en are exactly what the
+     code produced before; the parity check and the export tests hold them. */
+  houseHead:{ru:'{n} дом',en:'house {n}'},
+  houseNum:{ru:'дом {n}',en:'house {n}'},
+  rulesOne:{ru:'{n} домом',en:'house {n}'},
+  rulesMany:{ru:'{list} и {last} домами',en:'houses {list}, {last}'},
+  carriesPlain:{ru:'{p} управляет {from} домом и находится в {into} доме',en:'{p} rules house {from} and is in house {into}'},
+  xChart:{ru:'Карта',en:'Chart'},
+  xAngles:{ru:'УГЛЫ И КУСПИДЫ',en:'ANGLES AND CUSPS'},
+  xPlacements:{ru:'ПОЛОЖЕНИЯ И СВЯЗИ',en:'PLACEMENTS AND LINKS'},
+  xAspects:{ru:'АСПЕКТЫ',en:'ASPECTS'},
+  xMidpoints:{ru:'СРЕДНИЕ ТОЧКИ',en:'MIDPOINTS'},
+  xMidNote:{ru:'до {orb}°, по 90-градусному диску, самые тесные',en:'within {orb}°, on the 90-degree dial, the tightest'},
+  xConfigs:{ru:'КОНФИГУРАЦИИ',en:'CONFIGURATIONS'},
+  xBalance:{ru:'БАЛАНС',en:'BALANCE'},
+  xFooter:{ru:'Рецепции только по обители и экзальтации. Орбис для узлов, Лилит и Селены сужен.',en:'Receptions are by domicile and exaltation only. The orb for the nodes, Lilith and Selena is narrowed.'},
+  xRulesOne:{ru:'управляет {n} домом',en:'rules house {n}'},
+  xRulesMany:{ru:'управляет {list} и {last} домами',en:'rules houses {list}, {last}'},
+  xCarries:{ru:'тема {from} дома проявляется в {into}',en:'theme of house {from} lands in {into}'},
+  xReceivedBy:{ru:'принимают',en:'received by'},
   libFull:{ru:'Библиотека заполнена: {n} своих карт. Выгрузите CSV и удалите лишние, чтобы сохранить новую.',
     en:'The library is full: {n} charts of your own. Export a CSV and delete some to save a new one.'},
   importSkipped:{ru:'не поместилось: {n} (предел {cap})',en:'did not fit: {n} (limit {cap})'},
@@ -1760,8 +1777,11 @@ const I18N={
     foot:"პოზიციები შედარებულია JPL Horizons-თან ბიბლიოთეკის ყველა რუკაზე: სხვაობა ოთხ რკალის წამზე ნაკლებია, მეოცე საუკუნისთვის კი ნახევარზე ნაკლები. ქალაქების ატლასი - GeoNames, CC BY 4.0. პირველი ჩატვირთვის შემდეგ აქედან ქსელში არაფერი გადის.",
   },
 };
-/* The 3.16 layout: header, panels and the birth-data card, language-major like
-   the packs above. */
+/* Added to the packs after they were written: the 3.16 layout (header, panels,
+   the birth-data card) and, in 3.17, the 67 visible strings that had existed in
+   Russian and English only - the planet card, the export, two settings, the
+   backup line - and the phrases that were ru-or-en branches in the code. Before that,
+   these six languages showed English in the middle of their own text. */
 Object.assign(I18N.es,{
   libShort:"Biblioteca",
   settings:"Ajustes",
@@ -1787,7 +1807,92 @@ Object.assign(I18N.es,{
   prevChart:"Carta anterior",
   orbsReset:"Orbes restablecidos",
   libFull:"La biblioteca está llena: {n} cartas propias. Exporta un CSV y borra algunas para guardar una nueva.",
-  importSkipped:"no cupieron: {n} (límite {cap})"
+  importSkipped:"no cupieron: {n} (límite {cap})",
+  retrograde:"retrógrado",
+  tropical:"tropical",
+  relocNote:"El mismo instante, otro lugar. Los planetas no se mueven: sus posiciones son geocéntricas y no dependen de dónde estés. Solo cambian los ángulos, las casas y todo lo que se mide desde ellos. La zona horaria de la nueva ciudad no importa, porque el momento no ha cambiado. La relocalización se anula al levantar una carta nueva.",
+  confNote:"Diez planetas, sin Ascendente, Medio Cielo ni nodos: los ángulos están cerca de noventa grados en la mayoría de las cartas y los nodos siempre se oponen con exactitud, así que una figura construida sobre ellos sería una propiedad del marco y no de la carta. Los orbes salen de los ajustes de aspectos. Un yod necesita el quincuncio activado. Toca una figura para resaltarla en la rueda.",
+  sfDispositor:"Dispositor",
+  sfCycle:"Ciclo de dispositores",
+  sfCycles:"Ciclos de dispositores",
+  sfFinal:"Dispositor final",
+  sfFinals:"Dispositores finales",
+  sfNoFinal:"Sin dispositor final",
+  sfOwnSign:"en su propio signo, dispositor final",
+  sfRules:"Rige",
+  sfReceptions:"Recepciones",
+  sfPlacement:"Posición",
+  sfAspects:"Aspectos",
+  sfMidpoints:"En puntos medios",
+  midOrb:"Puntos medios",
+  sfReceives:"recibe",
+  sfByDomicile:"por domicilio",
+  sfByExaltation:"por exaltación",
+  sfMutual:"mutua",
+  digRuler:"domicilio",
+  digExalt:"exaltación",
+  digDetriment:"exilio",
+  digFall:"caída",
+  digPeregrine:"peregrino",
+  digCoRuler:"corregente",
+  angAngular:"angular",
+  angSuccedent:"sucedente",
+  angCadent:"cadente",
+  sectIn:"en secta",
+  sectContrary:"fuera de secta",
+  solCazimi:"cazimi",
+  solCombust:"combusto",
+  solUnderBeams:"bajo los rayos",
+  solFree:"libre de los rayos",
+  asteroids:"Asteroides: Ceres, Palas, Juno, Vesta",
+  asteroidsNote:"Un archivo aparte, unos 320 KB, que se descarga una vez al activarlo y después funciona sin conexión. Ajustado a JPL Horizons, residuo máximo 0,21 segundos de arco en 1600-2250.",
+  asteroidsLoading:"cargando…",
+  asteroidsFailed:"no se pudo cargar",
+  house3d:"Casa también por latitud (3D, solo Placidus)",
+  house3dNote:"Los programas habituales colocan un cuerpo solo por longitud, y la rueda lo dibuja así. Con esta opción cuenta también la latitud eclíptica: cambia cerca del 4% de las posiciones, sobre todo Plutón. El glifo en la rueda y el número de casa en el texto pueden entonces no coincidir.",
+  pointOrb:"Nodos, Lilith, Selena",
+  aboutTitle:"Fuentes y precisión",
+  copy:"Copiar",
+  copied:"Copiado",
+  copyFail:"No se pudo copiar",
+  bkNever:"Estas cartas nunca se han exportado. El navegador puede borrarlas sin avisar.",
+  bkNeverNative:"Estas cartas nunca se han exportado. Solo están en este teléfono y se pierden si se borra la app.",
+  bkLast:"Última exportación: hace {d}",
+  bkToday:"Última exportación: hoy",
+  bkNotPersisted:"el navegador no garantiza este almacenamiento",
+  bkRiskNative:"las cartas solo están en este teléfono",
+  chartNote:"Nota de la carta",
+  exportTitle:"Datos de la carta en texto",
+  exportBrief:"en un bloque",
+  exportNote:"Todo lo que la app calculó para esta carta: posiciones, dignidades, cadenas de dispositores, recepciones, aspectos con orbes, configuraciones y equilibrio. Solo hechos, sin interpretación.",
+  stationary:"estacionario",
+  sheetTitle:"Estructura de la carta",
+  sheetDay:"carta diurna",
+  sheetNight:"carta nocturna",
+  sheetIntercepted:"interceptados",
+  rulersNote:"Modernos: Plutón rige Escorpio, Urano Acuario, Neptuno Piscis, y Marte, Saturno y Júpiter son allí corregentes. Tradicionales: solo los siete planetas visibles. Ambos: cada uno de esos tres signos tiene dos regentes, así que una cadena de dispositores puede ramificarse. La secta, las exaltaciones y la fase solar son iguales en los tres.",
+  rulersBy_modern:"Las dignidades y los dispositores usan los regentes modernos: Plutón, Urano y Neptuno rigen Escorpio, Acuario y Piscis, con Marte, Saturno y Júpiter como corregentes allí.",
+  rulersBy_classical:"Las dignidades y los dispositores usan los regentes tradicionales, solo los siete planetas visibles.",
+  rulersBy_both:"Las dignidades y los dispositores usan ambos juegos de regentes: Escorpio, Acuario y Piscis tienen dos cada uno, así que las cadenas de dispositores se ramifican.",
+  gridNote:"Los diez planetas, Quirón, el Ascendente y el Medio Cielo. La marca de una celda es el aspecto; toca una celda para ver el par y el orbe. Sin anillo exterior la tabla es triangular, porque la mitad superior repetiría la inferior. Con él, las filas son sus cuerpos y las columnas los tuyos.",
+  houseHead:"casa {n}",
+  houseNum:"casa {n}",
+  rulesOne:"casa {n}",
+  rulesMany:"casas {list} y {last}",
+  carriesPlain:"{p} rige la casa {from} y está en la casa {into}",
+  xChart:"Carta",
+  xAngles:"ÁNGULOS Y CÚSPIDES",
+  xPlacements:"POSICIONES Y VÍNCULOS",
+  xAspects:"ASPECTOS",
+  xMidpoints:"PUNTOS MEDIOS",
+  xMidNote:"hasta {orb}°, en el disco de 90 grados, los más cerrados",
+  xConfigs:"CONFIGURACIONES",
+  xBalance:"EQUILIBRIO",
+  xFooter:"Recepciones solo por domicilio y exaltación. El orbe para los nodos, Lilith y Selena es más estrecho.",
+  xRulesOne:"rige la casa {n}",
+  xRulesMany:"rige las casas {list} y {last}",
+  xCarries:"el tema de la casa {from} se manifiesta en la {into}",
+  xReceivedBy:"lo reciben"
 });
 Object.assign(I18N.fr,{
   libShort:"Bibliothèque",
@@ -1814,7 +1919,92 @@ Object.assign(I18N.fr,{
   prevChart:"Carte précédente",
   orbsReset:"Orbes réinitialisés",
   libFull:"La bibliothèque est pleine : {n} cartes à vous. Exportez un CSV et supprimez-en pour en enregistrer une nouvelle.",
-  importSkipped:"hors limite : {n} (maximum {cap})"
+  importSkipped:"hors limite : {n} (maximum {cap})",
+  retrograde:"rétrograde",
+  tropical:"tropical",
+  relocNote:"Le même instant, un autre lieu. Les planètes ne bougent pas : leurs positions sont géocentriques et ne dépendent pas de l’endroit où l’on se trouve. Seuls changent les angles, les maisons et tout ce qui se mesure à partir d’eux. Le fuseau de la nouvelle ville ne compte pas, car le moment n’a pas changé. La relocalisation s’annule quand on dresse une nouvelle carte.",
+  confNote:"Dix planètes, sans l’Ascendant, le Milieu du Ciel ni les nœuds : les angles sont à peu près à quatre-vingt-dix degrés dans la plupart des cartes et les nœuds sont toujours exactement opposés, si bien qu’une figure bâtie sur eux serait une propriété du cadre et non de la carte. Les orbes viennent des réglages des aspects. Un yod demande le quinconce activé. Touchez une figure pour l’allumer sur la roue.",
+  sfDispositor:"Dispositeur",
+  sfCycle:"Cycle de dispositeurs",
+  sfCycles:"Cycles de dispositeurs",
+  sfFinal:"Dispositeur final",
+  sfFinals:"Dispositeurs finaux",
+  sfNoFinal:"Pas de dispositeur final",
+  sfOwnSign:"dans son propre signe, dispositeur final",
+  sfRules:"Gouverne",
+  sfReceptions:"Réceptions",
+  sfPlacement:"Position",
+  sfAspects:"Aspects",
+  sfMidpoints:"Sur des mi-points",
+  midOrb:"Mi-points",
+  sfReceives:"reçoit",
+  sfByDomicile:"par domicile",
+  sfByExaltation:"par exaltation",
+  sfMutual:"mutuelle",
+  digRuler:"domicile",
+  digExalt:"exaltation",
+  digDetriment:"exil",
+  digFall:"chute",
+  digPeregrine:"pérégrin",
+  digCoRuler:"co-maître",
+  angAngular:"angulaire",
+  angSuccedent:"succédente",
+  angCadent:"cadente",
+  sectIn:"dans sa secte",
+  sectContrary:"hors secte",
+  solCazimi:"cazimi",
+  solCombust:"combuste",
+  solUnderBeams:"sous les rayons",
+  solFree:"hors des rayons",
+  asteroids:"Astéroïdes : Cérès, Pallas, Junon, Vesta",
+  asteroidsNote:"Un fichier à part, environ 320 Ko, téléchargé une fois à l’activation, puis hors ligne. Ajusté sur JPL Horizons, écart maximal 0,21 seconde d’arc sur 1600-2250.",
+  asteroidsLoading:"chargement…",
+  asteroidsFailed:"chargement impossible",
+  house3d:"Maison selon la latitude aussi (3D, Placidus seulement)",
+  house3dNote:"Les logiciels courants placent un corps par sa seule longitude, et la roue le dessine ainsi. Avec cette option, la latitude écliptique compte aussi : environ 4 % des positions changent, le plus souvent Pluton. Le glyphe sur la roue et le numéro de maison dans le texte peuvent alors différer.",
+  pointOrb:"Nœuds, Lilith, Séléna",
+  aboutTitle:"Sources et précision",
+  copy:"Copier",
+  copied:"Copié",
+  copyFail:"Copie impossible",
+  bkNever:"Ces cartes n’ont jamais été exportées. Le navigateur peut les effacer sans prévenir.",
+  bkNeverNative:"Ces cartes n’ont jamais été exportées. Elles ne sont que sur ce téléphone et disparaissent si l’app est supprimée.",
+  bkLast:"Dernier export : il y a {d}",
+  bkToday:"Dernier export : aujourd’hui",
+  bkNotPersisted:"le navigateur ne garantit pas ce stockage",
+  bkRiskNative:"les cartes ne sont que sur ce téléphone",
+  chartNote:"Note sur la carte",
+  exportTitle:"Données de la carte en texte",
+  exportBrief:"en un bloc",
+  exportNote:"Tout ce que l’app a calculé pour cette carte : positions, dignités, chaînes de dispositeurs, réceptions, aspects avec orbes, configurations et équilibre. Des faits seulement, sans interprétation.",
+  stationary:"stationnaire",
+  sheetTitle:"Structure de la carte",
+  sheetDay:"carte diurne",
+  sheetNight:"carte nocturne",
+  sheetIntercepted:"interceptés",
+  rulersNote:"Modernes : Pluton gouverne le Scorpion, Uranus le Verseau, Neptune les Poissons, et Mars, Saturne et Jupiter y sont co-maîtres. Traditionnels : les sept planètes visibles seulement. Les deux : chacun de ces trois signes a deux maîtres, et une chaîne de dispositeurs peut se ramifier. La secte, les exaltations et la phase solaire sont les mêmes dans les trois.",
+  rulersBy_modern:"Dignités et dispositeurs suivent les maîtres modernes : Pluton, Uranus et Neptune gouvernent le Scorpion, le Verseau et les Poissons, avec Mars, Saturne et Jupiter comme co-maîtres.",
+  rulersBy_classical:"Dignités et dispositeurs suivent les maîtres traditionnels, les sept planètes visibles seulement.",
+  rulersBy_both:"Dignités et dispositeurs suivent les deux jeux de maîtres : le Scorpion, le Verseau et les Poissons en ont deux chacun, et les chaînes de dispositeurs se ramifient.",
+  gridNote:"Les dix planètes, Chiron, l’Ascendant et le Milieu du Ciel. Le signe dans une case est l’aspect ; touchez une case pour la paire et l’orbe. Sans anneau extérieur, le tableau est triangulaire, la moitié haute répéterait la basse. Avec un anneau, les lignes sont ses corps et les colonnes les vôtres.",
+  houseHead:"maison {n}",
+  houseNum:"maison {n}",
+  rulesOne:"maison {n}",
+  rulesMany:"maisons {list} et {last}",
+  carriesPlain:"{p} gouverne la maison {from} et se trouve en maison {into}",
+  xChart:"Carte",
+  xAngles:"ANGLES ET CUSPIDES",
+  xPlacements:"POSITIONS ET LIENS",
+  xAspects:"ASPECTS",
+  xMidpoints:"MI-POINTS",
+  xMidNote:"jusqu’à {orb}°, sur le cadran de 90 degrés, les plus serrés",
+  xConfigs:"CONFIGURATIONS",
+  xBalance:"ÉQUILIBRE",
+  xFooter:"Réceptions par domicile et exaltation seulement. L’orbe des nœuds, de Lilith et de Séléna est resserré.",
+  xRulesOne:"gouverne la maison {n}",
+  xRulesMany:"gouverne les maisons {list} et {last}",
+  xCarries:"le thème de la maison {from} se joue en {into}",
+  xReceivedBy:"reçu par"
 });
 Object.assign(I18N.de,{
   libShort:"Bibliothek",
@@ -1841,7 +2031,92 @@ Object.assign(I18N.de,{
   prevChart:"Vorheriges Chart",
   orbsReset:"Orben zurückgesetzt",
   libFull:"Die Bibliothek ist voll: {n} eigene Charts. Zum Speichern eines neuen erst ein CSV exportieren und einige löschen.",
-  importSkipped:"passten nicht: {n} (Grenze {cap})"
+  importSkipped:"passten nicht: {n} (Grenze {cap})",
+  retrograde:"rückläufig",
+  tropical:"tropisch",
+  relocNote:"Derselbe Moment, ein anderer Ort. Die Planeten bewegen sich nicht: Ihre Positionen sind geozentrisch und hängen nicht davon ab, wo man steht. Es ändern sich nur die Achsen, die Häuser und alles, was von ihnen aus gemessen wird. Die Zeitzone der neuen Stadt spielt keine Rolle, denn der Moment bleibt derselbe. Die Relokation wird zurückgesetzt, sobald ein neues Chart berechnet wird.",
+  confNote:"Zehn Planeten, ohne Aszendent, MC und Mondknoten: Die Achsen liegen in den meisten Charts fast neunzig Grad auseinander und die Knoten stehen sich immer genau gegenüber, eine Figur aus ihnen wäre also eine Eigenschaft des Rahmens und nicht des Charts. Die Orben kommen aus den Aspekteinstellungen. Ein Yod braucht den eingeschalteten Quinkunx. Eine Figur antippen, um sie im Rad hervorzuheben.",
+  sfDispositor:"Dispositor",
+  sfCycle:"Dispositorenkreis",
+  sfCycles:"Dispositorenkreise",
+  sfFinal:"Enddispositor",
+  sfFinals:"Enddispositoren",
+  sfNoFinal:"Kein Enddispositor",
+  sfOwnSign:"im eigenen Zeichen, ein Enddispositor",
+  sfRules:"Herrscht über",
+  sfReceptions:"Rezeptionen",
+  sfPlacement:"Stellung",
+  sfAspects:"Aspekte",
+  sfMidpoints:"Auf Halbsummen",
+  midOrb:"Halbsummen",
+  sfReceives:"empfängt",
+  sfByDomicile:"durch Domizil",
+  sfByExaltation:"durch Erhöhung",
+  sfMutual:"gegenseitig",
+  digRuler:"Domizil",
+  digExalt:"Erhöhung",
+  digDetriment:"Exil",
+  digFall:"Fall",
+  digPeregrine:"peregrin",
+  digCoRuler:"Mitherrscher",
+  angAngular:"eckständig",
+  angSuccedent:"nachfolgend",
+  angCadent:"fallend",
+  sectIn:"in der Sekte",
+  sectContrary:"gegen die Sekte",
+  solCazimi:"Cazimi",
+  solCombust:"verbrannt",
+  solUnderBeams:"unter den Strahlen",
+  solFree:"frei von den Strahlen",
+  asteroids:"Asteroiden: Ceres, Pallas, Juno, Vesta",
+  asteroidsNote:"Eine eigene Datei, etwa 320 KB, wird beim Einschalten einmal geladen und funktioniert danach offline. An JPL Horizons angepasst, größte Abweichung 0,21 Bogensekunden über 1600-2250.",
+  asteroidsLoading:"wird geladen…",
+  asteroidsFailed:"Laden fehlgeschlagen",
+  house3d:"Haus auch nach Breite (3D, nur Placidus)",
+  house3dNote:"Übliche Programme ordnen einen Körper nur nach der Länge zu, und das Rad zeichnet ihn so. Mit dieser Option zählt auch die ekliptikale Breite: etwa 4 % der Stellungen ändern sich, am häufigsten Pluto. Glyphe im Rad und Hausnummer im Text können dann voneinander abweichen.",
+  pointOrb:"Mondknoten, Lilith, Selena",
+  aboutTitle:"Quellen und Genauigkeit",
+  copy:"Kopieren",
+  copied:"Kopiert",
+  copyFail:"Kopieren fehlgeschlagen",
+  bkNever:"Diese Charts wurden noch nie exportiert. Der Browser kann sie ohne Warnung löschen.",
+  bkNeverNative:"Diese Charts wurden noch nie exportiert. Sie liegen nur auf diesem Telefon und gehen verloren, wenn die App gelöscht wird.",
+  bkLast:"Letzter Export: vor {d}",
+  bkToday:"Letzter Export: heute",
+  bkNotPersisted:"der Browser garantiert diesen Speicher nicht",
+  bkRiskNative:"die Charts liegen nur auf diesem Telefon",
+  chartNote:"Notiz zum Chart",
+  exportTitle:"Chartdaten als Text",
+  exportBrief:"in einem Block",
+  exportNote:"Alles, was die App für dieses Chart berechnet hat: Stellungen, Würden, Dispositorenketten, Rezeptionen, Aspekte mit Orben, Konfigurationen und Balance. Nur Fakten, keine Deutung.",
+  stationary:"stationär",
+  sheetTitle:"Struktur des Charts",
+  sheetDay:"Taggeburt",
+  sheetNight:"Nachtgeburt",
+  sheetIntercepted:"eingeschlossen",
+  rulersNote:"Modern: Pluto herrscht über Skorpion, Uranus über Wassermann, Neptun über Fische, und Mars, Saturn und Jupiter sind dort Mitherrscher. Traditionell: nur die sieben sichtbaren Planeten. Beide: Jedes dieser drei Zeichen hat zwei Herrscher, eine Dispositorenkette kann sich also verzweigen. Sekte, Erhöhungen und Sonnenphase sind in allen drei gleich.",
+  rulersBy_modern:"Würden und Dispositoren folgen den modernen Herrschern: Pluto, Uranus und Neptun herrschen über Skorpion, Wassermann und Fische, mit Mars, Saturn und Jupiter als Mitherrschern.",
+  rulersBy_classical:"Würden und Dispositoren folgen den traditionellen Herrschern, nur den sieben sichtbaren Planeten.",
+  rulersBy_both:"Würden und Dispositoren folgen beiden Herrschersätzen: Skorpion, Wassermann und Fische haben je zwei, die Dispositorenketten verzweigen sich also.",
+  gridNote:"Die zehn Planeten, Chiron, Aszendent und MC. Das Zeichen in einer Zelle ist der Aspekt; eine Zelle antippen für Paar und Orbis. Ohne äußeren Ring ist die Tabelle dreieckig, weil die obere Hälfte die untere wiederholen würde. Mit Ring sind die Zeilen seine Körper und die Spalten die eigenen.",
+  houseHead:"Haus {n}",
+  houseNum:"Haus {n}",
+  rulesOne:"Haus {n}",
+  rulesMany:"Häuser {list} und {last}",
+  carriesPlain:"{p} herrscht über Haus {from} und steht in Haus {into}",
+  xChart:"Chart",
+  xAngles:"ACHSEN UND HÄUSERSPITZEN",
+  xPlacements:"STELLUNGEN UND VERBINDUNGEN",
+  xAspects:"ASPEKTE",
+  xMidpoints:"HALBSUMMEN",
+  xMidNote:"bis {orb}°, auf der 90-Grad-Scheibe, die engsten",
+  xConfigs:"KONFIGURATIONEN",
+  xBalance:"BALANCE",
+  xFooter:"Rezeptionen nur durch Domizil und Erhöhung. Der Orbis für Mondknoten, Lilith und Selena ist enger.",
+  xRulesOne:"herrscht über Haus {n}",
+  xRulesMany:"herrscht über die Häuser {list} und {last}",
+  xCarries:"das Thema von Haus {from} zeigt sich in {into}",
+  xReceivedBy:"empfangen von"
 });
 Object.assign(I18N.it,{
   libShort:"Biblioteca",
@@ -1868,7 +2143,92 @@ Object.assign(I18N.it,{
   prevChart:"Carta precedente",
   orbsReset:"Orbi ripristinati",
   libFull:"La biblioteca è piena: {n} carte tue. Esporta un CSV ed eliminane alcune per salvarne una nuova.",
-  importSkipped:"non entrate: {n} (limite {cap})"
+  importSkipped:"non entrate: {n} (limite {cap})",
+  retrograde:"retrogrado",
+  tropical:"tropicale",
+  relocNote:"Lo stesso istante, un altro luogo. I pianeti non si spostano: le loro posizioni sono geocentriche e non dipendono da dove ci si trova. Cambiano solo gli angoli, le case e tutto ciò che si misura da essi. Il fuso della nuova città non conta, perché il momento non è cambiato. La rilocazione si azzera quando si calcola una nuova carta.",
+  confNote:"Dieci pianeti, senza Ascendente, Medio Cielo né nodi: gli angoli distano circa novanta gradi nella maggior parte delle carte e i nodi sono sempre esattamente opposti, quindi una figura costruita su di essi sarebbe una proprietà della cornice e non della carta. Gli orbi vengono dalle impostazioni degli aspetti. Uno yod richiede il quinconce attivo. Tocca una figura per evidenziarla sulla ruota.",
+  sfDispositor:"Dispositore",
+  sfCycle:"Ciclo di dispositori",
+  sfCycles:"Cicli di dispositori",
+  sfFinal:"Dispositore finale",
+  sfFinals:"Dispositori finali",
+  sfNoFinal:"Nessun dispositore finale",
+  sfOwnSign:"nel proprio segno, dispositore finale",
+  sfRules:"Governa",
+  sfReceptions:"Ricezioni",
+  sfPlacement:"Posizione",
+  sfAspects:"Aspetti",
+  sfMidpoints:"Su punti medi",
+  midOrb:"Punti medi",
+  sfReceives:"riceve",
+  sfByDomicile:"per domicilio",
+  sfByExaltation:"per esaltazione",
+  sfMutual:"reciproca",
+  digRuler:"domicilio",
+  digExalt:"esaltazione",
+  digDetriment:"esilio",
+  digFall:"caduta",
+  digPeregrine:"peregrino",
+  digCoRuler:"co-governatore",
+  angAngular:"angolare",
+  angSuccedent:"succedente",
+  angCadent:"cadente",
+  sectIn:"in setta",
+  sectContrary:"fuori setta",
+  solCazimi:"cazimi",
+  solCombust:"combusto",
+  solUnderBeams:"sotto i raggi",
+  solFree:"fuori dai raggi",
+  asteroids:"Asteroidi: Cerere, Pallade, Giunone, Vesta",
+  asteroidsNote:"Un file a parte, circa 320 KB, scaricato una volta all’attivazione e poi offline. Adattato a JPL Horizons, scarto massimo 0,21 secondi d’arco nel 1600-2250.",
+  asteroidsLoading:"caricamento…",
+  asteroidsFailed:"impossibile caricare",
+  house3d:"Casa anche per latitudine (3D, solo Placido)",
+  house3dNote:"I programmi comuni collocano un corpo solo per longitudine, e la ruota lo disegna così. Con questa opzione conta anche la latitudine eclittica: cambia circa il 4% delle posizioni, più spesso Plutone. Il glifo sulla ruota e il numero di casa nel testo possono allora non coincidere.",
+  pointOrb:"Nodi, Lilith, Selena",
+  aboutTitle:"Fonti e precisione",
+  copy:"Copia",
+  copied:"Copiato",
+  copyFail:"Copia non riuscita",
+  bkNever:"Queste carte non sono mai state esportate. Il browser può cancellarle senza avviso.",
+  bkNeverNative:"Queste carte non sono mai state esportate. Sono solo su questo telefono e si perdono se l’app viene eliminata.",
+  bkLast:"Ultima esportazione: {d} fa",
+  bkToday:"Ultima esportazione: oggi",
+  bkNotPersisted:"il browser non garantisce questa memoria",
+  bkRiskNative:"le carte sono solo su questo telefono",
+  chartNote:"Nota sulla carta",
+  exportTitle:"Dati della carta in testo",
+  exportBrief:"in un blocco",
+  exportNote:"Tutto ciò che l’app ha calcolato per questa carta: posizioni, dignità, catene di dispositori, ricezioni, aspetti con orbi, configurazioni ed equilibrio. Solo fatti, nessuna interpretazione.",
+  stationary:"stazionario",
+  sheetTitle:"Struttura della carta",
+  sheetDay:"carta diurna",
+  sheetNight:"carta notturna",
+  sheetIntercepted:"intercettati",
+  rulersNote:"Moderni: Plutone governa lo Scorpione, Urano l’Acquario, Nettuno i Pesci, e Marte, Saturno e Giove vi sono co-governatori. Tradizionali: solo i sette pianeti visibili. Entrambi: ciascuno di quei tre segni ha due governatori, quindi una catena di dispositori può ramificarsi. Setta, esaltazioni e fase solare sono uguali in tutti e tre.",
+  rulersBy_modern:"Dignità e dispositori seguono i governatori moderni: Plutone, Urano e Nettuno governano Scorpione, Acquario e Pesci, con Marte, Saturno e Giove come co-governatori.",
+  rulersBy_classical:"Dignità e dispositori seguono i governatori tradizionali, solo i sette pianeti visibili.",
+  rulersBy_both:"Dignità e dispositori seguono entrambe le serie di governatori: Scorpione, Acquario e Pesci ne hanno due ciascuno, quindi le catene di dispositori si ramificano.",
+  gridNote:"I dieci pianeti, Chirone, l’Ascendente e il Medio Cielo. Il segno in una cella è l’aspetto; tocca una cella per la coppia e l’orbe. Senza anello esterno la tabella è triangolare, perché la metà superiore ripeterebbe quella inferiore. Con l’anello, le righe sono i suoi corpi e le colonne i tuoi.",
+  houseHead:"casa {n}",
+  houseNum:"casa {n}",
+  rulesOne:"casa {n}",
+  rulesMany:"case {list} e {last}",
+  carriesPlain:"{p} governa la casa {from} e si trova nella casa {into}",
+  xChart:"Carta",
+  xAngles:"ANGOLI E CUSPIDI",
+  xPlacements:"POSIZIONI E LEGAMI",
+  xAspects:"ASPETTI",
+  xMidpoints:"PUNTI MEDI",
+  xMidNote:"fino a {orb}°, sul disco a 90 gradi, i più stretti",
+  xConfigs:"CONFIGURAZIONI",
+  xBalance:"EQUILIBRIO",
+  xFooter:"Ricezioni solo per domicilio ed esaltazione. L’orbe per i nodi, Lilith e Selena è ridotto.",
+  xRulesOne:"governa la casa {n}",
+  xRulesMany:"governa le case {list} e {last}",
+  xCarries:"il tema della casa {from} si esprime nella {into}",
+  xReceivedBy:"ricevuto da"
 });
 Object.assign(I18N.uk,{
   libShort:"Бібліотека",
@@ -1895,7 +2255,92 @@ Object.assign(I18N.uk,{
   prevChart:"Попередня карта",
   orbsReset:"Орбіси скинуто",
   libFull:"Бібліотека заповнена: {n} власних карт. Вивантажте CSV і видаліть зайві, щоб зберегти нову.",
-  importSkipped:"не вмістилося: {n} (межа {cap})"
+  importSkipped:"не вмістилося: {n} (межа {cap})",
+  retrograde:"ретроградний",
+  tropical:"тропічний",
+  relocNote:"Той самий момент, інше місце. Планети не зсуваються: їхні положення геоцентричні й не залежать від того, де ви стоїте. Змінюються лише кути, доми й усе, що від них відраховується. Часовий пояс нового міста ні до чого: момент лишився тим самим. Релокація скидається, коли будується нова карта.",
+  confNote:"Десять планет, без Асцендента, МС і вузлів: кути в більшості карт стоять близько дев’яноста градусів один від одного, а вузли завжди точно протилежні, тож фігура, побудована на них, була б властивістю рамки, а не карти. Орбіси беруться з налаштувань аспектів. Для йода потрібен увімкнений квінконс. Торкніться фігури, щоб підсвітити її на колі.",
+  sfDispositor:"Диспозитор",
+  sfCycle:"Цикл диспозиторів",
+  sfCycles:"Цикли диспозиторів",
+  sfFinal:"Кінцевий диспозитор",
+  sfFinals:"Кінцеві диспозитори",
+  sfNoFinal:"Кінцевого диспозитора немає",
+  sfOwnSign:"у своєму знаку, кінцевий диспозитор",
+  sfRules:"Управляє",
+  sfReceptions:"Рецепції",
+  sfPlacement:"Положення",
+  sfAspects:"Аспекти",
+  sfMidpoints:"На середніх точках",
+  midOrb:"Середні точки",
+  sfReceives:"приймає",
+  sfByDomicile:"за обителлю",
+  sfByExaltation:"за екзальтацією",
+  sfMutual:"взаємна",
+  digRuler:"обитель",
+  digExalt:"екзальтація",
+  digDetriment:"вигнання",
+  digFall:"падіння",
+  digPeregrine:"перегрин",
+  digCoRuler:"коуправитель",
+  angAngular:"кутовий",
+  angSuccedent:"наступний",
+  angCadent:"спадний",
+  sectIn:"у секті",
+  sectContrary:"поза сектою",
+  solCazimi:"казімі",
+  solCombust:"спалений",
+  solUnderBeams:"під променями",
+  solFree:"вільний від променів",
+  asteroids:"Астероїди: Церера, Паллада, Юнона, Веста",
+  asteroidsNote:"Окремий файл, близько 320 КБ, завантажується один раз під час увімкнення й далі працює офлайн. Підігнано до JPL Horizons, найбільша розбіжність 0,21 кутової секунди на 1600-2250.",
+  asteroidsLoading:"завантажується…",
+  asteroidsFailed:"не вдалося завантажити",
+  house3d:"Дім з урахуванням широти (3D, лише Плацидус)",
+  house3dNote:"Звичайні програми ставлять тіло в дім лише за довготою, і коло малює його так само. Увімкнена опція враховує ще й екліптичну широту: змінюється близько 4% положень, найчастіше в Плутона. Тоді гліф на колі й номер дому в тексті можуть розійтися.",
+  pointOrb:"Вузли, Ліліт, Селена",
+  aboutTitle:"Джерела й точність",
+  copy:"Копіювати",
+  copied:"Скопійовано",
+  copyFail:"Не вдалося скопіювати",
+  bkNever:"Карти жодного разу не вивантажувалися. Браузер може стерти їх без попередження.",
+  bkNeverNative:"Карти жодного разу не вивантажувалися. Вони зберігаються лише на цьому телефоні й зникнуть, якщо видалити застосунок.",
+  bkLast:"Останнє вивантаження: {d} тому",
+  bkToday:"Останнє вивантаження: сьогодні",
+  bkNotPersisted:"браузер не гарантує збереження цього сховища",
+  bkRiskNative:"карти зберігаються лише на цьому телефоні",
+  chartNote:"Нотатка до карти",
+  exportTitle:"Дані карти текстом",
+  exportBrief:"одним блоком",
+  exportNote:"Усе, що застосунок обчислив для цієї карти: положення, гідності, ланцюжки диспозиторів, рецепції, аспекти з орбісами, конфігурації й баланс. Лише факти, без тлумачення.",
+  stationary:"стаціонарний",
+  sheetTitle:"Структура карти",
+  sheetDay:"денна карта",
+  sheetNight:"нічна карта",
+  sheetIntercepted:"перехоплені",
+  rulersNote:"Сучасні: Плутон управляє Скорпіоном, Уран Водолієм, Нептун Рибами, а Марс, Сатурн і Юпітер там коуправителі. Класичні: лише сім видимих планет. Обидва набори: у цих трьох знаків по два управителі, і ланцюжок диспозиторів може розгалужуватися. Секта, екзальтації й фаза відносно Сонця однакові в усіх трьох.",
+  rulersBy_modern:"Гідності й диспозитори рахуються за сучасними управителями: Плутон, Уран і Нептун управляють Скорпіоном, Водолієм і Рибами, а Марс, Сатурн і Юпітер там коуправителі.",
+  rulersBy_classical:"Гідності й диспозитори рахуються за класичними управителями, лише сім видимих планет.",
+  rulersBy_both:"Гідності й диспозитори рахуються за обома наборами управителів: у Скорпіона, Водолія й Риб по два, тож ланцюжки диспозиторів розгалужуються.",
+  gridNote:"Десять планет, Хірон, Асцендент і МС. Знак у клітинці це аспект; торкніться клітинки, щоб побачити пару й орбіс. Без зовнішнього кільця таблиця трикутна, бо верхня половина повторювала б нижню. З кільцем рядки це його тіла, а стовпці ваші.",
+  houseHead:"{n} дім",
+  houseNum:"дім {n}",
+  rulesOne:"{n} домом",
+  rulesMany:"{list} і {last} домами",
+  carriesPlain:"{p} управляє {from} домом і перебуває в {into} домі",
+  xChart:"Карта",
+  xAngles:"КУТИ Й КУСПІДИ",
+  xPlacements:"ПОЛОЖЕННЯ Й ЗВ’ЯЗКИ",
+  xAspects:"АСПЕКТИ",
+  xMidpoints:"СЕРЕДНІ ТОЧКИ",
+  xMidNote:"до {orb}°, за 90-градусним диском, найтісніші",
+  xConfigs:"КОНФІГУРАЦІЇ",
+  xBalance:"БАЛАНС",
+  xFooter:"Рецепції лише за обителлю й екзальтацією. Орбіс для вузлів, Ліліт і Селени звужено.",
+  xRulesOne:"управляє {n} домом",
+  xRulesMany:"управляє {list} і {last} домами",
+  xCarries:"тема {from} дому проявляється в {into}",
+  xReceivedBy:"приймають"
 });
 Object.assign(I18N.ka,{
   libShort:"ბიბლიოთეკა",
@@ -1922,7 +2367,92 @@ Object.assign(I18N.ka,{
   prevChart:"წინა რუკა",
   orbsReset:"ორბისები საწყისზე დაბრუნდა",
   libFull:"ბიბლიოთეკა სავსეა: {n} საკუთარი რუკა. ახლის შესანახად გაიტანე CSV და წაშალე ზედმეტი.",
-  importSkipped:"ვერ დაეტია: {n} (ზღვარი {cap})"
+  importSkipped:"ვერ დაეტია: {n} (ზღვარი {cap})",
+  retrograde:"რეტროგრადული",
+  tropical:"ტროპიკული",
+  relocNote:"იგივე მომენტი, სხვა ადგილი. პლანეტები არ გადაადგილდება: მათი მდებარეობა გეოცენტრულია და არ არის დამოკიდებული იმაზე, სად დგახარ. იცვლება მხოლოდ კუთხეები, სახლები და ყველაფერი, რაც მათგან ითვლება. ახალი ქალაქის სასაათო სარტყელს მნიშვნელობა არ აქვს, რადგან მომენტი არ შეცვლილა. რელოკაცია უქმდება, როცა ახალი რუკა აიგება.",
+  confNote:"ათი პლანეტა, ასცენდენტის, MC-ის და კვანძების გარეშე: კუთხეები უმეტეს რუკაში ერთმანეთისგან დაახლოებით ოთხმოცდაათი გრადუსით არის დაშორებული, კვანძები კი ყოველთვის ზუსტად საპირისპიროა, ამიტომ მათზე აგებული ფიგურა ჩარჩოს თვისება იქნებოდა და არა რუკის. ორბისები ასპექტების პარამეტრებიდან მოდის. იოდს ჩართული კვინკონსი სჭირდება. შეეხე ფიგურას, რომ წრეზე გამოჩნდეს.",
+  sfDispositor:"დისპოზიტორი",
+  sfCycle:"დისპოზიტორების ციკლი",
+  sfCycles:"დისპოზიტორების ციკლები",
+  sfFinal:"საბოლოო დისპოზიტორი",
+  sfFinals:"საბოლოო დისპოზიტორები",
+  sfNoFinal:"საბოლოო დისპოზიტორი არ არის",
+  sfOwnSign:"საკუთარ ნიშანში, საბოლოო დისპოზიტორი",
+  sfRules:"მართავს",
+  sfReceptions:"რეცეფციები",
+  sfPlacement:"მდებარეობა",
+  sfAspects:"ასპექტები",
+  sfMidpoints:"შუა წერტილებზე",
+  midOrb:"შუა წერტილები",
+  sfReceives:"იღებს",
+  sfByDomicile:"სავანით",
+  sfByExaltation:"ამაღლებით",
+  sfMutual:"ურთიერთი",
+  digRuler:"სავანე",
+  digExalt:"ამაღლება",
+  digDetriment:"დევნილობა",
+  digFall:"დაცემა",
+  digPeregrine:"მოხეტიალე",
+  digCoRuler:"თანამმართველი",
+  angAngular:"კუთხური",
+  angSuccedent:"მომდევნო",
+  angCadent:"ვარდნილი",
+  sectIn:"სექტაში",
+  sectContrary:"სექტის გარეთ",
+  solCazimi:"კაზიმი",
+  solCombust:"დამწვარი",
+  solUnderBeams:"სხივების ქვეშ",
+  solFree:"სხივებისგან თავისუფალი",
+  asteroids:"ასტეროიდები: ცერერა, პალადა, იუნონა, ვესტა",
+  asteroidsNote:"ცალკე ფაილი, დაახლოებით 320 KB, ერთხელ ჩამოიტვირთება ჩართვისას და შემდეგ ოფლაინ მუშაობს. მორგებულია JPL Horizons-ზე, უდიდესი სხვაობა 0,21 რკალის წამი 1600-2250 წლებში.",
+  asteroidsLoading:"იტვირთება…",
+  asteroidsFailed:"ვერ ჩაიტვირთა",
+  house3d:"სახლი განედის გათვალისწინებით (3D, მხოლოდ პლაციდუსი)",
+  house3dNote:"ჩვეულებრივი პროგრამები სხეულს სახლში მხოლოდ გრძედით სვამენ და წრეც ასე ხატავს. ამ ოფციით ეკლიპტიკური განედიც ითვლება: იცვლება მდებარეობების დაახლოებით 4%, ყველაზე ხშირად პლუტონის. მაშინ გლიფი წრეზე და სახლის ნომერი ტექსტში შეიძლება არ დაემთხვეს.",
+  pointOrb:"კვანძები, ლილიტი, სელენა",
+  aboutTitle:"წყაროები და სიზუსტე",
+  copy:"კოპირება",
+  copied:"დაკოპირდა",
+  copyFail:"კოპირება ვერ მოხერხდა",
+  bkNever:"ეს რუკები არასდროს გატანილა. ბრაუზერს შეუძლია წაშალოს ისინი გაფრთხილების გარეშე.",
+  bkNeverNative:"ეს რუკები არასდროს გატანილა. ისინი მხოლოდ ამ ტელეფონზეა და დაიკარგება, თუ აპს წაშლი.",
+  bkLast:"ბოლო გატანა: {d} წინ",
+  bkToday:"ბოლო გატანა: დღეს",
+  bkNotPersisted:"ბრაუზერი ამ საცავის შენახვას არ იძლევა გარანტიას",
+  bkRiskNative:"რუკები მხოლოდ ამ ტელეფონზეა",
+  chartNote:"შენიშვნა რუკაზე",
+  exportTitle:"რუკის მონაცემები ტექსტად",
+  exportBrief:"ერთ ბლოკად",
+  exportNote:"ყველაფერი, რაც აპმა ამ რუკისთვის გამოთვალა: მდებარეობები, ღირსებები, დისპოზიტორების ჯაჭვები, რეცეფციები, ასპექტები ორბისებით, კონფიგურაციები და ბალანსი. მხოლოდ ფაქტები, ინტერპრეტაციის გარეშე.",
+  stationary:"სტაციონარული",
+  sheetTitle:"რუკის სტრუქტურა",
+  sheetDay:"დღის რუკა",
+  sheetNight:"ღამის რუკა",
+  sheetIntercepted:"ჩაკეტილი",
+  rulersNote:"თანამედროვე: პლუტონი მართავს მორიელს, ურანი მერწყულს, ნეპტუნი თევზებს, ხოლო მარსი, სატურნი და იუპიტერი იქ თანამმართველები არიან. ტრადიციული: მხოლოდ შვიდი ხილული პლანეტა. ორივე: ამ სამ ნიშანს თითო ორი მმართველი ჰყავს, ამიტომ დისპოზიტორების ჯაჭვი შეიძლება განშტოვდეს. სექტა, ამაღლებები და მზესთან ფაზა სამივეში ერთნაირია.",
+  rulersBy_modern:"ღირსებები და დისპოზიტორები თანამედროვე მმართველებით ითვლება: პლუტონი, ურანი და ნეპტუნი მართავენ მორიელს, მერწყულსა და თევზებს, მარსი, სატურნი და იუპიტერი კი იქ თანამმართველები არიან.",
+  rulersBy_classical:"ღირსებები და დისპოზიტორები ტრადიციული მმართველებით ითვლება, მხოლოდ შვიდი ხილული პლანეტა.",
+  rulersBy_both:"ღირსებები და დისპოზიტორები ორივე მმართველების ნაკრებით ითვლება: მორიელს, მერწყულსა და თევზებს თითო ორი ჰყავს, ამიტომ დისპოზიტორების ჯაჭვები განშტოვდება.",
+  gridNote:"ათი პლანეტა, ქირონი, ასცენდენტი და MC. უჯრაში ნიშანი ასპექტია; შეეხე უჯრას წყვილისა და ორბისის სანახავად. გარე რგოლის გარეშე ცხრილი სამკუთხაა, რადგან ზედა ნახევარი ქვედას გაიმეორებდა. რგოლით სტრიქონები მისი სხეულებია, სვეტები კი შენი.",
+  houseHead:"სახლი {n}",
+  houseNum:"სახლი {n}",
+  rulesOne:"{n} სახლს",
+  rulesMany:"{list} და {last} სახლებს",
+  carriesPlain:"{p} მართავს {from} სახლს და იმყოფება {into} სახლში",
+  xChart:"რუკა",
+  xAngles:"კუთხეები და კუსპიდები",
+  xPlacements:"მდებარეობები და კავშირები",
+  xAspects:"ასპექტები",
+  xMidpoints:"შუა წერტილები",
+  xMidNote:"{orb}°-მდე, 90-გრადუსიან დისკზე, ყველაზე მჭიდრო",
+  xConfigs:"კონფიგურაციები",
+  xBalance:"ბალანსი",
+  xFooter:"რეცეფციები მხოლოდ სავანითა და ამაღლებით. კვანძების, ლილიტისა და სელენას ორბისი შევიწროებულია.",
+  xRulesOne:"მართავს {n} სახლს",
+  xRulesMany:"მართავს {list} და {last} სახლებს",
+  xCarries:"{from} სახლის თემა ვლინდება {into}-ში",
+  xReceivedBy:"იღებენ"
 });
 /* STR holds the two languages the app was written in, key-major, which is how
    they were edited. I18N holds the six added afterwards, language-major, which
@@ -6030,16 +6560,11 @@ function structureLines(ch,p){
      drift into meaning something the data does not say. */
   if(f.rulesHouses.length){
     const arrows=f.carries.map(c=>{
-      const plain=LANG==='ru'
-        ? `${PN(p)} управляет ${c.from} домом и находится в ${c.into} доме`
-        : `${PN(p)} rules house ${c.from} and is in house ${c.into}`;
+      const plain=t('carriesPlain').replace('{p}',PN(p)).replace('{from}',c.from).replace('{into}',c.into);
       return `<span class="dim" title="${plain}">${c.from} \u2192 ${c.into}</span>`;
     }).join(' · ');
     const hs2=f.rulesHouses.slice().sort((a,b)=>a-b);
-    const head=LANG==='ru'
-      ? (hs2.length===1?`${hs2[0]} домом`
-         :`${hs2.slice(0,-1).join(', ')} и ${hs2[hs2.length-1]} домами`)
-      : `house${hs2.length>1?'s':''} ${hs2.join(', ')}`;
+    const head=housesRuled(hs2,'rulesOne','rulesMany');
     out.push([t('sfRules'),head+(arrows?' · '+arrows:'')]);
   }
 
@@ -6080,7 +6605,7 @@ function structureLines(ch,p){
 function structureHead(ch,p){
   const r=structureLines(ch,p); if(!r) return '';
   const f=r.f;
-  const bits=[LX(SIGN_NAME)[f.sign], (LANG==='ru'?`${f.house} дом`:`house ${f.house}`)];
+  const bits=[LX(SIGN_NAME)[f.sign], t('houseHead').replace('{n}',f.house)];
   if(f.dignity) bits.push(t(DIG_KEY[f.dignity]));
   return bits.join(' · ');
 }
@@ -6233,9 +6758,15 @@ function aspectDirection(ch,a,b,asp){
   return later<now?'applying':'separating';
 }
 
+/* "house 5" / "houses 5, 7" in each language's own grammar: Russian wants the
+   instrumental and an "и" before the last, the others a plain list. The
+   templates carry it; the code only fills them. */
+function housesRuled(hs,one,many){
+  return hs.length===1 ? t(one).replace('{n}',hs[0])
+    : t(many).replace('{list}',hs.slice(0,-1).join(', ')).replace('{last}',hs[hs.length-1]);
+}
 function chartExportText(ch){
   if(!ch) return '';
-  const ru=LANG==='ru';
   const F=factsOf(ch);
   const S=n=>LX(SIGN_NAME)[n];
   const deg=lon=>{const d=rev(lon)%30;
@@ -6244,7 +6775,7 @@ function chartExportText(ch){
   const L=[];
 
   const meta=document.getElementById('chartMeta');
-  L.push((ru?'КАРТА':'CHART').toUpperCase());
+  L.push(t('xChart').toUpperCase());
   if(meta&&meta.innerText.trim()) L.push(meta.innerText.trim());
   /* The house system is already in the meta line above; repeating it was the
      first thing a reader noticed. */
@@ -6256,17 +6787,17 @@ function chartExportText(ch){
   L.push(rulersLine(F));
   L.push('');
 
-  L.push(ru?'УГЛЫ И КУСПИДЫ':'ANGLES AND CUSPS');
+  L.push(t('xAngles'));
   L.push(`ASC ${place(ch.asc)}   MC ${place(ch.mc)}`);
   L.push(F.houses.map(h=>`${h.house} ${place(h.cuspLon)}`).join(' · '));
   L.push('');
 
-  L.push(ru?'ПОЛОЖЕНИЯ И СВЯЗИ':'PLACEMENTS AND LINKS');
+  L.push(t('xPlacements'));
   L.push(...placementLines(ch));
   L.push('');
 
   const asps=findAspects(ch.pos).sort((a,b)=>a.orb-b.orb);
-  L.push((ru?'АСПЕКТЫ':'ASPECTS')+` (${asps.length})`);
+  L.push(t('xAspects')+` (${asps.length})`);
   L.push(...aspectLines(ch));
   L.push('');
 
@@ -6275,17 +6806,16 @@ function chartExportText(ch){
     /* The heading says the limit without using the word the data lines use:
        a test counts aspect lines by that word, and a heading that borrowed it
        made the count one too many. */
-    L.push((ru?'СРЕДНИЕ ТОЧКИ':'MIDPOINTS')+` (${ru?'до':'within'} ${MIDPOINT_ORB}°, `
-      +(ru?'по 90-градусному диску, самые тесные':'on the 90-degree dial, the tightest')+`)`);
+    L.push(t('xMidpoints')+` (${t('xMidNote').replace('{orb}',MIDPOINT_ORB)})`);
     mid.forEach(h=>L.push(`${PN(h.body)} = ${PN(h.a)}/${PN(h.b)}, ${t('orb')} ${h.orb.toFixed(2)}°`));
     L.push('');
   }
 
   const cfgL=configurationLines(ch);
-  if(cfgL.length){ L.push(ru?'КОНФИГУРАЦИИ':'CONFIGURATIONS'); L.push(...cfgL); L.push(''); }
+  if(cfgL.length){ L.push(t('xConfigs')); L.push(...cfgL); L.push(''); }
 
   const bal=chartBalance(ch);
-  L.push(ru?'БАЛАНС':'BALANCE');
+  L.push(t('xBalance'));
   L.push(ELEM_KEYS.map((k,i)=>`${t(k)} ${bal.el[i]}`).join(' · '));
   L.push(MODE_KEYS.map((k,i)=>`${t(k)} ${bal.mo[i]}`).join(' · '));
   L.push([['hemi_e',bal.hemi.e],['hemi_w',bal.hemi.w],['hemi_n',bal.hemi.n],['hemi_s',bal.hemi.s]]
@@ -6295,9 +6825,7 @@ function chartExportText(ch){
      whatever the setting, so with modern rulers on - the default - the block
      opened with "Rulers: modern" and closed by contradicting it, and the model
      writing the reading was handed both. */
-  L.push(t('rulersBy_'+F.rulers)
-    +(ru?' Рецепции только по обители и экзальтации. Орбис для узлов, Лилит и Селены сужен.'
-        :' Receptions are by domicile and exaltation only. The orb for the nodes, Lilith and Selena is narrowed.'));
+  L.push(t('rulersBy_'+F.rulers)+' '+t('xFooter'));
   return L.join('\n');
 }
 
@@ -6308,7 +6836,6 @@ function chartExportText(ch){
    per line. A control that copies something useless is worse than no control,
    so the grid has none and the reason is here rather than in a bug report. */
 function placementLines(ch){
-  const ru=LANG==='ru';
   const F=factsOf(ch);
   const S=n=>LX(SIGN_NAME)[n];
   const deg=lon=>{const d=rev(lon)%30;
@@ -6317,8 +6844,7 @@ function placementLines(ch){
   const L=[];
   WHEEL_BODIES.concat(FACT_POINTS).filter(p=>ch.pos[p]).forEach(p=>{
     const f=F.planets[p], b=ch.pos[p];
-    const head=[`${PN(p)} ${place(b.lon)}`,
-      ru?`дом ${f.house}`:`house ${f.house}`];
+    const head=[`${PN(p)} ${place(b.lon)}`, t('houseNum').replace('{n}',f.house)];
     if(b.retro) head.push(t('retrograde'));
     if(isStationary(p,b.spd)) head.push(t('stationary'));
     if(f.dignity) head.push(t(DIG_KEY[f.dignity]));
@@ -6344,17 +6870,13 @@ function placementLines(ch){
     }
     if(f.rulesHouses.length){
       const hs=f.rulesHouses.slice().sort((a,b2)=>a-b2);
-      const rHead=ru
-        ? (hs.length===1?`управляет ${hs[0]} домом`
-           :`управляет ${hs.slice(0,-1).join(', ')} и ${hs[hs.length-1]} домами`)
-        : `rules house${hs.length>1?'s':''} ${hs.join(', ')}`;
+      const rHead=housesRuled(hs,'xRulesOne','xRulesMany');
       L.push('  '+rHead
-        +(f.carries.length?', '+f.carries.map(c=>ru?`тема ${c.from} дома проявляется в ${c.into}`
-          :`theme of house ${c.from} lands in ${c.into}`).join('; '):''));
+        +(f.carries.length?', '+f.carries.map(c=>t('xCarries').replace('{from}',c.from).replace('{into}',c.into)).join('; '):''));
     }
     const rec=F.receptions.filter(r=>r.to===p).slice().sort((a,b2)=>
       (REC_ORDER[a.type]-REC_ORDER[b2.type])||PN(a.from).localeCompare(PN(b2.from)));
-    if(rec.length) L.push('  '+(ru?'принимают':'received by')+': '+rec.map(r=>{
+    if(rec.length) L.push('  '+t('xReceivedBy')+': '+rec.map(r=>{
       const mut=F.mutualReceptions.some(m=>(m.a===r.from&&m.b===p)||(m.a===p&&m.b===r.from));
       return `${PN(r.from)} ${t(REC_KEY[r.type])}${mut?' ('+t('sfMutual')+')':''}`;}).join(', '));
   });

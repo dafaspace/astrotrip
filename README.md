@@ -353,7 +353,11 @@ does not move at all.
 English, Spanish, French, Russian, German, Italian, Ukrainian, Georgian - the
 same set and the same order as Cinemail. English is the default; the language is
 chosen in the settings panel, each one by its own name, and the choice persists. A key missing from a language falls through to English, so a
-partial translation costs one string rather than the screen.
+partial translation costs one string rather than the screen. That fallback hid a gap until 13 Oct 2026:
+67 visible strings - the planet card, the text block, two settings, the backup line -
+and a handful of phrases written into the code as Russian-or-English branches showed
+English in the other six languages. Since 3.17 every interface string exists in all
+eight, and a test walks every key instead of a hand-kept list.
 
 The interpretation corpus is deliberately not translated: it exists in Russian
 only, it is switched off, and a machine rendering of it into six languages would
@@ -642,7 +646,7 @@ mattered: before it did, a deliberately broken app passed every check. The runne
 for the city atlas to finish loading, or the atlas tests would silently check the inline
 seed instead.
 
-**349 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
+**351 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
 library, robustness over 1550-2250 and at polar latitudes, house systems (angles land
 on the cusps, cusps run round the circle without crossing, quadrant systems coincide at
 the equator, zero-latitude bodies get the same house from both methods), library data

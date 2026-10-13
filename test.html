@@ -4437,6 +4437,35 @@ function run(){
       return stored;})()`);
     return r==='it'||`в хранилище легло "${r}"`;
   });
+  t('каждая строка интерфейса есть на всех восьми языках, а не по списку',()=>{
+    /* Тест ниже сверяет ключи по списку, составленному вручную, и 13 окт 2026
+       оказалось, что 79 строк было только на русском и английском: карточка
+       планеты, блок для ИИ, две настройки, строка резервной копии. Этот берёт
+       все ключи STR. Исключение одно и названо: выключенный разбор, который
+       существует только по-русски. */
+    const r=ev(`(()=>{const interp=new Set(['corpusnote','learned','forget','landq','felt','weight','lasttime','learnempty']);
+      const out=[];
+      for(const k of Object.keys(STR)){ if(interp.has(k)) continue;
+        for(const c of LANG_CODES){ if(c==='ru'||c==='en') continue;
+          if(!(I18N[c]&&I18N[c][k]!==undefined)&&!(STR[k]&&STR[k][c]!==undefined)) out.push(c+'.'+k); } }
+      return out;})()`);
+    return r.length===0||`без перевода ${r.length}: ${r.slice(0,8).join(', ')}`;
+  });
+  t('в карточке планеты и в блоке для ИИ на шести языках нет английских вставок',()=>{
+    /* Фразы, которые были в коде веткой «ru или en»: «house 5», «rules houses»,
+       «received by», заголовки блока. */
+    const r=ev(`(()=>{const k=LANG, out={};
+      try{ for(const c of ['es','fr','de','it','uk','ka']){ LANG=c;
+          const txt=chartExportText(CURRENT)+' | '+structureLines(CURRENT,'Sun').lines.map(x=>x.join(' ')).join(' | ')
+            +' | '+structureHead(CURRENT,'Sun');
+          /* Phrases, not words: French writes ASPECTS and German BALANCE too. */
+          const hit=txt.match(/house [0-9]|houses [0-9]|rules house|received by|theme of house|PLACEMENTS AND LINKS|ANGLES AND CUSPS|Receptions are by|on the 90-degree dial|in its own sign/);
+          if(hit) out[c]=hit[0]; } }
+      finally{ LANG=k; }
+      return out;})()`);
+    const bad=Object.entries(r).map(([c,w])=>c+': «'+w+'»');
+    return bad.length===0||bad.join('; ');
+  });
   t('ни один язык не оставляет видимую строку непереведённой',()=>{
     /* Ключи, которые реально попадают на экран. Разбор сюда не входит:
        он выключен и существует только по-русски. */
