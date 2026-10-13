@@ -2701,6 +2701,37 @@ function run(){
     if(!/2/.test(r.text)) return 'строка не говорит, сколько загружено: '+r.text;
     return r.back==='Своя'||'после отмены в библиотеке: '+r.back;
   });
+  t('у предела библиотеки старые карты не выпадают, а лишнее названо',()=>{
+    /* Было: list.slice(0,LIB_CAP) при сохранении и при импорте, и самые старые
+       свои карты молча уходили снизу. Нашёл аудит _HQ 13 окт 2026. */
+    const r=ev(`(()=>{const kc=localStorage.getItem(LKEY_CHARTS), out={};
+      try{
+        const many=[]; for(let i=0;i<LIB_CAP-1;i++) many.push({id:'m'+i,name:'M'+i,y:1900+(i%100),mo:1,d:1,t:12,lat:0,lon:0});
+        writeCharts(many);
+        const csv='name,date,time,utc_offset,latitude,longitude,city\\r\\nA,1950-01-01,10:00,+01:00,48.85,2.35,Paris\\r\\nB,1960-02-02,11:00,+01:00,52.52,13.40,Berlin\\r\\nC,1970-03-03,12:00,+01:00,41.90,12.50,Rome\\r\\n';
+        out.n=importCsvText(csv);
+        out.total=savedCharts().length;
+        out.oldest=savedCharts().some(e=>e.id==='m'+(LIB_CAP-2));
+        out.text=document.getElementById('toastText').textContent;
+        hideToast();
+        document.getElementById('chartName').value='Сверх предела';
+        document.getElementById('saveChart').disabled=false;
+        document.getElementById('saveChart').click();
+        out.afterSave=savedCharts().length;
+        out.fullText=document.getElementById('toastText').textContent;
+      } finally {
+        if(kc===null) localStorage.removeItem(LKEY_CHARTS); else localStorage.setItem(LKEY_CHARTS,kc);
+        renderLibrary(); renderBackupLine(); hideToast(); syncSaveBtn();
+      }
+      return out;})()`);
+    const cap=ev('LIB_CAP');
+    if(r.n!==1) return 'загружено '+r.n+' вместо одной';
+    if(r.total!==cap) return 'в библиотеке '+r.total;
+    if(!r.oldest) return 'самая старая карта выпала';
+    if(!/2/.test(r.text)||!new RegExp(String(cap)).test(r.text)) return 'не сказано, что двум не хватило места: '+r.text;
+    if(r.afterSave!==cap) return 'сохранение сверх предела прошло: '+r.afterSave;
+    return new RegExp(String(cap)).test(r.fullText)||'нет объяснения, что библиотека полна: '+r.fullText;
+  });
   t('сброшенные орбисы можно вернуть',()=>{
     const r=ev(`(()=>{const keep=JSON.stringify(ORBS), out={};
       try{

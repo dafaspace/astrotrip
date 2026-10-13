@@ -527,9 +527,10 @@ and allocates only for the eight rows shown.
 
 ### Getting to a chart
 
-Four people were walked through the app before this layout was settled: an
-astrologer casting client after client, a researcher reading famous charts, an
-amateur casting a partner's chart, and someone with one chart of their own. All four
+Four imagined users were walked through the app on paper before this layout was
+settled - not observed people; no stranger had used AstroTrip yet: an astrologer
+casting client after client, a researcher reading famous charts, an amateur casting a
+partner's chart, and someone with one chart of their own. All four
 do the same three things - enter who, when and where, see the chart, keep it - and
 the old page put the name and the save button a card below the form, behind three
 calculation options with a paragraph each. Measured at 375x812: the form was 949 px
@@ -591,6 +592,10 @@ Your own charts export to plain **CSV** with a header row and import back from i
 the database opens in a spreadsheet, survives editing by hand, and can be diffed. The
 built-in library is not exported; it is not yours to carry off.
 
+Your own charts are capped at 2000. At the cap a save is refused and an import stops,
+and both say so; nothing already in the library is dropped. Until 3.16.3 the oldest
+charts fell off the bottom in silence.
+
 ### Chart balance
 
 Element, modality and hemisphere tallies. Counts only, no verdict: which element is
@@ -637,7 +642,7 @@ mattered: before it did, a deliberately broken app passed every check. The runne
 for the city atlas to finish loading, or the atlas tests would silently check the inline
 seed instead.
 
-**348 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
+**349 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
 library, robustness over 1550-2250 and at polar latitudes, house systems (angles land
 on the cusps, cusps run round the circle without crossing, quadrant systems coincide at
 the equator, zero-latitude bodies get the same house from both methods), library data

@@ -1110,7 +1110,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
 /* Bump together with CACHE in sw.js: the two are the same release, and the
    number on screen is how you tell from a phone which one you are looking at. */
-const APP_VERSION='3.16.2';
+const APP_VERSION='3.16.3';
 document.getElementById('ver').textContent=APP_VERSION;
 
 /* ---------- feature flags ----------
@@ -1417,6 +1417,9 @@ const STR = {
   editData:{ru:'Изменить данные рождения',en:'Edit the birth data'},
   geoNone:{ru:'Координаты и пояс возьмутся из города',en:'Coordinates and offset come from the city'},
   undo:{ru:'Вернуть',en:'Undo'},
+  libFull:{ru:'Библиотека заполнена: {n} своих карт. Выгрузите CSV и удалите лишние, чтобы сохранить новую.',
+    en:'The library is full: {n} charts of your own. Export a CSV and delete some to save a new one.'},
+  importSkipped:{ru:'не поместилось: {n} (предел {cap})',en:'did not fit: {n} (limit {cap})'},
   chartDeleted:{ru:'Карта удалена',en:'Chart deleted'},
   prevChart:{ru:'Прошлая карта',en:'Previous chart'},
   orbsReset:{ru:'Орбисы сброшены',en:'Orbs reset'},
@@ -1782,7 +1785,9 @@ Object.assign(I18N.es,{
   undo:"Deshacer",
   chartDeleted:"Carta eliminada",
   prevChart:"Carta anterior",
-  orbsReset:"Orbes restablecidos"
+  orbsReset:"Orbes restablecidos",
+  libFull:"La biblioteca está llena: {n} cartas propias. Exporta un CSV y borra algunas para guardar una nueva.",
+  importSkipped:"no cupieron: {n} (límite {cap})"
 });
 Object.assign(I18N.fr,{
   libShort:"Bibliothèque",
@@ -1807,7 +1812,9 @@ Object.assign(I18N.fr,{
   undo:"Annuler",
   chartDeleted:"Carte supprimée",
   prevChart:"Carte précédente",
-  orbsReset:"Orbes réinitialisés"
+  orbsReset:"Orbes réinitialisés",
+  libFull:"La bibliothèque est pleine : {n} cartes à vous. Exportez un CSV et supprimez-en pour en enregistrer une nouvelle.",
+  importSkipped:"hors limite : {n} (maximum {cap})"
 });
 Object.assign(I18N.de,{
   libShort:"Bibliothek",
@@ -1832,7 +1839,9 @@ Object.assign(I18N.de,{
   undo:"Rückgängig",
   chartDeleted:"Chart gelöscht",
   prevChart:"Vorheriges Chart",
-  orbsReset:"Orben zurückgesetzt"
+  orbsReset:"Orben zurückgesetzt",
+  libFull:"Die Bibliothek ist voll: {n} eigene Charts. Zum Speichern eines neuen erst ein CSV exportieren und einige löschen.",
+  importSkipped:"passten nicht: {n} (Grenze {cap})"
 });
 Object.assign(I18N.it,{
   libShort:"Biblioteca",
@@ -1857,7 +1866,9 @@ Object.assign(I18N.it,{
   undo:"Annulla",
   chartDeleted:"Carta eliminata",
   prevChart:"Carta precedente",
-  orbsReset:"Orbi ripristinati"
+  orbsReset:"Orbi ripristinati",
+  libFull:"La biblioteca è piena: {n} carte tue. Esporta un CSV ed eliminane alcune per salvarne una nuova.",
+  importSkipped:"non entrate: {n} (limite {cap})"
 });
 Object.assign(I18N.uk,{
   libShort:"Бібліотека",
@@ -1882,7 +1893,9 @@ Object.assign(I18N.uk,{
   undo:"Повернути",
   chartDeleted:"Карту видалено",
   prevChart:"Попередня карта",
-  orbsReset:"Орбіси скинуто"
+  orbsReset:"Орбіси скинуто",
+  libFull:"Бібліотека заповнена: {n} власних карт. Вивантажте CSV і видаліть зайві, щоб зберегти нову.",
+  importSkipped:"не вмістилося: {n} (межа {cap})"
 });
 Object.assign(I18N.ka,{
   libShort:"ბიბლიოთეკა",
@@ -1907,7 +1920,9 @@ Object.assign(I18N.ka,{
   undo:"დაბრუნება",
   chartDeleted:"რუკა წაიშალა",
   prevChart:"წინა რუკა",
-  orbsReset:"ორბისები საწყისზე დაბრუნდა"
+  orbsReset:"ორბისები საწყისზე დაბრუნდა",
+  libFull:"ბიბლიოთეკა სავსეა: {n} საკუთარი რუკა. ახლის შესანახად გაიტანე CSV და წაშალე ზედმეტი.",
+  importSkipped:"ვერ დაეტია: {n} (ზღვარი {cap})"
 });
 /* STR holds the two languages the app was written in, key-major, which is how
    they were edited. I18N holds the six added afterwards, language-major, which
@@ -8432,11 +8447,14 @@ document.getElementById('saveChart').addEventListener('click',function(){
   const p=d.split('-').map(Number), q=tm.split(':').map(Number);
   const cityV=formVal('city'), nm=formSaveName();
   const list=savedCharts();
+  /* Full means full: the new chart is refused and the reason said. It used to
+     go in at the top while the oldest one silently fell off the bottom. */
+  if(list.length>=LIB_CAP){ toast(t('libFull').replace('{n}',LIB_CAP)); return; }
   list.unshift({id:'u'+Date.now(), name:nm,
     y:p[0], mo:p[1], d:p[2], t:q[0]+q[1]/60,
     lat:+document.getElementById('lat').value, lon:+document.getElementById('lng').value,
     tz:parseOffset(document.getElementById('tz').value), city:cityV, rr:'A', src:''});
-  writeCharts(list.slice(0,LIB_CAP));
+  writeCharts(list);
   renderLibrary(); renderBackupLine(); askPersistence(); syncSaveBtn();
 });
 
@@ -8489,7 +8507,7 @@ function csvToLib(text){
   const at=n=>head.indexOf(n);
   if(at('date')===-1||at('latitude')===-1) return -1;
   const have=new Set(savedCharts().map(e=>`${e.name}|${e.y}-${e.mo}-${e.d}|${e.t}`));
-  const list=savedCharts(); let n=0;
+  const list=savedCharts(); let n=0, skipped=0;
   for(let i=1;i<rows.length;i++){
     const r=rows[i]; const g=k=>{const j=at(k);return j===-1?'':(r[j]||'').trim();};
     const dm=/^(-?\d{1,6})-(\d{1,2})-(\d{1,2})$/.exec(g('date')); if(!dm) continue;
@@ -8500,13 +8518,18 @@ function csvToLib(text){
     const key=`${g('name')}|${+dm[1]}-${+dm[2]}-${+dm[3]}|${t}`;
     if(have.has(key)) continue;
     have.add(key);
+    if(list.length>=LIB_CAP){ skipped++; continue; }
     list.unshift({id:'u'+Date.now()+'_'+n, name:g('name')||g('city')||g('date'),
       y:+dm[1], mo:+dm[2], d:+dm[3], t, lat, lon,
       tz:parseOffset(g('utc_offset')), city:g('city'), rr:g('rodden')||'', src:g('source')||'',
       note:g('note')||''});
     n++;
   }
-  writeCharts(list.slice(0,LIB_CAP));
+  /* What is already in the library stays. A file larger than the room left is
+     imported up to the limit and the rest is counted, not dropped in silence -
+     before, the oldest saved charts fell off the bottom with no word. */
+  writeCharts(list);
+  csvToLib.skipped=skipped;
   return n;
 }
 document.getElementById('expCsv').addEventListener('click',async()=>{
@@ -8615,7 +8638,9 @@ function importCsvText(txt){
   if(n<0){ toast(t('importBad')); return n; }
   renderLibrary(); renderBackupLine();
   /* The wrong file imported is a hundred rows to delete one by one. */
-  toast(t('importDone')+n, t('undo'), n>0?()=>{
+  const sk=csvToLib.skipped||0;
+  const msg=t('importDone')+n+(sk?' · '+t('importSkipped').replace('{n}',sk).replace('{cap}',LIB_CAP):'');
+  toast(msg, t('undo'), n>0?()=>{
     writeCharts(before); renderLibrary(); renderBackupLine(); }:null);
   return n;
 }

@@ -72,6 +72,15 @@ for f in probe.js parity.txt test.html sw.js; do
   [ ! -e "$PUB/$f" ] || { echo "  FAIL $f is inside the built app"; exit 1; }
 done
 echo "  ok   app carries the product and nothing from development"
+# The privacy manifest: two plugins use "required reason" APIs, and an upload
+# without the reasons is refused or warned. Read back from the built app, not
+# from the project, so a file that is in the folder but not in the target fails.
+PI="$APP/PrivacyInfo.xcprivacy"
+[ -f "$PI" ] || { echo "  FAIL PrivacyInfo.xcprivacy missing from the built app"; exit 1; }
+for r in CA92.1 C617.1; do
+  grep -q "$r" "$PI" || { echo "  FAIL privacy manifest lacks reason $r"; exit 1; }
+done
+echo "  ok   privacy manifest: no tracking, nothing collected, reasons CA92.1 C617.1"
 echo "  size     $(du -sh "$APP" | cut -f1)"
 
 [ $SIGNED = 1 ] || { echo; echo "Unsigned archive: it proves the release builds; it cannot be uploaded."; exit 0; }

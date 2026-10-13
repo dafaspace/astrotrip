@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  AstroTrip's privacy manifest. Nothing is tracked and nothing is collected: the
+  app makes no network request after it is installed, and the charts stay on
+  the phone.
+
+  The two "required reason" APIs are used by plugins, not by the page:
+  - UserDefaults, by @capacitor/preferences, which keeps a native copy of the
+    saved charts so iOS clearing web storage cannot take them. CA92.1: data
+    the app itself reads and writes.
+  - File timestamps, by @capacitor/filesystem, which writes the CSV backup to
+    the app's cache before the share sheet. C617.1: files inside the app's own
+    container.
+  Both plugin READMEs require this file in ios/App; Capacitor core's own
+  manifest does not cover them. Added 13 Oct 2026, before the first upload.
+-->
+<plist version="1.0">
+<dict>
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array/>
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>CA92.1</string>
+			</array>
+		</dict>
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>C617.1</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>
