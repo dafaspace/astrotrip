@@ -66,10 +66,17 @@ against another person is paid.** **[decided 13 Oct]**
   calculator" - both real search suggestions **[fact, 13 Oct]** - leave the free tool, and so
   does the daily habit of checking today's sky. The ephemeris pages answer part of that need for
   free. The people lost are mostly amateurs, who are not the paying audience.
-- **Open, Dafa's call:** whether the web shows only the free tier from now on, or everything
-  until the web can take payment (no provider for a seller in Georgia is confirmed, and Paddle
-  bans horoscopes outright). Whatever is chosen, the dafaspace.com card that promises
-  forecasting on the web follows it.
+- **The web is the free tier, with a week's key.** **[decided 13 Oct]** The website shows the free
+  tier only. Everything opens for a week with a code - in practice a link - that Dafa hands to a
+  tester or to a professional who asks. **[proposal, how]** The link carries its end date and a
+  signature made with a private key that never leaves Dafa's machine; the app holds only the
+  public key, so a code cannot be made up, and no server or account is needed. The same code
+  works in the sideloaded APK, which cannot buy through Google Play. Two limits, said plainly: a
+  code can be forwarded during its week, and anyone who edits the page in developer tools can
+  open the paid part, because a website without a server can only keep honest people honest.
+  The web cannot take payment (no provider for a seller in Georgia is confirmed, and Paddle bans
+  horoscopes outright); the dafaspace.com card that promises forecasting on the web changes
+  with this.
 - **Price, open:** $9.99 proposed; Astro Gold Essentials is $24.99 **[fact, MARKET.md]**.
   Experiment: after the first 20 sales or on 31 Jan 2027, whichever comes first, move the price
   and write down sales per week before and after.
