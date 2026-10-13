@@ -8,7 +8,8 @@ reasons are in `README.md`; the market is in `MARKET.md`.
 _Written 13 Oct 2026 by the AstroTrip session at Dafa's request, from MARKET.md (25 Sep), the
 _HQ audit (13 Oct) and the decisions of 11 Oct. Each claim is marked: **[fact]** checked, with
 where; **[decided]** Dafa's word; **[proposal]** waiting for Dafa; **[unknown]** not checked.
-Not yet confirmed by Dafa as a whole._
+Not yet confirmed by Dafa as a whole. Points 2 and 3 revised the same day after his word on the
+trial and on where the line runs._
 
 **1. Who pays, for what, how much, how often.**
 A practising astrologer or an astrology student outside Russia pays once, about $9.99, for a
@@ -19,14 +20,20 @@ new data, no AI (main instruction, section 5) - and Astro Gold's move from $49.9
 subscription in Dec 2025 left it at 3.67 stars, the lowest in its field **[fact, MARKET.md]**.
 
 **2. The fastest route to the first paying stranger.**
-The App Store, the app sold at $9.99 upfront. **[proposal]** Upfront rather than free plus an
-in-app unlock (the plan of 11 Oct): no StoreKit code, no purchase plugin, no restore flow, and
-the precedent sells - Time Nomad at $8.99 and iPhemeris at $29.99 are sold upfront and hold
-4.66-4.77 **[fact, MARKET.md]**. The free trial is the website.
+The App Store: a free download, seven days of everything, then a one-time unlock. **[decided
+13 Oct]** A professional pays after trying the tool on real clients, so the upfront sale
+proposed earlier the same day is dropped; Astro Gold, by the makers of Solar Fire, runs exactly
+this - a 7-day trial of everything, then a free tier that stays usable, and the rest as a
+lifetime purchase **[fact, its App Store listing, 13 Oct]**. Apple allows a trial without a
+subscription in one way (guideline 3.1.1): a $0 non-consumable item named "7-day Trial", with the
+length, what stops working and the price stated before the trial starts. The work: StoreKit
+through a purchase plugin, the unlock, a restore button and that screen - about 2-3 days, not
+started.
 
 What blocks it, in order:
 - **App Store Connect record and the TestFlight upload.** Dafa's step, possible by 20 Oct 2026.
   The signed 3.17.0 IPA with its privacy manifest is built and checked.
+- **The trial and the unlock** (above), after Dafa's word to start them.
 - **Paid Applications Agreement, with tax and a bank.** **[unknown]** whether Apple pays into a
   Georgian bank. App Store Connect's own rule: a bank it cannot find is a bank it cannot pay.
   Check in App Store Connect > Business > Agreements, Tax and Banking by adding the bank. Dafa,
@@ -42,19 +49,30 @@ What blocks it, in order:
 Target: the first paying stranger by 30 Nov 2026.
 
 **3. Free and paid.**
-- **The free tool that search finds: the website.** A natal chart calculator with today's
-  transits, the library of 1019 charts, and ephemeris pages for 2026 and 2027 - "ephemeris
-  2026" is Google's first suggestion for "ephemeris" **[fact, 13 Oct]**. The ephemeris pages are
-  not built (404).
-- **The product it leads to:** the iOS app, then Android - the whole tool.
-- **The paid part:** the app, $9.99 once. **[proposal]** On the web, the forecasting modes -
-  progressions, directions, solar and lunar returns, synastry, composite, the tri-wheel - become
-  "in the app". That is the line between reading a chart and working with a client over time: a
-  difference of value, not a quota. Data stays free everywhere: saving, CSV export and import are
-  never behind the price (section 3, control over data). If this is taken, the dafaspace.com card
-  that promises forecasting on the web changes with it.
-- **Price experiment:** start at $9.99; after the first 20 sales or on 31 Jan 2027, whichever
-  comes first, move to $14.99 and write down sales per week before and after.
+The rule a buyer can say back in one line: **one chart is free; a chart set against time or
+against another person is paid.** **[decided 13 Oct]**
+- **Free forever, on the web and in the app:** a natal chart and everything about it -
+  positions, aspects, dignities, dispositor chains, receptions, configurations, the aspect grid,
+  balance, relocation, the text block, printing - plus the library of 1019 charts, saving, and
+  CSV export and import. Data is never behind the price (main instruction, section 3).
+- **Paid once, after the 7-day trial:** every chart with a second or third ring - transits,
+  progressions, directions, solar and lunar returns, synastry, the tri-wheels - and the
+  composite, which is made of two charts. These are the tools of working with a client over
+  time, the same line Astro Gold and TimePassages draw **[fact, their App Store listings]**.
+- **The free tool that search finds:** the natal chart calculator, and ephemeris pages for 2026
+  and 2027 - "ephemeris 2026" is Google's first suggestion for "ephemeris" **[fact, 13 Oct]**;
+  the pages are not built (404).
+- **The weak spot, said out loud:** with transits paid, "транзиты онлайн" and "transit chart
+  calculator" - both real search suggestions **[fact, 13 Oct]** - leave the free tool, and so
+  does the daily habit of checking today's sky. The ephemeris pages answer part of that need for
+  free. The people lost are mostly amateurs, who are not the paying audience.
+- **Open, Dafa's call:** whether the web shows only the free tier from now on, or everything
+  until the web can take payment (no provider for a seller in Georgia is confirmed, and Paddle
+  bans horoscopes outright). Whatever is chosen, the dafaspace.com card that promises
+  forecasting on the web follows it.
+- **Price, open:** $9.99 proposed; Astro Gold Essentials is $24.99 **[fact, MARKET.md]**.
+  Experiment: after the first 20 sales or on 31 Jan 2027, whichever comes first, move the price
+  and write down sales per week before and after.
 
 **4. If money is not reachable.**
 It is not proven: nobody has said they would pay **[fact]**; free calculators (astro.com,
@@ -81,7 +99,7 @@ Hours saved on his own work: none.
   case with the JPL check and the store link comes after the listing.
 
 **6. The number and the date.**
-How many of the 10-20 invited astrologers answer yes to "would you pay $9.99 once for this",
-checked on 15 Nov 2026. **[proposal]** Three or more: the paid version is built. Fewer: money is
+How many of the 10-20 invited astrologers answer yes to "after a week with everything, would you
+pay $9.99 once for transits, progressions, returns and synastry", checked on 15 Nov 2026. **[proposal]** Three or more: the paid version is built. Fewer: money is
 not reachable; AstroTrip goes to the store free, keeps the feedback and the engine, and gets no
 new features.
