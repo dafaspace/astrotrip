@@ -451,6 +451,12 @@ function run(){
         const got=ev(`(()=>{const k=HSYS; HSYS=${JSON.stringify(sys)};
           const ch=computeChart(${c.y},${c.mo},${c.d},${c.utHours},0,${c.lat},${c.lon},false);
           HSYS=k; return {cusps:ch.houses.cusps, asc:ch.asc, mc:ch.mc, sys:ch.houses.system};})()`);
+        /* Единственный откат, который здесь законен: топоцентрическая за
+           полярным кругом, когда куспиды эталона сами идут зигзагом и домами
+           не читаются (у Swiss Ephemeris house_pos с ними не согласен). Тогда
+           откат обязателен, и проверяется именно он. */
+        const zigzag=ev(`!cuspsRunOneWay(${JSON.stringify(r.cusps)})`);
+        if(sys==='topocentric'&&zigzag){ if(got.sys!=='equal') bad.push(`${c.name} ${sys}: зигзаг без отката`); continue; }
         if(got.sys!==sys){ bad.push(`${c.name} ${sys}: откат на ${got.sys}`); continue; }
         const d=(a,b)=>{let x=Math.abs(a-b); if(x>180)x=360-x; return x*3600;};
         let m=Math.max(d(got.asc,r.asc), d(got.mc,r.mc));
@@ -5147,6 +5153,54 @@ function run(){
     if(!(r.h10.y<0)) bad.push('X дом не наверху');
     if(!(r.next.y>0)) bad.push('Асцендент + 30° ушёл вверх: зодиак идёт по часовой');
     return !bad.length||bad.join('; ');
+  });
+  t('#3 средний узел совпадает со Swiss Ephemeris до 0,5″: нутация на месте',()=>{
+    /* pyswisseph 2.10.03, MEAN_NODE, FLG_MOSEPH, с нутацией. */
+    const ref=[[1985,11,3,10.6167,38.921153],[2000,1,1,0,125.067123],[1950,6,15,12,3.348993]];
+    const bad=ref.map(([y,m,d,h,n])=>{const c=ev(`computeChart(${y},${m},${d},${h},0,0,0,false)`);
+      const e=Math.abs(((c.pos.NNode.lon-n+540)%360)-180)*3600; return e<=0.5?null:`${y}: ${e.toFixed(2)}″`;}).filter(Boolean);
+    return !bad.length||bad.join('; ');
+  });
+  t('#7 за полярным кругом дома читаются в ту сторону, куда идут куспиды',()=>{
+    /* swe.house_pos при тех же ARMC 288.2114, широте 69.6492 и наклоне 23.4386 */
+    const want={regiomontanus:{Sun:11,Moon:11,Mercury:11,Venus:12,Mars:6,Jupiter:11,Saturn:12,Uranus:12,Neptune:12,Pluto:6},
+      campanus:{Sun:12,Moon:12,Mercury:12,Venus:12,Mars:6,Jupiter:12,Saturn:12,Uranus:12,Neptune:12,Pluto:6}};
+    const bad=[];
+    for(const [sys,w] of Object.entries(want)){
+      const got=ev(`(()=>{const k=HSYS; try{ HSYS=${JSON.stringify(sys)};
+        const c=computeChart(2001,6,21,0,0,69.6492,18.9553,false);
+        return Object.fromEntries(Object.keys(${JSON.stringify(w)}).map(p=>[p,houseOf(c.pos[p].lon,c.houses.cusps)]));
+      }finally{HSYS=k;}})()`);
+      for(const p in w) if(got[p]!==w[p]) bad.push(`${sys}/${p}: ${got[p]} вместо ${w[p]}`);
+    }
+    return !bad.length||bad.slice(0,6).join('; ');
+  });
+  t('#7 #11 откат за полярным кругом не ставит Асцендент на запад',()=>{
+    const r=ev(`(()=>{const k=HSYS; try{ const out=[];
+      for(const [sys,lat,h] of [['topocentric',69.6492,0],['regiomontanus',89,6],['campanus',-89.2,15]]){
+        HSYS=sys; const c=computeChart(2001,6,21,h,0,lat,18.9553,false);
+        out.push({sys,lat,used:c.houses.system, east:rev(c.asc-c.mc)<180, monotone:cuspsRunOneWay(c.houses.cusps)});
+      } return out; }finally{HSYS=k;}})()`);
+    const bad=r.filter(x=>!x.east||!x.monotone).map(x=>`${x.sys} ${x.lat}: система ${x.used}, Асцендент ${x.east?'на востоке':'на западе'}, куспиды ${x.monotone?'по кругу':'зигзагом'}`);
+    return !bad.length||bad.join('; ');
+  });
+  t('#8 Плацидус держится до полярного круга: Рованиеми 66,5° это Плацидус',()=>{
+    const r=ev(`(()=>{const k=HSYS; try{ HSYS='placidus';
+      return [66.499,66.55,66.6].map(lat=>computeChart(2001,6,21,12,2,lat,25.73,false).houses.system);
+    }finally{HSYS=k;}})()`);
+    return (r[0]==='placidus'&&r[1]==='placidus'&&r[2]==='equal')||r.join(', ');
+  });
+  t('#14 тесный сходящийся аспект Луны назван сходящимся',()=>{
+    const r=ev(`(()=>{const sq=ASPECT_DEFS.find(a=>a.name==='square'), cj=ASPECT_DEFS.find(a=>a.name==='conjunction');
+      const ch={pos:{Moon:{lon:99.8,spd:13.2},Saturn:{lon:10,spd:0.05},Sun:{lon:100.2,spd:0.98}}};
+      return [aspectDirection(ch,'Moon','Saturn',sq), aspectDirection(ch,'Moon','Sun',cj),
+        aspectDirection({pos:{Moon:{lon:100.3,spd:13.2},Sun:{lon:100.2,spd:0.98}}},'Moon','Sun',cj)];})()`);
+    return (r[0]==='applying'&&r[1]==='applying'&&r[2]==='separating')||r.join(', ');
+  });
+  t('#16 у узлов, Лилит, Селены и Фортуны нет сожжения',()=>{
+    const r=ev(`(()=>{const F=chartFacts(CURRENT);
+      return FACT_POINTS.filter(p=>F.planets[p]&&F.planets[p].solar.condition!==null);})()`);
+    return !r.length||'солнечное состояние у '+r.join(', ');
   });
   /* REVIEW-2026-10-15-END */
 

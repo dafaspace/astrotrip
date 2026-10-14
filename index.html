@@ -3689,11 +3689,17 @@ function computeChart(y,mo,day,localH,tzOff,lat,lng,withSpeed){
     const p=apparent(a,tm,dpsi,E,V); if(p) pos[a]=p;
   });
   pos.Moon=moonApparent(Tc,dpsi);
-  const nd=meanNode(Tc);
+  /* The mean points sit on the true equinox of date like every other body:
+     nutation added, and their own time on the TT clock. Swiss Ephemeris does
+     the same, and without it the mean node and the mean Black Moon stood up
+     to 17 arcseconds from it while the Moon beside them agreed. */
+  const NUT=dpsi*R2D, dTT=d+(jdTT-jdUT);
+  const nd=rev(meanNode(Tc)+NUT);
   pos.NNode={lon:nd}; pos.SNode={lon:rev(nd+180)};
-  if(LILMODE==='true'){ const lt=lilithTrue(Tc,dpsi); pos.Lilith=lt||{lon:lilithLon(d)}; }
-  else pos.Lilith={lon:lilithLon(d)};
-  const sel=selenaLon(d); if(sel!=null) pos.Selena={lon:sel};
+  const lilMean=()=>({lon:rev(lilithLon(dTT)+NUT)});
+  if(LILMODE==='true'){ const lt=lilithTrue(Tc,dpsi); pos.Lilith=lt||lilMean(); }
+  else pos.Lilith=lilMean();
+  const sel=selenaLon(dTT); if(sel!=null) pos.Selena={lon:rev(sel+NUT)};
   const ramc=rev(gastDeg(jdUT,Tc,dpsi,eps)+lng);
   let mc=atan2d(sind(ramc),cosd(ramc)*cosd(ecl));
   const ascRaw=atan2d(cosd(ramc),-(sind(ramc)*cosd(ecl)+tand(lat)*sind(ecl)));
@@ -3719,7 +3725,16 @@ function computeChart(y,mo,day,localH,tzOff,lat,lng,withSpeed){
      angles first and the array afterwards turns cusps 1, 7 and 10 twice, since
      those are built out of the angles that were already turned. */
   if(!flipQuadrant&&rev(ascRaw-mc)>180) asc=rev(ascRaw+180);
-  const houses=HOUSE_SYSTEMS[HSYS].fn(ramc,lat,ecl,asc,mc);
+  let houses=HOUSE_SYSTEMS[HSYS].fn(ramc,lat,ecl,asc,mc);
+  /* A turned-round system that gave up and fell back (Regiomontanus and
+     Campanus above 88 degrees, Topocentric where its cusps zigzag) is not
+     turned round at all, so its Ascendant takes the ordinary correction and
+     the fallback is built from that. Without it the fallback started from
+     the raw Ascendant, which there lies in the west. */
+  if(flipQuadrant&&!QUAD_FLIP.includes(houses.system)){
+    if(rev(ascRaw-mc)>180) asc=rev(ascRaw+180);
+    houses=HOUSE_SYSTEMS.equal.fn(ramc,lat,ecl,asc,mc);
+  }
   if(flipQuadrant&&QUAD_FLIP.includes(houses.system)){
     asc=rev(asc+180); mc=rev(mc+180);
     /* All twelve, not the six swehouse.c names. Its loop skips cusps 4 to 9
@@ -3841,7 +3856,11 @@ function wholeSignCusps(asc){
   return {cusps:c,system:'whole'};
 }
 function placidusCusps(ramc,lat,ecl,asc,mc){
-  if(Math.abs(lat)>66) return equalCusps(asc);
+  /* Placidus is defined up to the polar circle, 90 minus the obliquity, about
+     66.56 - not 66, which took it from Rovaniemi, Salekhard and forty-odd
+     other places in the atlas while Swiss Ephemeris still computes it there.
+     The same edge computeChart and Koch use. */
+  if(Math.abs(lat)>=90-ecl) return equalCusps(asc);
   function raToLon(ra){ return atan2d(sind(ra), cosd(ra)*cosd(ecl)); }
   function iterCusp(start,f,nocturnal){
     let ra=rev(ramc+start);
@@ -4961,9 +4980,16 @@ const HOUSE_SYSTEMS={
      and 2nd. It lands within a few arc-minutes of Placidus over most of the
      inhabited world, which is the point of it - the same houses from a closed
      formula instead of an iteration. */
-  topocentric:{ru:'Топоцентрическая',en:'Topocentric',fn:(ramc,lat,ecl,asc,mc)=>
-    quadrantCusps(ramc,lat,ecl,asc,mc,
-      (H,la)=>Math.atan(tand(la)*((H===60||H===120)?2/3:1/3))*R2D,'topocentric')},
+  /* Beyond the polar circle the topocentric cusps stop running in one
+     direction - 302, 278, 280, 287, 296, 312 at Tromso, the same in Swiss
+     Ephemeris - and a zigzag cannot be read as houses: every body landed in
+     house 1. There it falls back the way Placidus does, and the chart header
+     names the system actually drawn. */
+  topocentric:{ru:'Топоцентрическая',en:'Topocentric',fn:(ramc,lat,ecl,asc,mc)=>{
+    const h=quadrantCusps(ramc,lat,ecl,asc,mc,
+      (H,la)=>Math.atan(tand(la)*((H===60||H===120)?2/3:1/3))*R2D,'topocentric');
+    return cuspsRunOneWay(h.cusps)?h:equalCusps(asc);
+  }},
   porphyry:{ru:'Порфирий',en:'Porphyry',fn:(ramc,lat,ecl,asc,mc)=>porphyryCusps(asc,mc)},
   equal:{ru:'Равнодомная',en:'Equal',fn:(ramc,lat,ecl,asc)=>equalCusps(asc)},
   whole:{ru:'Цельнознаковая',en:'Whole sign',fn:(ramc,lat,ecl,asc)=>wholeSignCusps(asc)}
@@ -4974,10 +5000,24 @@ let HSYS=Object.keys(HOUSE_SYSTEMS).includes(localStorage.getItem('astrarium_hsy
    schools work with, and what every ephemeris printed before software existed. */
 let LILMODE=['mean','true'].includes(localStorage.getItem('astrarium_lilith'))
   ? localStorage.getItem('astrarium_lilith') : 'mean';
+/* Whether the twelve cusps run round the circle once, in either direction.
+   Forward they always do outside the polar circles; turned round there, as
+   Swiss Ephemeris turns Regiomontanus and Campanus, they run backwards. */
+function cuspsRunOneWay(c){
+  let fwd=0, back=0;
+  for(let h=0;h<12;h++){ fwd+=rev(c[(h+1)%12]-c[h]); back+=rev(c[h]-c[(h+1)%12]); }
+  return Math.abs(fwd-360)<1e-6||Math.abs(back-360)<1e-6;
+}
+/* The house a longitude falls in, in whichever direction the cusps run. The
+   forward reading alone put every planet in house 1 once the cusps had been
+   turned round beyond the polar circle: each span read as 330 degrees. Checked
+   against swe.house_pos at Tromso for Regiomontanus and Campanus. */
 function houseOf(lon,cusps){
+  let fwd=0; for(let h=0;h<12;h++) fwd+=rev(cusps[(h+1)%12]-cusps[h]);
+  const back=Math.abs(fwd-360)>1e-6;
   for(let h=0;h<12;h++){
-    const a=cusps[h], span=rev(cusps[(h+1)%12]-a);
-    if(rev(lon-a)<span) return h+1;
+    const a=cusps[h], b=cusps[(h+1)%12];
+    if(back ? rev(a-lon)<rev(a-b) : rev(lon-a)<rev(b-a)) return h+1;
   }
   return 12;
 }
@@ -5293,7 +5333,11 @@ function chartFacts(ch,mode=RULER_MODE){
 
     /* Solar condition. The Sun has none by definition, and the categories are
        exclusive, so this is one value rather than three flags. */
-    const elong=p==='Sun'?null:arcBetween(lon,ch.pos.Sun.lon);
+    /* Bodies only. Combustion and cazimi are conditions of a planet near the
+       Sun; no school applies them to the nodes, the Black Moon, Selena or the
+       Lot of Fortune, and the card printed "North Node: combust" in every
+       eclipse season. */
+    const elong=p==='Sun'||FACT_POINTS.includes(p)?null:arcBetween(lon,ch.pos.Sun.lon);
     const solar=elong==null?null
       :elong<=SOLAR_LIMITS.cazimi?'cazimi'
       :elong<=SOLAR_LIMITS.combust?'combust'
@@ -7219,10 +7263,16 @@ const isStationary=(p,spd)=>spd!=null&&MEAN_MOTION[p]!=null
 function aspectDirection(ch,a,b,asp){
   const sa=ch.pos[a]&&ch.pos[a].spd, sb=ch.pos[b]&&ch.pos[b].spd;
   if(sa==null||sb==null) return null;
-  const now=Math.abs(arcBetween(ch.pos[a].lon,ch.pos[b].lon)-asp.angle);
-  const h=0.05;
-  const later=Math.abs(arcBetween(ch.pos[a].lon+sa*h,ch.pos[b].lon+sb*h)-asp.angle);
-  return later<now?'applying':'separating';
+  /* The sign of the orb's rate of change at this instant, not a comparison
+     with the orb a step later. The step was 0.05 days, in which the Moon runs
+     0.6 degrees and jumps clean over a 0.2-degree applying aspect, so the
+     tightest applying aspects - the ones a reader looks at first - all came
+     out "separating". The separation's rate is the difference of the speeds,
+     with its sign turned when the shorter arc runs the other way round. */
+  const diff=rev(ch.pos[b].lon-ch.pos[a].lon), arc=diff<=180?diff:360-diff;
+  const arcRate=(diff<=180?1:-1)*(sb-sa);
+  const orbRate=Math.sign(arc-asp.angle)*arcRate;
+  return orbRate<0?'applying':'separating';
 }
 
 /* "house 5" / "houses 5, 7" in each language's own grammar: Russian wants the
