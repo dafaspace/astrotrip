@@ -351,8 +351,11 @@ does not move at all.
 ### Eight languages
 
 English, Spanish, French, Russian, German, Italian, Ukrainian, Georgian - the
-same set and the same order as Cinemail. English is the default; the language is
-chosen in the settings panel, each one by its own name, and the choice persists. A key missing from a language falls through to English, so a
+same set and the same order as Cinemail. With no stored choice the app starts in
+the device's language when it is one of the eight, English otherwise (until 3.18.1 it
+was English for everyone); the iOS bundle declares the eight as its localizations, or
+its WebView would report English whatever the phone is set to. The language is chosen
+in the settings panel, each one by its own name, and the choice persists. A key missing from a language falls through to English, so a
 partial translation costs one string rather than the screen. That fallback hid a gap until 13 Oct 2026:
 67 visible strings - the planet card, the text block, two settings, the backup line -
 and a handful of phrases written into the code as Russian-or-English branches showed
@@ -596,6 +599,9 @@ The store build is full for now. Its purchase - seven days of everything, then o
 payment, as Apple's guideline 3.1.1 allows - is the next step, and the app is not to go
 on sale before it.
 
+How to hand a key to someone, what they see, the log of who got which, and what to do
+if the private key is lost: `ACCESS-KEYS.md`, in Russian, for Dafa.
+
 ### The way back
 
 Anything that throws away what was on screen offers it back for eight seconds, in one
@@ -671,7 +677,7 @@ mattered: before it did, a deliberately broken app passed every check. The runne
 for the city atlas to finish loading, or the atlas tests would silently check the inline
 seed instead.
 
-**354 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
+**355 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
 library, robustness over 1550-2250 and at polar latitudes, house systems (angles land
 on the cusps, cusps run round the circle without crossing, quadrant systems coincide at
 the equator, zero-latitude bodies get the same house from both methods), library data

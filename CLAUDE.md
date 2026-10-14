@@ -76,6 +76,7 @@ against another person is paid.** **[decided 13 Oct]**
   buy through Google Play. Two limits, said plainly: a
   code can be forwarded during its week, and anyone who edits the page in developer tools can
   open the paid part, because a website without a server can only keep honest people honest.
+  How Dafa hands a key out, and what to do if the private key is lost: `ACCESS-KEYS.md`.
   The web cannot take payment (no provider for a seller in Georgia is confirmed, and Paddle bans
   horoscopes outright); the dafaspace.com card that promises forecasting on the web changes
   with this.

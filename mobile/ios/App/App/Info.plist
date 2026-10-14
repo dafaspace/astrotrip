@@ -6,6 +6,17 @@
 	<string>$(CAPACITOR_DEBUG)</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>es</string>
+		<string>fr</string>
+		<string>ru</string>
+		<string>de</string>
+		<string>it</string>
+		<string>uk</string>
+		<string>ka</string>
+	</array>
 	<key>CFBundleDisplayName</key>
         <string>AstroTrip</string>
 	<key>CFBundleExecutable</key>

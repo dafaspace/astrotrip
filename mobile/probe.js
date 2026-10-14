@@ -34,6 +34,10 @@ addEventListener('load',()=>setTimeout(async()=>{
     say('requests outside the bundle: '+(outside.length?outside.join(' '):'none'));
     say('fonts inter '+document.fonts.check('16px Inter')+' literata '+document.fonts.check('16px Literata')
       +' astro '+document.fonts.check('16px Astro'));
+    /* What the WebView reports as the device language: on iOS it follows the
+       app's declared localizations, so this says whether CFBundleLocalizations
+       did its job. */
+    say('device language '+(navigator.languages||[]).join(',')+' -> '+(typeof deviceLang==='function'?deviceLang():'?'));
     say('atlas '+(typeof ATLAS!=='undefined'?ATLAS.state:'?')+', lang '+(typeof LANG!=='undefined'?LANG:'?')
       +', chart '+(typeof CURRENT!=='undefined'&&CURRENT?'cast':'none'));
     /* What the WebView offers for handing a file to the user. <a download>

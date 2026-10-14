@@ -58,7 +58,11 @@ const frame=document.getElementById('app');
      and the next run quietly tested the export in Georgian, where a line
      looked for by its English or Russian label was "missing". */
   try{ ['astrarium_access','astrarium_ring','astrarium_ring2','astrarium_orbs','astrarium_partner','astrarium_asteroids','astrarium_house3d','astrarium_rulers','astrarium_lang','astrarium_form']
-         .forEach(k=>localStorage.removeItem(k)); }catch(e){}
+         .forEach(k=>localStorage.removeItem(k));
+       /* The app now starts in the device's language. The suite reads labels in
+          English, so it says so rather than inheriting whatever this browser is
+          set to. */
+       localStorage.setItem('astrarium_lang','en'); }catch(e){}
   /* Read once here, because the runner below is synchronous. */
   try{ SW_SRC=await (await fetch('./sw.js?notacache='+Date.now())).text(); }catch(e){}
   /* The golden ChartFacts, fetched here because t() is synchronous. */
@@ -4505,6 +4509,21 @@ function run(){
     const shown=sel.selectedOptions.length;
     const buttons=D.querySelectorAll('[data-lang]').length;
     return (shown===1&&buttons===0)||`показано ${shown}, и ещё ${buttons} кнопок языка`;
+  });
+  t('без выбора язык берётся с устройства, если он из восьми, иначе английский',()=>{
+    const r=ev(`(()=>{const out={};
+      const set=v=>Object.defineProperty(navigator,'languages',{configurable:true,get:()=>v});
+      try{
+        set(['ru-RU','en']); out.ru=deviceLang();
+        set(['uk-UA']); out.uk=deviceLang();
+        set(['pt-BR','ka-GE']); out.second=deviceLang();
+        set(['pt-BR','zh-CN']); out.none=deviceLang();
+        set(['de_AT']); out.under=deviceLang();
+      } finally { delete navigator.languages; }
+      return out;})()`);
+    const want={ru:'ru',uk:'uk',second:'ka',none:'en',under:'de'};
+    const bad=Object.entries(want).filter(([k,v])=>r[k]!==v).map(([k,v])=>k+': '+r[k]+' вместо '+v);
+    return bad.length===0||bad.join('; ');
   });
   t('по умолчанию английский, даже если в хранилище мусор',()=>{
     const r=ev(`(()=>{const keep=localStorage.getItem('astrarium_lang');

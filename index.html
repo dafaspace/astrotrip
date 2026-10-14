@@ -1123,7 +1123,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
 /* Bump together with CACHE in sw.js: the two are the same release, and the
    number on screen is how you tell from a phone which one you are looking at. */
-const APP_VERSION='3.18.0';
+const APP_VERSION='3.18.1';
 document.getElementById('ver').textContent=APP_VERSION;
 
 /* ---------- feature flags ----------
@@ -1157,8 +1157,18 @@ const FEATURES={interpretation:false};
 const LANGS=[['en','English'],['es','Español'],['fr','Français'],['ru','Русский'],
   ['de','Deutsch'],['it','Italiano'],['uk','Українська'],['ka','ქართული']];
 const LANG_CODES=LANGS.map(l=>l[0]);
+/* With no stored choice, the device's own language when it is one of the eight,
+   English otherwise. Until 3.18.1 it was English for everyone, and a Russian
+   astrologer opening a link landed in English and had to find the switch.
+   navigator.languages is the person's order of preference, so a second
+   language counts when the first is not offered. */
+function deviceLang(){
+  const list=navigator.languages&&navigator.languages.length?navigator.languages:[navigator.language||''];
+  for(const l of list){ const c=String(l).toLowerCase().split(/[-_]/)[0]; if(LANG_CODES.includes(c)) return c; }
+  return 'en';
+}
 let LANG = LANG_CODES.includes(localStorage.getItem('astrarium_lang'))
-  ? localStorage.getItem('astrarium_lang') : 'en';
+  ? localStorage.getItem('astrarium_lang') : deviceLang();
 /* Every table keyed by language goes through this. A language that is missing
    an entry shows the English one rather than "undefined", so a half-finished
    translation costs one string, not the screen. */
