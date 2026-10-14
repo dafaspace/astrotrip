@@ -2763,6 +2763,40 @@ function run(){
       if(!r.report.includes(ev(`t('rpPrivacy')`))) bad.push('в отчёте нет строки о приватности');
     return bad.length===0||bad.join('; ');
   });
+  t('имя и город из чужого CSV не исполняются как код',()=>{
+    /* До 3.18.3 имя карты попадало в разметку как есть: CSV с именем
+       <img onerror=...> запускал код при открытии библиотеки, а такой код мог
+       прочитать все сохранённые карты и отправить их наружу. */
+    const r=ev(`(()=>{const kc=localStorage.getItem(LKEY_CHARTS), out={};
+      const f=id=>document.getElementById(id), keepF={};
+      FORM_FIELDS.forEach(id=>keepF[id]=f(id).value);
+      try{
+        writeCharts([]);
+        const bad='<img src=x onerror="window.__xss=1">';
+        importCsvText('name,date,time,utc_offset,latitude,longitude,city,note\\r\\n"'+bad.replace(/"/g,'""')+'",1950-01-01,10:00,+01:00,48.85,2.35,"<b id=xb>Paris</b>","\\"><img id=xn>"\\r\\n');
+        hideToast(); renderLibrary();
+        out.libImg=document.querySelectorAll('#libList img').length;
+        out.libB=!!document.getElementById('xb');
+        out.noteImg=!!document.getElementById('xn');
+        out.shown=document.querySelector('#libList .libname').textContent;
+        const row=document.querySelector('#libList .libitem[data-own="1"]'); row.click(); hideToast();
+        out.metaImg=document.querySelectorAll('#chartMeta img').length;
+        renderPeopleList(searchPeople('img'));
+        out.peopleImg=document.querySelectorAll('#synaList img').length;
+        document.getElementById('synaList').style.display='none';
+      } finally {
+        if(kc===null) localStorage.removeItem(LKEY_CHARTS); else localStorage.setItem(LKEY_CHARTS,kc);
+        FORM_FIELDS.forEach(id=>f(id).value=keepF[id]); f('calc').click();
+        renderLibrary(); hideToast();
+      }
+      return out;})()`);
+    const bad=[];
+    if(r.libImg||r.libB||r.noteImg) bad.push('в библиотеке разметка из файла стала элементами');
+    if(!/<img/.test(r.shown)) bad.push('имя не показано как текст: '+r.shown);
+    if(r.metaImg) bad.push('в шапке карты разметка из имени');
+    if(r.peopleImg) bad.push('в поиске партнёра разметка из имени');
+    return bad.length===0||bad.join('; ');
+  });
   t('удалённую карту можно вернуть на её место',()=>{
     const r=ev(`(()=>{const kc=localStorage.getItem(LKEY_CHARTS), out={};
       try{

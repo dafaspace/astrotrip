@@ -1137,7 +1137,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
 /* Bump together with CACHE in sw.js: the two are the same release, and the
    number on screen is how you tell from a phone which one you are looking at. */
-const APP_VERSION='3.18.2';
+const APP_VERSION='3.18.3';
 document.getElementById('ver').textContent=APP_VERSION;
 
 /* ---------- feature flags ----------
@@ -1187,6 +1187,13 @@ let LANG = LANG_CODES.includes(localStorage.getItem('astrarium_lang'))
    an entry shows the English one rather than "undefined", so a half-finished
    translation costs one string, not the screen. */
 const LX=o=>(o&&o[LANG]!==undefined)?o[LANG]:(o?o.en:undefined);
+/* Text a person typed or imported, made safe to put inside HTML. Chart names,
+   cities and notes reached innerHTML as they were until 3.18.3, so a CSV file
+   with a name like <img onerror=...> ran code inside the app when the library
+   opened - and that code could have read every saved chart and sent it away.
+   Everything that comes from a person or a file goes through this; the app's own
+   strings and numbers do not need to. */
+const escH=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const STR = {
   tagline:{ru:'Точные карты офлайн, и время, которое можно двигать.', en:'Precise charts offline, and time you can move.'},
   birth:{ru:'Данные рождения',en:'Birth data'},
@@ -7833,7 +7840,7 @@ function renderPeopleList(items){
   const box=document.getElementById('synaList');
   if(!items.length){ box.style.display='none'; box.innerHTML=''; return; }
   box.innerHTML=items.map(x=>
-    `<div><span>${x.n}</span><span class="cc">${x.e.y}</span></div>`).join('');
+    `<div><span>${escH(x.n)}</span><span class="cc">${escH(x.e.y)}</span></div>`).join('');
   box.style.display='block';
   [...box.children].forEach((el,i)=>el.addEventListener('mousedown',ev=>{
     ev.preventDefault(); choosePartner(items[i]);
@@ -8496,7 +8503,7 @@ function refreshCityListAfterAtlas(){
 function renderCityList(items){
   const box=document.getElementById('citylist');
   if(!items.length){box.style.display='none';box.innerHTML='';return;}
-  box.innerHTML=items.map(c=>`<div><span>${cityLabel(c)}</span><span class="cc">${c.c}</span></div>`).join('');
+  box.innerHTML=items.map(c=>`<div><span>${escH(cityLabel(c))}</span><span class="cc">${escH(c.c)}</span></div>`).join('');
   box.style.display='block';
   [...box.children].forEach((el,i)=>el.addEventListener('mousedown',ev=>{ev.preventDefault();selectCity(items[i]);}));
 }
@@ -8578,14 +8585,14 @@ function renderChartMeta(ch,y,mo,da,hh,mi,tz){
      one is a wrong chart to anyone reading it later. */
   /* With no birth city entered there is nothing to point an arrow away from,
      and "Relocation -> Berlin" reads as though the first word were a place. */
-  const place=RELOC ? (city?`${city} \u2192 <b>${RELOC.city}</b>`:`<b>${RELOC.city}</b>`) : city;
-  let who=[name?`<b>${name}</b>`:'', place].filter(Boolean).join(' · ');
+  const place=RELOC ? (city?`${escH(city)} \u2192 <b>${escH(RELOC.city)}</b>`:`<b>${escH(RELOC.city)}</b>`) : escH(city);
+  let who=[name?`<b>${escH(name)}</b>`:'', place].filter(Boolean).join(' · ');
   /* In synastry the chart is about two people, so the header has to say both.
      A wheel that names only one of them is the wrong wheel to anyone reading
      it later. */
   if(RING_MODE==='synastry'){
     const pe=partnerEntry();
-    if(pe) who=(who||t('natal'))+' &amp; <b>'+partnerName(pe)+'</b>';
+    if(pe) who=(who||t('natal'))+' &amp; <b>'+escH(partnerName(pe))+'</b>';
   }
   /* The third line is for paper. On screen the chips under it say the same
      thing and can be changed; printed, the chips are gone and this stays. */
@@ -9008,12 +9015,12 @@ function libRow(e,own){
     ? `<span class="libwarn">${t('noTime')}</span>`
     : `<span class="libmeta">${String(Math.floor(e.t)).padStart(2,'0')}:${String(Math.round((e.t%1)*60)).padStart(2,'0')}</span>`
       + (e.rr==='AA'?` <span class="libwarn">${t('rrKnown')}</span>`:'');
-  const del=own?`<button class="libdel" data-del="${e.id}">${t('delChart')}</button>`:'';
-  const note=own?`<input class="libnote" data-note="${e.id}" value="${(e.note||'').replace(/"/g,'&quot;')}" placeholder="${t('chartNote')}">`:'';
+  const del=own?`<button class="libdel" data-del="${escH(e.id)}">${t('delChart')}</button>`:'';
+  const note=own?`<input class="libnote" data-note="${escH(e.id)}" value="${escH(e.note||'')}" placeholder="${t('chartNote')}">`:'';
   /* City is dropped when it repeats the name, which it does whenever a chart was
      saved without one and fell back to the city. */
   const place=(city&&city!==nm)?` · ${city}`:'';
-  return `<div class="libitem" data-id="${e.id}" data-own="${own?1:0}" title="${own?'':(e.src||'')}"><span class="libname">${nm}</span><span class="libmeta">${date}${place}</span>${time}${del}</div>`
+  return `<div class="libitem" data-id="${escH(e.id)}" data-own="${own?1:0}" title="${own?'':escH(e.src||'')}"><span class="libname">${escH(nm)}</span><span class="libmeta">${escH(date)}${escH(place)}</span>${time}${del}</div>`
     +note;
 }
 /* Russian needs three forms where English needs two, so the count cannot be
@@ -9435,7 +9442,7 @@ document.getElementById('expCsv').addEventListener('click',async()=>{
   const show=()=>{
     const items=searchCities(f.value);
     if(!items.length){ box.style.display='none'; box.innerHTML=''; return; }
-    box.innerHTML=items.map(c=>`<div><span>${cityLabel(c)}</span><span class="cc">${c.c}</span></div>`).join('');
+    box.innerHTML=items.map(c=>`<div><span>${escH(cityLabel(c))}</span><span class="cc">${escH(c.c)}</span></div>`).join('');
     box.style.display='block';
     [...box.children].forEach((el,i)=>el.addEventListener('mousedown',ev=>{
       ev.preventDefault();
