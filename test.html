@@ -57,7 +57,7 @@ const frame=document.getElementById('app');
   /* The language too: a manual check in Georgian on 2 Oct 2026 left it stored,
      and the next run quietly tested the export in Georgian, where a line
      looked for by its English or Russian label was "missing". */
-  try{ ['astrarium_ring','astrarium_ring2','astrarium_orbs','astrarium_partner','astrarium_asteroids','astrarium_house3d','astrarium_rulers','astrarium_lang','astrarium_form']
+  try{ ['astrarium_access','astrarium_ring','astrarium_ring2','astrarium_orbs','astrarium_partner','astrarium_asteroids','astrarium_house3d','astrarium_rulers','astrarium_lang','astrarium_form']
          .forEach(k=>localStorage.removeItem(k)); }catch(e){}
   /* Read once here, because the runner below is synchronous. */
   try{ SW_SRC=await (await fetch('./sw.js?notacache='+Date.now())).text(); }catch(e){}
@@ -214,6 +214,31 @@ const frame=document.getElementById('app');
         renderBackupLine();
       }
       return out;})()`); }catch(e){ SHARE_CHECK={error:e.message}; }
+    /* Full access, with a key pair made here: the suite signs its own keys and
+       never sees the real private one. The run then has full access, as every
+       older test assumes; the free tier is tested by taking it away for a moment.
+       The key is not left in storage, so the profile is not changed. */
+    try{ ACCESS_CHECK=await W.eval(`(async()=>{const out={};
+      const enc=b=>btoa(String.fromCharCode(...b)).replace(/\\+/g,'-').replace(/\\//g,'_').replace(/=+$/,'');
+      const make=async(untilSec,key)=>{ const d=new Uint8Array(5); d[0]=1; new DataView(d.buffer).setUint32(1,untilSec);
+        const sig=new Uint8Array(await crypto.subtle.sign({name:'ECDSA',hash:'SHA-256'},key,d));
+        const all=new Uint8Array(69); all.set(d); all.set(sig,5); return enc(all); };
+      try{ await crypto.subtle.importKey('spki',fromB64(ACCESS_PUBKEYS[0]),{name:'ECDSA',namedCurve:'P-256'},false,['verify']); out.shippedKeyOk=true; }
+      catch(e){ out.shippedKeyOk=false; }
+      const kp=await crypto.subtle.generateKey({name:'ECDSA',namedCurve:'P-256'},true,['sign','verify']);
+      const other=await crypto.subtle.generateKey({name:'ECDSA',namedCurve:'P-256'},true,['sign','verify']);
+      ACCESS_PUBKEYS.push(btoa(String.fromCharCode(...new Uint8Array(await crypto.subtle.exportKey('spki',kp.publicKey)))));
+      const now=Math.floor(Date.now()/1000);
+      const good=await make(now+7*86400,kp.privateKey);
+      out.good=await verifyAccessKey(good); out.want=(now+7*86400)*1000;
+      out.expired=await verifyAccessKey(await make(now-86400,kp.privateKey));
+      out.foreign=await verifyAccessKey(await make(now+86400,other.privateKey));
+      const tp=good.split(''); tp[3]=tp[3]==='A'?'B':'A'; out.tampered=await verifyAccessKey(tp.join(''));
+      out.garbage=await verifyAccessKey('hello');
+      out.applied=await applyAccessKey(good,false,false);
+      out.stored=localStorage.getItem(ACCESS_KEY)===good;
+      localStorage.removeItem(ACCESS_KEY);
+      return out;})()`); }catch(e){ ACCESS_CHECK={error:e.message}; }
     /* The asteroid file is a third of a megabyte and is fetched only when the
        switch is turned on, so nothing has loaded it by this point and the
        synchronous runner cannot wait for it. Loaded here, with the switch left
@@ -233,7 +258,7 @@ const frame=document.getElementById('app');
   },220));
   frame.src='./index.html?notacache='+Date.now();
 })();
-let STORE_CHECK=null, SHARE_CHECK=null, SW_SRC='', PARITY_GOLD='', SWE_REF=null, ATLAS_REAL_BYTES=null, ATLAS_BAR=null, ATLAS_FAIL=null, DEFAULT_RING=null;
+let ACCESS_CHECK=null, STORE_CHECK=null, SHARE_CHECK=null, SW_SRC='', PARITY_GOLD='', SWE_REF=null, ATLAS_REAL_BYTES=null, ATLAS_BAR=null, ATLAS_FAIL=null, DEFAULT_RING=null;
 
 function run(){
   const W=frame.contentWindow, D=frame.contentDocument;
@@ -2623,6 +2648,69 @@ function run(){
      выбрасывает то, что было на экране, даёт видимый возврат в одно касание.
      Здесь четыре таких места, найденные по коду: удаление своей карты, замена
      карты на экране новой, загрузка CSV и сброс орбисов. */
+  /* ---------- полный доступ ----------
+     Решение Дафы 13 окт 2026: одна карта бесплатно, всё со вторым и третьим
+     кольцом и композит - полный доступ. В вебе его на неделю открывает ключ,
+     подписанный закрытым ключом разработчика. */
+  t('ключ доступа: подпись проверяется, подделка, чужой и истёкший не проходят',()=>{
+    const r=ACCESS_CHECK;
+    if(!r) return 'замер не выполнен';
+    if(r.error) return 'исключение: '+r.error;
+    const bad=[];
+    if(!r.shippedKeyOk) bad.push('открытый ключ в приложении не разбирается');
+    if(r.good!==r.want) bad.push('верный ключ не принят или дата не та');
+    if(r.expired) bad.push('истёкший принят');
+    if(r.foreign) bad.push('ключ с чужой подписью принят');
+    if(r.tampered) bad.push('подделанная дата принята');
+    if(r.garbage) bad.push('мусор принят');
+    if(!r.applied||!r.stored) bad.push('верный ключ не открыл доступ или не запомнился');
+    return bad.length===0||bad.join('; ');
+  });
+  t('без полного доступа двойные карты закрыты и объяснено, как открыть',()=>{
+    const r=ev(`(()=>{const keepU=ACCESS_UNTIL, keepM=RING_MODE, keepM2=RING2_MODE, out={};
+      try{
+        ACCESS_UNTIL=0; renderRingSwitch();
+        const opts=[...document.querySelectorAll('#ringSel option')];
+        out.natalOpen=!opts.find(o=>o.value==='none').textContent.includes(t('proOnly'));
+        out.paidMarked=opts.filter(o=>o.value!=='none').every(o=>o.textContent.includes(t('proOnly')));
+        out.isPro=isPro();
+        const sel=document.getElementById('ringSel'); sel.value='synastry';
+        sel.dispatchEvent(new Event('change'));
+        out.mode=RING_MODE; out.sel=sel.value;
+        out.toast=document.getElementById('toastText').textContent;
+        out.btn=document.getElementById('toastBtn').textContent;
+        document.getElementById('toastBtn').click();
+        out.setOpen=document.getElementById('setCard').open;
+        out.flash=!!document.querySelector('#setCard .setrow.flash #accessCode');
+        closePanel('setCard');
+        renderAccess(); out.free=document.getElementById('accessState').textContent;
+      } finally {
+        ACCESS_UNTIL=keepU; RING_MODE=keepM; RING2_MODE=keepM2; renderRingSwitch(); renderAccess(); hideToast();
+      }
+      return out;})()`);
+    const bad=[];
+    if(r.isPro) bad.push('в вебе без ключа доступ открыт');
+    if(!r.natalOpen) bad.push('натал помечен платным');
+    if(!r.paidMarked) bad.push('не все платные типы помечены');
+    if(r.mode==='synastry') bad.push('синастрия открылась без доступа');
+    if(r.sel==='synastry') bad.push('список остался на закрытом типе');
+    if(r.toast!==ev(`t('proNeeded')`)) bad.push('нет объяснения: '+r.toast);
+    if(r.btn!==ev(`t('enterCode')`)||!r.setOpen||!r.flash) bad.push('кнопка не ведёт к полю кода');
+    if(r.free!==ev(`t('accessFree')`)) bad.push('в настройках не сказано, что бесплатно');
+    return bad.length===0||bad.join('; ');
+  });
+  t('с ключом в настройках видна дата, а в магазинной сборке поля кода нет',()=>{
+    const r=ev(`(()=>{const out={}; renderAccess();
+      out.until=document.getElementById('accessState').textContent;
+      const keepC=window.Capacitor; window.Capacitor={isNativePlatform:()=>true};
+      try{ renderAccess(); out.hidden=document.getElementById('accessSec').hidden; out.pro=isPro(); }
+      finally{ if(keepC===undefined) delete window.Capacitor; else window.Capacitor=keepC; renderAccess(); }
+      out.shown=!document.getElementById('accessSec').hidden;
+      return out;})()`);
+    if(!/\d{2}\.\d{2}\.\d{4}/.test(r.until)) return 'дата окончания не показана: '+r.until;
+    if(!r.hidden||!r.pro) return 'в магазинной сборке поле кода видно или доступ закрыт';
+    return r.shown||'в вебе поле кода пропало';
+  });
   t('удалённую карту можно вернуть на её место',()=>{
     const r=ev(`(()=>{const kc=localStorage.getItem(LKEY_CHARTS), out={};
       try{
@@ -2714,6 +2802,7 @@ function run(){
         out.oldest=savedCharts().some(e=>e.id==='m'+(LIB_CAP-2));
         out.text=document.getElementById('toastText').textContent;
         hideToast();
+        const keepName=document.getElementById('chartName').value; out.keepName=keepName;
         document.getElementById('chartName').value='Сверх предела';
         document.getElementById('saveChart').disabled=false;
         document.getElementById('saveChart').click();
@@ -2721,6 +2810,7 @@ function run(){
         out.fullText=document.getElementById('toastText').textContent;
       } finally {
         if(kc===null) localStorage.removeItem(LKEY_CHARTS); else localStorage.setItem(LKEY_CHARTS,kc);
+        if(out.keepName!==undefined) document.getElementById('chartName').value=out.keepName;
         renderLibrary(); renderBackupLine(); hideToast(); syncSaveBtn();
       }
       return out;})()`);
@@ -4472,7 +4562,7 @@ function run(){
     const need=['tagline','birth','date','time','lat','lng','tz','cast','city','cityph','hint',
       'libTitle','libFind','noTime','rrKnown','delChart','libShort','settings','themeLabel',
       'langLabel','close','whatIs','nameLabel','saveBtn','savedBtn','saveToLib','edit','hide',
-      'editData','geoNone','setCalc','setView','setHsys','setLil','setRulers',
+      'editData','geoNone','accessTitle','accessFree','proNeeded','enterCode','setCalc','setView','setHsys','setLil','setRulers',
       'hsysLabel','lilLabel','lil_mean','lil_true','transittime','secondsLabel','needdata',
       'empty','natal','era1','era2','era3','era4','tapdetail','positions','posnote',
       'transitdate','scrubintro','stepLabel','u_sec','u_min','u_hour','u_day','u_week',

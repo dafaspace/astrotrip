@@ -68,10 +68,12 @@ against another person is paid.** **[decided 13 Oct]**
   free. The people lost are mostly amateurs, who are not the paying audience.
 - **The web is the free tier, with a week's key.** **[decided 13 Oct]** The website shows the free
   tier only. Everything opens for a week with a code - in practice a link - that Dafa hands to a
-  tester or to a professional who asks. **[proposal, how]** The link carries its end date and a
-  signature made with a private key that never leaves Dafa's machine; the app holds only the
-  public key, so a code cannot be made up, and no server or account is needed. The same code
-  works in the sideloaded APK, which cannot buy through Google Play. Two limits, said plainly: a
+  tester or to a professional who asks. **[built 14 Oct, v3.18.0]** The link carries its end date and
+  a signature made with a private key that never leaves Dafa's machine
+  (`node tools-access-key.mjs issue [days] [name]`); the app holds only the public key, so a
+  code cannot be made up, and no server or account is needed. The store build is full until its
+  purchase lands; when it gates too, the same code will open the sideloaded APK, which cannot
+  buy through Google Play. Two limits, said plainly: a
   code can be forwarded during its week, and anyone who edits the page in developer tools can
   open the paid part, because a website without a server can only keep honest people honest.
   The web cannot take payment (no provider for a seller in Georgia is confirmed, and Paddle bans

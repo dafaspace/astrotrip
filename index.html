@@ -606,6 +606,9 @@ dialog.panel[open]{animation:panelIn 200ms cubic-bezier(.2,.7,.2,1) both}
 .setrow .dd{width:auto;flex:none;max-width:62%}
 .setrow .dd .ddbtn{min-height:44px;padding:4px 26px 4px 12px;font-size:14px;background-color:var(--paper2)}
 .setrow .ddlist{left:auto;right:0}
+.setstate{margin:2px 0 4px;line-height:1.45}
+#accessSec .setrow input{flex:1;min-width:0}
+#accessSec .setrow button{flex:none;min-height:44px;display:inline-flex;align-items:center;line-height:1}
 .setfold{border-bottom:1px solid var(--line)}
 .setfold>summary{min-height:52px}
 .setfold>summary .setlab{flex:none}
@@ -738,6 +741,16 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
         <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
     </div>
     <div class="panelbody">
+      <!-- Full access: what is free, and a field for a week's key. Web only - the
+           store build is full until its purchase lands. -->
+      <div id="accessSec">
+        <h3 class="setsec" data-i="accessTitle"></h3>
+        <div class="tiny setstate" id="accessState"></div>
+        <div class="setrow">
+          <input id="accessCode" type="text" autocomplete="off" autocapitalize="off" spellcheck="false">
+          <button type="button" id="accessApply" data-i="accessApply"></button>
+        </div>
+      </div>
       <!-- How the chart is calculated: what an astrologer sets once for their
            school and then leaves. The house system is also a chip over the
            wheel, because it is the one choice people compare on a live chart -
@@ -1110,7 +1123,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
 /* Bump together with CACHE in sw.js: the two are the same release, and the
    number on screen is how you tell from a phone which one you are looking at. */
-const APP_VERSION='3.17.0';
+const APP_VERSION='3.18.0';
 document.getElementById('ver').textContent=APP_VERSION;
 
 /* ---------- feature flags ----------
@@ -1413,6 +1426,17 @@ const STR = {
   editData:{ru:'Изменить данные рождения',en:'Edit the birth data'},
   geoNone:{ru:'Координаты и пояс возьмутся из города',en:'Coordinates and offset come from the city'},
   undo:{ru:'Вернуть',en:'Undo'},
+  accessTitle:{ru:'Полный доступ',en:'Full access'},
+  accessFree:{ru:'Бесплатно: одна карта и всё, что о ней. Транзиты, прогрессии, дирекции, возвраты, синастрия, композит и тройные карты входят в полный доступ. На неделю его открывает код от разработчика.',
+    en:'Free: one chart and everything about it. Transits, progressions, directions, returns, synastry, the composite and the tri-wheels are full access. A key from the developer opens it for a week.'},
+  accessUntil:{ru:'Полный доступ открыт до {d}.',en:'Full access is open until {d}.'},
+  accessPh:{ru:'Код доступа',en:'Access key'},
+  accessApply:{ru:'Открыть',en:'Open'},
+  proNeeded:{ru:'Двойные и тройные карты входят в полный доступ',en:'Double and triple charts are full access'},
+  enterCode:{ru:'Ввести код',en:'Enter key'},
+  accessOpened:{ru:'Полный доступ открыт до {d}',en:'Full access open until {d}'},
+  accessBad:{ru:'Код не подходит или истёк',en:'This key is not valid or has expired'},
+  proOnly:{ru:'полный доступ',en:'full access'},
   /* Phrases that were written into the code as ru-or-en branches, so every other
      language got the English one. Values for ru and en are exactly what the
      code produced before; the parity check and the export tests hold them. */
@@ -1892,7 +1916,17 @@ Object.assign(I18N.es,{
   xRulesOne:"rige la casa {n}",
   xRulesMany:"rige las casas {list} y {last}",
   xCarries:"el tema de la casa {from} se manifiesta en la {into}",
-  xReceivedBy:"lo reciben"
+  xReceivedBy:"lo reciben",
+  accessTitle:"Acceso completo",
+  accessFree:"Gratis: una carta y todo lo que hay en ella. Tránsitos, progresiones, direcciones, revoluciones, sinastría, la carta compuesta y las triples son acceso completo. Una clave del desarrollador lo abre durante una semana.",
+  accessUntil:"Acceso completo abierto hasta el {d}.",
+  accessPh:"Clave de acceso",
+  accessApply:"Abrir",
+  proNeeded:"Las cartas dobles y triples son acceso completo",
+  enterCode:"Introducir clave",
+  accessOpened:"Acceso completo hasta el {d}",
+  accessBad:"La clave no es válida o ha caducado",
+  proOnly:"acceso completo"
 });
 Object.assign(I18N.fr,{
   libShort:"Bibliothèque",
@@ -2004,7 +2038,17 @@ Object.assign(I18N.fr,{
   xRulesOne:"gouverne la maison {n}",
   xRulesMany:"gouverne les maisons {list} et {last}",
   xCarries:"le thème de la maison {from} se joue en {into}",
-  xReceivedBy:"reçu par"
+  xReceivedBy:"reçu par",
+  accessTitle:"Accès complet",
+  accessFree:"Gratuit : une carte et tout ce qui la concerne. Transits, progressions, directions, révolutions, synastrie, carte composite et triples roues font partie de l’accès complet. Une clé du développeur l’ouvre pour une semaine.",
+  accessUntil:"Accès complet ouvert jusqu’au {d}.",
+  accessPh:"Clé d’accès",
+  accessApply:"Ouvrir",
+  proNeeded:"Les cartes doubles et triples font partie de l’accès complet",
+  enterCode:"Saisir la clé",
+  accessOpened:"Accès complet jusqu’au {d}",
+  accessBad:"Cette clé n’est pas valide ou a expiré",
+  proOnly:"accès complet"
 });
 Object.assign(I18N.de,{
   libShort:"Bibliothek",
@@ -2116,7 +2160,17 @@ Object.assign(I18N.de,{
   xRulesOne:"herrscht über Haus {n}",
   xRulesMany:"herrscht über die Häuser {list} und {last}",
   xCarries:"das Thema von Haus {from} zeigt sich in {into}",
-  xReceivedBy:"empfangen von"
+  xReceivedBy:"empfangen von",
+  accessTitle:"Voller Zugang",
+  accessFree:"Kostenlos: ein Chart und alles dazu. Transite, Progressionen, Direktionen, Revolutionen, Synastrie, Composit und Dreifachräder gehören zum vollen Zugang. Ein Schlüssel vom Entwickler öffnet ihn für eine Woche.",
+  accessUntil:"Voller Zugang offen bis {d}.",
+  accessPh:"Zugangsschlüssel",
+  accessApply:"Öffnen",
+  proNeeded:"Doppel- und Dreifachcharts gehören zum vollen Zugang",
+  enterCode:"Schlüssel eingeben",
+  accessOpened:"Voller Zugang bis {d}",
+  accessBad:"Der Schlüssel ist ungültig oder abgelaufen",
+  proOnly:"voller Zugang"
 });
 Object.assign(I18N.it,{
   libShort:"Biblioteca",
@@ -2228,7 +2282,17 @@ Object.assign(I18N.it,{
   xRulesOne:"governa la casa {n}",
   xRulesMany:"governa le case {list} e {last}",
   xCarries:"il tema della casa {from} si esprime nella {into}",
-  xReceivedBy:"ricevuto da"
+  xReceivedBy:"ricevuto da",
+  accessTitle:"Accesso completo",
+  accessFree:"Gratis: una carta e tutto ciò che la riguarda. Transiti, progressioni, direzioni, rivoluzioni, sinastria, carta composita e ruote triple sono accesso completo. Una chiave dello sviluppatore lo apre per una settimana.",
+  accessUntil:"Accesso completo aperto fino al {d}.",
+  accessPh:"Chiave di accesso",
+  accessApply:"Apri",
+  proNeeded:"Le carte doppie e triple sono accesso completo",
+  enterCode:"Inserisci chiave",
+  accessOpened:"Accesso completo fino al {d}",
+  accessBad:"La chiave non è valida o è scaduta",
+  proOnly:"accesso completo"
 });
 Object.assign(I18N.uk,{
   libShort:"Бібліотека",
@@ -2340,7 +2404,17 @@ Object.assign(I18N.uk,{
   xRulesOne:"управляє {n} домом",
   xRulesMany:"управляє {list} і {last} домами",
   xCarries:"тема {from} дому проявляється в {into}",
-  xReceivedBy:"приймають"
+  xReceivedBy:"приймають",
+  accessTitle:"Повний доступ",
+  accessFree:"Безкоштовно: одна карта й усе, що її стосується. Транзити, прогресії, дирекції, повернення, синастрія, композит і потрійні карти входять до повного доступу. На тиждень його відкриває код від розробника.",
+  accessUntil:"Повний доступ відкрито до {d}.",
+  accessPh:"Код доступу",
+  accessApply:"Відкрити",
+  proNeeded:"Подвійні й потрійні карти входять до повного доступу",
+  enterCode:"Ввести код",
+  accessOpened:"Повний доступ до {d}",
+  accessBad:"Код не підходить або закінчився",
+  proOnly:"повний доступ"
 });
 Object.assign(I18N.ka,{
   libShort:"ბიბლიოთეკა",
@@ -2452,7 +2526,17 @@ Object.assign(I18N.ka,{
   xRulesOne:"მართავს {n} სახლს",
   xRulesMany:"მართავს {list} და {last} სახლებს",
   xCarries:"{from} სახლის თემა ვლინდება {into}-ში",
-  xReceivedBy:"იღებენ"
+  xReceivedBy:"იღებენ",
+  accessTitle:"სრული წვდომა",
+  accessFree:"უფასოდ: ერთი რუკა და ყველაფერი მის შესახებ. ტრანზიტები, პროგრესიები, დირექციები, დაბრუნებები, სინასტრია, კომპოზიტი და სამმაგი რუკები სრულ წვდომაშია. ერთი კვირით მას დეველოპერის კოდი ხსნის.",
+  accessUntil:"სრული წვდომა ღიაა {d}-მდე.",
+  accessPh:"წვდომის კოდი",
+  accessApply:"გახსნა",
+  proNeeded:"ორმაგი და სამმაგი რუკები სრულ წვდომაშია",
+  enterCode:"კოდის შეყვანა",
+  accessOpened:"სრული წვდომა {d}-მდე",
+  accessBad:"კოდი არ გამოდგება ან ვადა გაუვიდა",
+  proOnly:"სრული წვდომა"
 });
 /* STR holds the two languages the app was written in, key-major, which is how
    they were edited. I18N holds the six added afterwards, language-major, which
@@ -7089,6 +7173,67 @@ const TRI_COMBOS=[['progressed','transit'],['directed','transit'],['solar','tran
 const RING2_MODES=['none','transit'];
 let RING2_MODE=RING2_MODES.includes(localStorage.getItem('astrarium_ring2'))
   ? localStorage.getItem('astrarium_ring2') : 'none';
+/* ---------- full access ----------
+   One chart is free; every chart with a second or third ring - transits,
+   progressions, directions, returns, synastry, the tri-wheels - and the
+   composite are the paid part (Dafa, 13 Oct 2026). On the web, which cannot take
+   payment, a key opens everything for a week: a link Dafa hands out, signed with
+   a private key that never leaves his machine (tools-access-key.mjs). The page
+   checks the signature with the public half below, so there is no server and no
+   account. It keeps honest people honest and claims nothing more: a key can be
+   forwarded within its week, and developer tools can open any gate in a page.
+
+   The store build is full for now. Its purchase - seven days of everything, then
+   one payment - is the next step, and until that lands the app is only in the
+   hands of testers: it must not go on sale before it. */
+const ACCESS_PUBKEYS=['MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEOrFKIA8r8CHQjcejyGXVUvFxAvpJ7h+UiTswM9smKMydoRHIxS1jlUIrGC6MQZ+67f/6Ye9/r8pNTv3zLOHM6w=='];
+const ACCESS_KEY='astrarium_access';
+let ACCESS_UNTIL=0;
+function isPro(){ return inStoreShell()||ACCESS_UNTIL>Date.now(); }
+const fromB64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+/* A key is 69 bytes: version, the end date in seconds (4 bytes, big-endian), and
+   the ECDSA P-256 signature of those five, in the raw form WebCrypto verifies. */
+async function verifyAccessKey(code){
+  try{
+    let s=String(code||'').trim().replace(/-/g,'+').replace(/_/g,'/');
+    while(s.length%4) s+='=';
+    const b=fromB64(s);
+    if(b.length!==69||b[0]!==1||!(window.crypto&&crypto.subtle)) return 0;
+    const until=(b[1]*16777216+b[2]*65536+b[3]*256+b[4])*1000;
+    for(const k of ACCESS_PUBKEYS){
+      const key=await crypto.subtle.importKey('spki',fromB64(k),{name:'ECDSA',namedCurve:'P-256'},false,['verify']);
+      /* Expired counts as not valid here, not at each caller: the first version
+         returned the date and left the check to whoever asked, and a test caught
+         an expired key passing. */
+      if(await crypto.subtle.verify({name:'ECDSA',hash:'SHA-256'},key,b.slice(5),b.slice(0,5)))
+        return until>Date.now()?until:0;
+    }
+  }catch(e){}
+  return 0;
+}
+/* The chart type the person last chose, kept while a stored key is checked: the
+   check is asynchronous, and without this a paid type restored from storage
+   would drop to the free one on every launch before the key could answer. */
+const WANT_RING=[RING_MODE,RING2_MODE];
+if(!isPro()){ RING_MODE='none'; RING2_MODE='none'; }
+const fmtDay=ms=>{ const d=new Date(ms); return `${pad2(d.getDate())}.${pad2(d.getMonth()+1)}.${d.getFullYear()}`; };
+async function applyAccessKey(code,announce,restore){
+  const until=await verifyAccessKey(code);
+  if(!(until>Date.now())){ if(announce) toast(t('accessBad')); return false; }
+  ACCESS_UNTIL=until;
+  try{ localStorage.setItem(ACCESS_KEY,String(code).trim()); }catch(e){}
+  if(restore&&RING_MODE==='none'&&WANT_RING[0]!=='none'){ RING_MODE=WANT_RING[0]; RING2_MODE=WANT_RING[1]; }
+  renderAccess(); renderRingSwitch(); if(CURRENT) renderTransits(CURRENT);
+  if(announce) toast(t('accessOpened').replace('{d}',fmtDay(until)));
+  return true;
+}
+function renderAccess(){
+  const sec=document.getElementById('accessSec'); if(!sec) return;
+  sec.hidden=inStoreShell();
+  document.getElementById('accessState').textContent=ACCESS_UNTIL>Date.now()
+    ? t('accessUntil').replace('{d}',fmtDay(ACCESS_UNTIL)) : t('accessFree');
+  document.getElementById('accessCode').placeholder=t('accessPh');
+}
 const ringValue=()=>RING_MODE+(triOn()?'+'+RING2_MODE:'');
 /* Whether the third ring is drawn right now. Checked rather than assumed,
    because the stored pair comes back from localStorage, where anything can be,
@@ -7532,7 +7677,7 @@ function renderRingSwitch(){
   const sel=document.getElementById('ringSel'), cur=ringValue();
   sel.innerHTML=RING_MODES.map(m=>[m,t('ring_'+m)])
     .concat(TRI_COMBOS.map(([a,b])=>[a+'+'+b,t('ring_'+a)+' + '+t('ring_'+b)]))
-    .map(([v,lbl])=>`<option value="${v}"${v===cur?' selected':''}>${lbl}</option>`).join('');
+    .map(([v,lbl])=>`<option value="${v}"${v===cur?' selected':''}>${lbl}${v!=='none'&&!isPro()?' · '+t('proOnly'):''}</option>`).join('');
   const tri=triOn();
   document.getElementById('ringTitle').textContent=t('ring_'+RING_MODE)
     +(tri?' + '+t('ring_'+RING2_MODE):'');
@@ -8426,6 +8571,13 @@ document.getElementById('reset').addEventListener('click',()=>{localStorage.remo
   });
   document.getElementById('ringSel').addEventListener('change',e=>{
     const [v,v2='none']=e.target.value.split('+');
+    /* A paid type, chosen without full access: the list stays where it was and
+       says why, with the way in one tap away. */
+    if(v!=='none'&&!isPro()){
+      e.target.value=ringValue(); if(e.target._ddPaint) e.target._ddPaint();
+      toast(t('proNeeded'), t('enterCode'), ()=>openSettingsAt('accessCode'));
+      return;
+    }
     if((v==='progressed'||v==='directed')&&BIRTH_MS==null){
       alert(t('needbirth')); e.target.value=ringValue(); return;
     }
@@ -8464,7 +8616,7 @@ document.getElementById('langSel').addEventListener('change',e=>{
   applyStatic(); fillHsys(); fillLil(); fillRulers(); renderOrbs(); fillScrubUnit(); renderRingSwitch();
   setPlaying(PLAYING); fillNamePh(); fillLibSort(); renderLibrary();
   upgradeAllSelects(); repaintDropdowns();
-  renderGeoSum(); setGeoOpen(!document.getElementById('geoFields').hidden);
+  renderGeoSum(); setGeoOpen(!document.getElementById('geoFields').hidden); renderAccess();
   if(CURRENT)run();
 });
 fillLangSel();
@@ -9340,14 +9492,38 @@ document.getElementById('libBtn').addEventListener('click',e=>openPanel('libCard
 document.getElementById('setBtn').addEventListener('click',e=>openPanel('setCard',e.detail>0));
 /* A link from elsewhere to one settings row: the panel opens there, and the
    row is marked for a moment so the eye lands on it. */
-document.addEventListener('click',e=>{
-  const b=e.target.closest('[data-open-set]'); if(!b) return;
-  openPanel('setCard',e.detail>0);
-  const ctl=document.getElementById(b.dataset.openSet), row=ctl&&ctl.closest('.setrow');
+function openSettingsAt(id,byPointer){
+  openPanel('setCard',byPointer);
+  const ctl=document.getElementById(id), row=ctl&&ctl.closest('.setrow');
   if(!row) return;
   row.scrollIntoView({block:'center'});
   row.classList.add('flash'); setTimeout(()=>row.classList.remove('flash'),1400);
+}
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-open-set]'); if(!b) return;
+  openSettingsAt(b.dataset.openSet,e.detail>0);
 });
+document.getElementById('accessApply').addEventListener('click',()=>{
+  const inp=document.getElementById('accessCode');
+  applyAccessKey(inp.value,true,false).then(ok=>{ if(ok) inp.value=''; });
+});
+/* A key arrives as a link (#key=...) or is already stored. The fragment is taken
+   off the address at once, so it is not left in a bookmark or a screenshot. A
+   link opened in a tab where the site is already open changes only the fragment
+   and reloads nothing - the first version missed exactly that - so the change is
+   listened for as well. */
+function keyFromAddress(){
+  const m=/^#key=([A-Za-z0-9_-]+)$/.exec(location.hash); if(!m) return false;
+  try{ history.replaceState(history.state,'',location.pathname+location.search); }catch(e){}
+  applyAccessKey(m[1],true,true);
+  return true;
+}
+addEventListener('hashchange',keyFromAddress);
+if(!keyFromAddress()){
+  let saved=null; try{ saved=localStorage.getItem(ACCESS_KEY); }catch(e){}
+  if(saved) applyAccessKey(saved,false,true);
+}
+renderAccess();
 /* An "i" opens the note that follows its row. One handler for all of them. */
 document.addEventListener('click',e=>{
   const b=e.target.closest('button.info'); if(!b) return;

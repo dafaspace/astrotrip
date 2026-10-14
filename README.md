@@ -571,6 +571,31 @@ setting is one line with an "i" for its paragraph. A panel adds a history entry,
 the Android back button, a browser's back and Escape close it rather than leaving
 the app, and closing it never moves the page.
 
+### Free, and full access
+
+One chart is free: a natal chart and everything about it - positions, aspects,
+dignities, dispositor chains, receptions, configurations, the grid, balance, relocation,
+the text block, printing - with the library, saving and CSV. Every chart with a second
+or third ring - transits, progressions, directions, returns, synastry, the tri-wheels -
+and the composite are full access (Dafa, 13 Oct 2026). Saving and the CSV are never
+behind it: a client list does not depend on a payment.
+
+The website is the free tier. A key opens everything for a week: a link
+`.../astrotrip/#key=...`, or the same key pasted under Settings > Full access. Keys are
+issued on Dafa's machine with `node tools-access-key.mjs issue [days] [name]`, which
+signs a version byte and an end date with an ECDSA P-256 key kept in
+`mobile/keys/access-key.pem` (ignored by git, to be backed up) and logs who got which
+key. The page holds only the public half and checks the signature with WebCrypto: no
+server, no account, nothing sent anywhere. It keeps honest people honest and claims no
+more - a key can be forwarded within its week, and developer tools can open any gate in
+a page. A link opened in a tab where the site is already open changes only the
+fragment, so that is listened for too, and the fragment is taken off the address once
+read.
+
+The store build is full for now. Its purchase - seven days of everything, then one
+payment, as Apple's guideline 3.1.1 allows - is the next step, and the app is not to go
+on sale before it.
+
 ### The way back
 
 Anything that throws away what was on screen offers it back for eight seconds, in one
@@ -646,7 +671,7 @@ mattered: before it did, a deliberately broken app passed every check. The runne
 for the city atlas to finish loading, or the atlas tests would silently check the inline
 seed instead.
 
-**351 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
+**354 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
 library, robustness over 1550-2250 and at polar latitudes, house systems (angles land
 on the cusps, cusps run round the circle without crossing, quadrant systems coincide at
 the equator, zero-latitude bodies get the same house from both methods), library data
