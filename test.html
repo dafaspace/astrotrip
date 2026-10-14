@@ -2378,7 +2378,7 @@ function run(){
     if(r.afterCancel) bad.push('отменённая отправка записана как выгрузка');
     if(!r.afterDone) bad.push('завершённая отправка не записана');
     if(!/\.csv$/.test(r.plugFile||'')) bad.push('Android: в файл ушёл не CSV: '+r.plugFile);
-    if(!/^name,date,time/.test(r.plugData||'')) bad.push('Android: в файле не CSV с заголовком: '+r.plugData);
+    if(!/^\ufeff?name,date,time/.test(r.plugData||'')) bad.push('Android: в файле не CSV с заголовком: '+r.plugData);
     if(!/\.csv$/.test(r.plugShared||'')) bad.push('Android: в меню ушёл не тот файл: '+r.plugShared);
     if(r.plugAfterCancel) bad.push('Android: отменённая отправка записана как выгрузка');
     if(!r.plugAfterDone) bad.push('Android: завершённая отправка не записана');
@@ -4766,8 +4766,10 @@ function run(){
     const h=ev('libToCsv().split("\\r\\n")[0]');
     /* Сверяется с самим CSV_COLS, а не с переписанным от руки списком: при
        добавлении колонки note этот тест провалился на приложении, которое было
-       исправно, и это ровно тот случай, когда тест дублирует данные. */
-    return h===ev('CSV_COLS.join(",")')||`заголовок "${h}"`;
+       исправно, и это ровно тот случай, когда тест дублирует данные.
+       Перед заголовком стоит BOM, чтобы Excel открыл кириллицу как UTF-8. */
+    if(h.charCodeAt(0)!==0xFEFF) return 'нет BOM в начале файла';
+    return h.slice(1)===ev('CSV_COLS.join(",")')||`заголовок "${h}"`;
   });
   t('повторная загрузка того же файла не удваивает библиотеку',()=>{
     const r=ev(`(()=>{const keep=localStorage.getItem('astrarium_charts');
@@ -4933,6 +4935,98 @@ function run(){
       return Object.keys(F.planets).filter(p=>ch.pos[p]&&F.planets[p].sect.aboveHorizon!==(altitudeOf(ch,p)>0));
     }finally{HSYS=k;}})()`);
     return !r.length||'не совпало у '+r.join(', ');
+  });
+  /* Сценарии импорта прогоняются на временной библиотеке: настоящая
+     сохраняется до теста и возвращается после, даже если тест упал. */
+  const withLib=(charts,body)=>ev(`(()=>{const keep=localStorage.getItem('astrarium_charts');
+    localStorage.setItem('astrarium_charts',${JSON.stringify(JSON.stringify(charts))});
+    try{ ${body} }finally{ if(keep==null) localStorage.removeItem('astrarium_charts');
+      else localStorage.setItem('astrarium_charts',keep); }})()`);
+  t('#39 сохранить без места нельзя: ни карты на 0°/0°, ни дублей',()=>{
+    const prev=ev(`FORM_FIELDS.map(id=>document.getElementById(id).value)`);
+    try{
+      const r=withLib([],`
+        const set=(id,v)=>document.getElementById(id).value=v;
+        set('date','1990-05-10'); set('time','04:45'); set('city','Москва'); set('lat',''); set('lng',''); set('tz','');
+        document.getElementById('saveChart').click(); document.getElementById('saveChart').click();
+        const empty=savedCharts().length;
+        set('lat','55.75'); set('lng','37.62'); set('tz','+04:00');
+        document.getElementById('saveChart').click(); syncSaveBtn(); document.getElementById('saveChart').click();
+        return {empty, full:savedCharts().length, e:savedCharts()[0]};`);
+      if(r.empty!==0) return `без места сохранено ${r.empty}`;
+      if(r.full!==1) return `с местом после двух нажатий карт ${r.full}`;
+      return (r.e.lat===55.75&&r.e.lon===37.62&&r.e.tz===4)||JSON.stringify(r.e);
+    }finally{ W.__p=prev; ev(`FORM_FIELDS.forEach((id,i)=>document.getElementById(id).value=__p[i]);syncSaveBtn()`); }
+  });
+  t('#40 #41 строка без смещения или с нечитаемой ячейкой не входит, а считается',()=>{
+    const csv=['name,date,time,utc_offset,latitude,longitude,city',
+      'Хорошая,1990-05-10,04:45,+04:00,55.7558,37.6173,Москва',
+      'Без смещения,1990-05-10,04:45,,55.7558,37.6173,Москва',
+      'Запятая,1990-05-10,04:45,UTC+3,"55,7558",37.6173,Москва',
+      'Запад,1990-05-10,14:30,-05:00,40N43,74W00,NY',
+      'PM,1990-05-10,2:30 PM,-05:00,40.71,-74.0,NY',
+      'Без времени,1990-05-10,,+03:00,55.75,37.62,Москва',
+      'Мусор,1990-05-10,25:00,+03:00,55.75,37.62,Москва',
+      'Широта,1990-05-10,10:00,+03:00,95,37.62,Москва',
+      '31 февраля,1990-02-31,10:00,+03:00,55,37,Москва'].join('\r\n');
+    const r=withLib([],`const n=csvToLib(${JSON.stringify(csv)});
+      return {n,rej:csvToLib.rejected,list:savedCharts()};`);
+    const by=nm=>r.list.find(e=>e.name===nm);
+    const bad=[];
+    if(r.n!==5) bad.push(`вошло ${r.n}, а не 5`);
+    if(r.rej!==4) bad.push(`не прочитано ${r.rej}, а не 4`);
+    if(by('Без смещения')) bad.push('строка без смещения вошла');
+    const c=by('Запятая'); if(!c||c.lat!==55.7558||c.tz!==3) bad.push('десятичная запятая или UTC+3: '+JSON.stringify(c&&[c.lat,c.tz]));
+    const w=by('Запад'); if(!w||Math.abs(w.lat-(40+43/60))>1e-9||w.lon!==-74) bad.push('40N43 74W00: '+JSON.stringify(w&&[w.lat,w.lon]));
+    const pm=by('PM'); if(!pm||pm.t!==14.5) bad.push('2:30 PM: '+(pm&&pm.t));
+    const nt=by('Без времени'); if(!nt||nt.t!==null) bad.push('пустое время: '+(nt&&nt.t));
+    return !bad.length||bad.join('; ');
+  });
+  t('#43 файл из Excel: точка с запятой, BOM и даты через точку',()=>{
+    const csv='﻿name;date;time;utc_offset;latitude;longitude;city\r\nЭксель;10.05.1990;04:45;+04:00;55,7558;37,6173;Москва\r\n';
+    const r=withLib([],`const n=csvToLib(${JSON.stringify(csv)}); return {n,e:savedCharts()[0]};`);
+    if(r.n!==1) return `вошло ${r.n}`;
+    const e=r.e;
+    return (e.name==='Эксель'&&e.y===1990&&e.mo===5&&e.d===10&&e.lat===55.7558&&e.lon===37.6173&&e.tz===4)||JSON.stringify(e);
+  });
+  t('#45 счётчики импорта не тянутся с прошлого раза',()=>{
+    const r=withLib([],`csvToLib.skipped=300; csvToLib.rejected=7;
+      const n=csvToLib('name,date,latitude\\r\\n'); return [n,csvToLib.skipped,csvToLib.rejected];`);
+    return (r[1]===0&&r[2]===0)||`после пустого файла: ${r.join(', ')}`;
+  });
+  t('#46 отмена импорта убирает только импортированное',()=>{
+    const csv='name,date,time,utc_offset,latitude,longitude\r\nИмпорт,1990-05-10,04:45,+04:00,55.75,37.62\r\n';
+    const r=withLib([{id:'u_old',name:'Своя',y:1980,mo:1,d:1,t:12,lat:1,lon:2,tz:0,note:''}],`
+      importCsvText(${JSON.stringify(csv)});
+      const l=savedCharts(); l.find(x=>x.id==='u_old').note='дописано после импорта';
+      l.unshift({id:'u_new',name:'Сохранена после',y:2000,mo:1,d:1,t:12,lat:1,lon:2,tz:0});
+      writeCharts(l);
+      document.getElementById('toastBtn').click();
+      const a=savedCharts(); return {names:a.map(x=>x.name), note:(a.find(x=>x.id==='u_old')||{}).note};`);
+    const bad=[];
+    if(r.names.includes('Импорт')) bad.push('импорт не отменён');
+    if(!r.names.includes('Сохранена после')) bad.push('пропала карта, сохранённая после импорта');
+    if(r.note!=='дописано после импорта') bad.push('пропала заметка: '+r.note);
+    return !bad.length||bad.join('; ');
+  });
+  t('#47 переполненное хранилище: сказано прямо, карта не считается сохранённой',()=>{
+    const r=ev(`(()=>{const orig=Storage.prototype.setItem;
+      Storage.prototype.setItem=function(k,v){ if(k==='astrarium_charts') throw new DOMException('full','QuotaExceededError'); return orig.call(this,k,v); };
+      try{ const ok=writeCharts([{id:'x'}]);
+        const msg=(document.querySelector('#toast')||{}).textContent||'';
+        return {ok,msg}; }finally{ Storage.prototype.setItem=orig; }})()`);
+    if(r.ok!==false) return 'writeCharts сообщил об успехе';
+    return r.msg.includes(ev(`t('storageFull')`).slice(0,12))||`сообщение: ${r.msg}`;
+  });
+  t('#25 карта не строится с широтой 95 или смещением +25',()=>{
+    const prev=ev(`FORM_FIELDS.map(id=>document.getElementById(id).value)`);
+    const al=W.alert; let said=0; W.alert=()=>{said++;};
+    try{
+      const a=ev(`document.getElementById('lat').value='95';run()`);
+      ev(`document.getElementById('lat').value='55.75'`);
+      const b=ev(`document.getElementById('tz').value='+25:00';run()`);
+      return (a===false&&b===false&&said===2)||`широта 95: ${a}, смещение +25: ${b}, сообщений ${said}`;
+    }finally{ W.alert=al; W.__p=prev; ev(`FORM_FIELDS.forEach((id,i)=>document.getElementById(id).value=__p[i]);syncSaveBtn();run()`); }
   });
   /* REVIEW-2026-10-15-END */
 

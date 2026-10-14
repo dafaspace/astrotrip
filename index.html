@@ -2730,6 +2730,37 @@ Object.assign(I18N.ka,{
   rpPrivacy:"მხოლოდ მთვლელები: არც სახელები, არც დაბადების თარიღები, არც ადგილები.",
   rpNone:"არა"
 });
+/* Added with the fixes from the code review of 15 Oct 2026, all eight at once. */
+Object.assign(STR,{
+  importRejected:{ru:'не прочитано: {n} (проверьте дату, время, координаты и смещение UTC)',
+    en:'not read: {n} (check the date, time, coordinates and UTC offset)'},
+  storageFull:{ru:'Не сохранено: место приложения на этом устройстве заполнено. Выгрузите CSV, затем сократите заметки или удалите карты.',
+    en:'Not saved: the app\'s storage on this device is full. Export a CSV, then shorten notes or delete charts.'}
+});
+Object.assign(I18N.es,{
+  importRejected:"sin leer: {n} (revisa la fecha, la hora, las coordenadas y el desfase UTC)",
+  storageFull:"No se guardó: el espacio de la app en este dispositivo está lleno. Exporta un CSV y luego acorta notas o borra cartas."
+});
+Object.assign(I18N.fr,{
+  importRejected:"non lues : {n} (vérifiez la date, l’heure, les coordonnées et le décalage UTC)",
+  storageFull:"Non enregistré : l’espace de l’app sur cet appareil est plein. Exportez un CSV, puis raccourcissez des notes ou supprimez des cartes."
+});
+Object.assign(I18N.de,{
+  importRejected:"nicht gelesen: {n} (Datum, Zeit, Koordinaten und UTC-Versatz prüfen)",
+  storageFull:"Nicht gespeichert: Der Speicher der App auf diesem Gerät ist voll. Erst eine CSV exportieren, dann Notizen kürzen oder Charts löschen."
+});
+Object.assign(I18N.it,{
+  importRejected:"non lette: {n} (controlla data, ora, coordinate e scarto UTC)",
+  storageFull:"Non salvato: lo spazio dell’app su questo dispositivo è pieno. Esporta un CSV, poi accorcia le note o elimina delle carte."
+});
+Object.assign(I18N.uk,{
+  importRejected:"не прочитано: {n} (перевірте дату, час, координати й зсув UTC)",
+  storageFull:"Не збережено: місце застосунку на цьому пристрої заповнене. Вивантажте CSV, потім скоротіть нотатки або видаліть карти."
+});
+Object.assign(I18N.ka,{
+  importRejected:"ვერ წაიკითხა: {n} (შეამოწმე თარიღი, დრო, კოორდინატები და UTC წანაცვლება)",
+  storageFull:"არ შეინახა: აპის ადგილი ამ მოწყობილობაზე სავსეა. გაიტანე CSV, შემდეგ შეამოკლე შენიშვნები ან წაშალე რუკები."
+});
 /* STR holds the two languages the app was written in, key-major, which is how
    they were edited. I18N holds the six added afterwards, language-major, which
    is how a translator reads them. Lookup order: added pack, then STR for this
@@ -8698,9 +8729,10 @@ function restoreForm(){
 
 function run(){
   const dv=document.getElementById('date').value, tv=document.getElementById('time').value;
-  const lat=parseFloat(document.getElementById('lat').value), lng=parseFloat(document.getElementById('lng').value);
-  const tz=parseOffset(document.getElementById('tz').value);
-  if(!dv||!tv||isNaN(lat)||isNaN(lng)||isNaN(tz)){
+  /* Ranges too, not only presence: a latitude of 95 or an offset of +25 made a
+     chart that looked like any other. */
+  const geo=formGeo(), lat=geo?geo.lat:NaN, lng=geo?geo.lng:NaN, tz=geo?geo.tz:NaN;
+  if(!dv||!tv||!geo){
     /* The coordinates are behind a line now, so a chart that fails on them has
        to show where they are, or the message names fields nobody can see. */
     if(dv&&tv) setGeoOpen(true);
@@ -9036,12 +9068,18 @@ function nativePrefs(){
   const C=typeof window!=='undefined'&&window.Capacitor;
   return inStoreShell()&&C&&C.Plugins&&C.Plugins.Preferences||null;
 }
+/* Returns false when nothing was written. A full store used to throw out of
+   here: an import then said "could not read that file" about a good file, and
+   a save did nothing and said nothing. Now it says what happened, once. */
 function writeCharts(list){
   const json=JSON.stringify(list), at=Date.now();
-  localStorage.setItem(LKEY_CHARTS,json);
-  localStorage.setItem(LKEY_CHARTS_AT,String(at));
+  try{
+    localStorage.setItem(LKEY_CHARTS,json);
+    localStorage.setItem(LKEY_CHARTS_AT,String(at));
+  }catch(e){ toast(t('storageFull')); return false; }
   const P=nativePrefs();
   if(P) P.set({key:LKEY_CHARTS,value:JSON.stringify({at,charts:json})}).catch(()=>{});
+  return true;
 }
 /* Returns true when it changed the working copy, so the library is drawn again. */
 async function syncChartsWithNative(){
@@ -9332,6 +9370,14 @@ document.getElementById('libList').addEventListener('click',function(ev){
   if(e) loadChartEntry(e,own);
 });
 const formVal=id=>((document.getElementById(id)||{}).value||'').trim();
+/* The place and the offset in the form, or null when any of them is missing
+   or impossible. One check for casting and for saving, so the two cannot
+   disagree about what a usable chart is. */
+function formGeo(){
+  const lat=parseFloat(formVal('lat')), lng=parseFloat(formVal('lng')), tz=parseOffset(formVal('tz'));
+  if(!(Math.abs(lat)<=90)||!(Math.abs(lng)<=180)||Number.isNaN(tz)) return null;
+  return {lat,lng,tz};
+}
 /* What a chart saved from the form is called: its name, or the city, or the
    date, so that no row in the library is blank. */
 function formSaveName(){
@@ -9369,6 +9415,12 @@ document.getElementById('saveQuick').addEventListener('click',()=>document.getEl
 document.getElementById('saveChart').addEventListener('click',function(){
   const d=document.getElementById('date').value, tm=document.getElementById('time').value;
   if(!d||!tm) return;
+  /* A place and an offset, or nothing. A city typed and never picked left the
+     coordinates empty, +'' is 0, and the library got a row called Moscow that
+     opened as a chart for 0 N 0 E at UTC - with a duplicate per press, since
+     a NaN offset never compares equal to itself. */
+  const geo=formGeo();
+  if(!geo){ setGeoOpen(true); toast(t('needdata')); return; }
   const p=d.split('-').map(Number), q=tm.split(':').map(Number);
   const cityV=formVal('city'), nm=formSaveName();
   const list=savedCharts();
@@ -9377,9 +9429,8 @@ document.getElementById('saveChart').addEventListener('click',function(){
   if(list.length>=LIB_CAP){ toast(t('libFull').replace('{n}',LIB_CAP)); return; }
   list.unshift({id:'u'+Date.now(), name:nm,
     y:p[0], mo:p[1], d:p[2], t:q[0]+q[1]/60,
-    lat:+document.getElementById('lat').value, lon:+document.getElementById('lng').value,
-    tz:parseOffset(document.getElementById('tz').value), city:cityV, rr:'A', src:''});
-  writeCharts(list);
+    lat:geo.lat, lon:geo.lng, tz:geo.tz, city:cityV, rr:'A', src:''});
+  if(!writeCharts(list)) return;
   renderLibrary(); renderBackupLine(); askPersistence(); syncSaveBtn();
 });
 
@@ -9399,16 +9450,26 @@ const LIB_CAP=2000;
 const CSV_COLS=['name','date','time','utc_offset','latitude','longitude','city','rodden','source','note'];
 const csvCell=v=>{ const s=v==null?'':String(v);
   return /[",\n\r]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; };
+/* The separator is whatever the header line uses most. Excel writes ';' in
+   every locale where the comma is the decimal mark - Russian, German, French,
+   Italian - so a file round-tripped through it on such a machine was refused
+   whole as "not a CSV". */
+function csvSep(text){
+  const head=text.slice(0,(text.indexOf('\n')+1||text.length+1)-1);
+  const n=c=>head.split(c).length-1;
+  return [',',';','\t'].reduce((a,b)=>n(b)>n(a)?b:a);
+}
 function csvParse(text){
   const rows=[]; let row=[], cell='', q=false;
   text=text.replace(/^﻿/,'');
+  const sep=csvSep(text);
   for(let i=0;i<text.length;i++){
     const c=text[i];
     if(q){
       if(c==='"'){ if(text[i+1]==='"'){cell+='"';i++;} else q=false; }
       else cell+=c;
     } else if(c==='"') q=true;
-    else if(c===','){ row.push(cell); cell=''; }
+    else if(c===sep){ row.push(cell); cell=''; }
     else if(c==='\n'){ row.push(cell); rows.push(row); row=[]; cell=''; }
     else if(c!=='\r') cell+=c;
   }
@@ -9416,8 +9477,11 @@ function csvParse(text){
   return rows.filter(r=>r.length>1||r[0]!=='');
 }
 const hhmm=h=>{ const t=Math.round(h*60); return pad2(Math.floor(t/60)%24)+':'+pad2(((t%60)+60)%60); };
+/* The byte-order mark is for Excel, which otherwise opens UTF-8 as the
+   machine's old code page and turns every Cyrillic name into noise. Every
+   other reader, ours included, skips it. */
 function libToCsv(){
-  const lines=[CSV_COLS.join(',')];
+  const lines=['\ufeff'+CSV_COLS.join(',')];
   savedCharts().forEach(e=>lines.push([
     e.name, `${String(e.y).padStart(4,'0')}-${pad2(e.mo)}-${pad2(e.d)}`,
     e.t==null?'':hhmm(e.t), e.tz==null?'':formatOffset(e.tz),
@@ -9425,36 +9489,76 @@ function libToCsv(){
   ].map(csvCell).join(',')));
   return lines.join('\r\n')+'\r\n';
 }
+/* Cells are read strictly. parseFloat took "55,7558" as 55 and "37W30" as
+   +37, the time pattern ignored "PM", and an empty time became a known noon;
+   each of those made a chart that looked right and was not. A cell this
+   cannot read sends the row to the rejected count instead. */
+function csvDate(s){
+  let m=/^(-?\d{1,6})-(\d{1,2})-(\d{1,2})$/.exec(s), y, mo, d;
+  if(m){ y=+m[1]; mo=+m[2]; d=+m[3]; }
+  /* Day first with dots is how Excel writes dates in Europe and Russia, and
+     it is unambiguous. Slashes are not - 03/04 is March in New York and April
+     in London - so they are refused rather than guessed. */
+  else if((m=/^(\d{1,2})\.(\d{1,2})\.(-?\d{1,6})$/.exec(s))){ d=+m[1]; mo=+m[2]; y=+m[3]; }
+  else return null;
+  if(mo<1||mo>12||d<1||d>new Date(Date.UTC(2000,mo,0)).getUTCDate()) return null;
+  if(mo===2&&d===29&&!(y%4===0&&(y%100!==0||y%400===0))) return null;
+  return [y,mo,d];
+}
+function csvClock(s){
+  if(s==='') return null;                        // no time: a chart cast for noon, and marked so
+  const m=/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*([ap]\.?m\.?)?$/i.exec(s);
+  if(!m) return NaN;
+  let h=+m[1]; const mi=+m[2], se=+(m[3]||0);
+  if(mi>59||se>59) return NaN;
+  if(m[4]){ if(h<1||h>12) return NaN; h=h%12+(/^p/i.test(m[4])?12:0); }
+  else if(h>23) return NaN;
+  return h+mi/60+se/3600;
+}
+function csvCoord(s,max){
+  let v;
+  const m=/^(\d{1,3})\s*([NSEWnsew])\s*(\d{1,2})(?:['′]?\s*(\d{1,2}))?$/.exec(s);
+  if(m){
+    if(+m[3]>59||+(m[4]||0)>59) return NaN;
+    v=(+m[1]+ +m[3]/60+ +(m[4]||0)/3600)*(/[SWsw]/.test(m[2])?-1:1);
+  }else if(/^[+-]?\d{1,3}([.,]\d+)?$/.test(s)) v=parseFloat(s.replace(',','.'));
+  else return NaN;
+  return Math.abs(v)<=max?v:NaN;
+}
 function csvToLib(text){
+  csvToLib.skipped=0; csvToLib.rejected=0; csvToLib.added=[];
   const rows=csvParse(text);
   if(rows.length<2) return 0;
   const head=rows[0].map(h=>h.trim().toLowerCase());
   const at=n=>head.indexOf(n);
   if(at('date')===-1||at('latitude')===-1) return -1;
   const have=new Set(savedCharts().map(e=>`${e.name}|${e.y}-${e.mo}-${e.d}|${e.t}`));
-  const list=savedCharts(); let n=0, skipped=0;
+  const list=savedCharts(); let n=0, skipped=0, rejected=0; const added=[];
   for(let i=1;i<rows.length;i++){
     const r=rows[i]; const g=k=>{const j=at(k);return j===-1?'':(r[j]||'').trim();};
-    const dm=/^(-?\d{1,6})-(\d{1,2})-(\d{1,2})$/.exec(g('date')); if(!dm) continue;
-    const tm=/^(\d{1,2}):(\d{2})/.exec(g('time'));
-    const lat=parseFloat(g('latitude')), lon=parseFloat(g('longitude'));
-    if(isNaN(lat)||isNaN(lon)) continue;
-    const t=tm?(+tm[1]+ +tm[2]/60):12;
-    const key=`${g('name')}|${+dm[1]}-${+dm[2]}-${+dm[3]}|${t}`;
+    const dt=csvDate(g('date')), t=csvClock(g('time'));
+    const lat=csvCoord(g('latitude'),90), lon=csvCoord(g('longitude'),180);
+    /* No offset, no chart. Without it the row opened at UTC: three hours out
+       for Moscow, and nothing on screen to say so. */
+    const tz=parseOffset(g('utc_offset'));
+    if(!dt||Number.isNaN(t)||Number.isNaN(lat)||Number.isNaN(lon)||Number.isNaN(tz)){ rejected++; continue; }
+    const key=`${g('name')}|${dt[0]}-${dt[1]}-${dt[2]}|${t}`;
     if(have.has(key)) continue;
     have.add(key);
     if(list.length>=LIB_CAP){ skipped++; continue; }
-    list.unshift({id:'u'+Date.now()+'_'+n, name:g('name')||g('city')||g('date'),
-      y:+dm[1], mo:+dm[2], d:+dm[3], t, lat, lon,
-      tz:parseOffset(g('utc_offset')), city:g('city'), rr:g('rodden')||'', src:g('source')||'',
+    const id='u'+Date.now()+'_'+n;
+    list.unshift({id, name:g('name')||g('city')||g('date'),
+      y:dt[0], mo:dt[1], d:dt[2], t, lat, lon,
+      tz, city:g('city'), rr:g('rodden')||'', src:g('source')||'',
       note:g('note')||''});
-    n++;
+    added.push(id); n++;
   }
   /* What is already in the library stays. A file larger than the room left is
      imported up to the limit and the rest is counted, not dropped in silence -
      before, the oldest saved charts fell off the bottom with no word. */
-  writeCharts(list);
-  csvToLib.skipped=skipped;
+  csvToLib.skipped=skipped; csvToLib.rejected=rejected;
+  if(n&&!writeCharts(list)) return -2;
+  csvToLib.added=added;
   return n;
 }
 document.getElementById('expCsv').addEventListener('click',async()=>{
@@ -9558,16 +9662,21 @@ document.getElementById('atlasRetry').addEventListener('click',()=>{
 /* The file's text in, the library updated, the result said. Kept apart from
    the file picker so the same path can be run without one. */
 function importCsvText(txt){
-  const before=savedCharts();
   const n=csvToLib(txt);
+  if(n===-2) return n;                           // writeCharts has said why
   if(n<0){ toast(t('importBad')); return n; }
   if(n>0) track('csvIn');
   renderLibrary(); renderBackupLine();
-  /* The wrong file imported is a hundred rows to delete one by one. */
-  const sk=csvToLib.skipped||0;
-  const msg=t('importDone')+n+(sk?' · '+t('importSkipped').replace('{n}',sk).replace('{cap}',LIB_CAP):'');
+  const sk=csvToLib.skipped||0, rj=csvToLib.rejected||0, added=new Set(csvToLib.added);
+  const msg=t('importDone')+n
+    +(sk?' · '+t('importSkipped').replace('{n}',sk).replace('{cap}',LIB_CAP):'')
+    +(rj?' · '+t('importRejected').replace('{n}',rj):'');
+  /* The wrong file imported is a hundred rows to delete one by one. The way
+     back takes out exactly what the import put in: restoring the library as
+     it was before also took out a chart saved, or a note written, in the
+     seconds since. */
   toast(msg, t('undo'), n>0?()=>{
-    writeCharts(before); renderLibrary(); renderBackupLine(); }:null);
+    writeCharts(savedCharts().filter(e=>!added.has(e.id))); renderLibrary(); renderBackupLine(); }:null);
   return n;
 }
 document.getElementById('impCsv').addEventListener('click',()=>document.getElementById('impFile').click());
@@ -9585,7 +9694,7 @@ document.getElementById('libList').addEventListener('change',e=>{
   const list=savedCharts(), row=list.find(x=>x.id===el.dataset.note);
   if(!row) return;
   row.note=el.value.trim();
-  writeCharts(list);
+  if(!writeCharts(list)){ el.value=savedCharts().find(x=>x.id===row.id)?.note||''; return; }
   renderBackupLine();
 });
 document.getElementById('libFind').addEventListener('input',renderLibrary);
