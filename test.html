@@ -4844,6 +4844,65 @@ function run(){
     return off || 'кнопка активна, но нажатие ничего не делает';
   });
 
+  /* ---------- проверка кода 15 октября 2026 ----------
+     Каждая находка, которую чинили, получает здесь тест на сам сценарий из
+     docs/review-2026-10-15.md, номер находки в названии. */
+  group('проверка кода 15 октября');
+  t('#57 смещение пояса берётся в момент рождения, а не на часы раньше',()=>{
+    const cases=[
+      ['Europe/Moscow',1990,3,25,0,30,3,'Москва перед летним временем'],
+      ['America/New_York',2024,3,10,4,0,-4,'Нью-Йорк после перевода вперёд'],
+      ['America/New_York',2024,11,3,3,30,-5,'Нью-Йорк после перевода назад'],
+      ['America/New_York',2024,11,3,1,30,-4,'повторившийся час: первый из двух'],
+      ['America/New_York',2024,3,10,2,30,-5,'пропущенный час: часы ещё не переведены'],
+      ['Asia/Vladivostok',2010,3,28,1,30,10,'Владивосток в ночь перевода']];
+    const bad=cases.map(([z,y,mo,d,h,mi,want,nm])=>{
+      const got=ev(`ianaOffset(${JSON.stringify(z)},${y},${mo},${d},${h},${mi})`);
+      return got===want?null:`${nm}: ${got} вместо ${want}`;}).filter(Boolean);
+    return !bad.length||bad.join('; ');
+  });
+  t('#58 местное среднее время читается с секундами и берётся по месту рождения',()=>{
+    const bad=[];
+    const msk=ev(`ianaOffset('Europe/Moscow',1880,6,1,12,0)`);
+    if(Math.abs(msk-(2+30/60+17/3600))>1e-6) bad.push(`Москва 1880 из базы: ${msk}`);
+    const spb=ev(`placeOffset('Europe/Moscow',30.3351,1880,6,1,12,0)`);
+    if(Math.abs(spb-30.3351/15)>1e-9) bad.push(`Петербург 1880: ${spb}, а не долгота/15`);
+    const f=ev(`formatOffset(30.3351/15)`);
+    if(f!=='+02:01:20') bad.push(`запись смещения ${f}`);
+    const mod=ev(`placeOffset('Europe/Moscow',30.3351,1990,6,1,12,0)`);
+    if(mod!==4) bad.push(`Петербург 1990: ${mod}, ожидалось летнее +4`);
+    return !bad.length||bad.join('; ');
+  });
+  t('#58 форма ставит местное среднее время города, а не опорного города пояса',()=>{
+    const prev=ev(`[document.getElementById('date').value,document.getElementById('time').value,`
+      +`document.getElementById('tz').value,SELECTED_CITY,TZ_AUTO]`);
+    try{
+      ev(`SELECTED_CITY={r:'Санкт-Петербург',e:'Saint Petersburg',lat:59.9343,lon:30.3351,z:'Europe/Moscow'};TZ_AUTO=true;`
+        +`document.getElementById('date').value='1880-06-01';document.getElementById('time').value='12:00';updateTzAuto()`);
+      const v=D.getElementById('tz').value;
+      return v==='+02:01:20'||`в поле ${v}`;
+    }finally{
+      W.__p=prev;
+      ev(`document.getElementById('date').value=__p[0];document.getElementById('time').value=__p[1];`
+        +`document.getElementById('tz').value=__p[2];SELECTED_CITY=__p[3];TZ_AUTO=__p[4];`);
+    }
+  });
+  t('#40 смещение читается в тех видах, в каких его пишут, и мусор не становится нулём',()=>{
+    const want={'+3':3,'+03:00':3,'+0300':3,'UTC+3':3,'GMT-5':-5,'+03:00:00':3,'5.5':5.5,'-3,5':-3.5,
+      '+02:01:20':2+1/60+20/3600,'-09:30':-9.5};
+    const bad=Object.entries(want).map(([s,v])=>{const g=ev(`parseOffset(${JSON.stringify(s)})`);
+      return Math.abs(g-v)<1e-9?null:`${s} -> ${g}`;}).filter(Boolean);
+    ['','abc','+25','12:75','UTC','3 часа'].forEach(s=>{const g=ev(`parseOffset(${JSON.stringify(s)})`);
+      if(!Number.isNaN(g)) bad.push(`${JSON.stringify(s)} принят как ${g}`);});
+    return !bad.length||bad.join('; ');
+  });
+  t('#60 Ханой в 1965 году на +7 и без атласа',()=>{
+    const z=ev(`SEED_CITIES.find(c=>c.e==='Hanoi').z`);
+    const off=ev(`ianaOffset(${JSON.stringify(z)},1965,6,1,12,0)`);
+    return off===7||`${z}: ${off}`;
+  });
+  /* REVIEW-2026-10-15-END */
+
   render();
 }
 

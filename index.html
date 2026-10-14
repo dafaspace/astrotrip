@@ -3371,7 +3371,7 @@ const SEED_CITIES=[
 {r:'Коломбо',e:'Colombo',c:'LK',lat:6.9271,lon:79.8612,z:'Asia/Colombo'},
 {r:'Катманду',e:'Kathmandu',c:'NP',lat:27.7172,lon:85.324,z:'Asia/Kathmandu'},
 {r:'Бангкок',e:'Bangkok',c:'TH',lat:13.7563,lon:100.5018,z:'Asia/Bangkok'},
-{r:'Ханой',e:'Hanoi',c:'VN',lat:21.0278,lon:105.8342,z:'Asia/Ho_Chi_Minh'},
+{r:'Ханой',e:'Hanoi',c:'VN',lat:21.0278,lon:105.8342,z:'Asia/Bangkok'}, /* as the atlas has it: the North kept +7 in 1959-1975, Asia/Ho_Chi_Minh is the South's +8 */
 {r:'Хошимин',e:'Ho Chi Minh City',c:'VN',lat:10.8231,lon:106.6297,z:'Asia/Ho_Chi_Minh'},
 {r:'Джакарта',e:'Jakarta',c:'ID',lat:-6.2088,lon:106.8456,z:'Asia/Jakarta'},
 {r:'Манила',e:'Manila',c:'PH',lat:14.5995,lon:120.9842,z:'Asia/Manila'},
@@ -3549,32 +3549,83 @@ function searchCities(q){
   atlasLoad();
   return SEED_CITIES.filter(c=>normStr(c.r).includes(q)||normStr(c.e).includes(q)).slice(0,8);
 }
+/* Seconds are written only when there are any. A zone offset never has them;
+   local mean time almost always does - St Petersburg's is +02:01:20 - and a
+   form that rounded it to +02:01 moved the Ascendant by up to five arcminutes
+   on every chart cast before standard time. */
 function formatOffset(h){
-  const sign=h<0?'-':'+', a=Math.abs(h); let hh=Math.floor(a+1e-9), mm=Math.round((a-hh)*60);
-  if(mm===60){mm=0;hh++;}
-  return sign+String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0');
+  const sign=h<0?'-':'+', s=Math.round(Math.abs(h)*3600);
+  const hh=Math.floor(s/3600), mm=Math.floor(s%3600/60), ss=s%60;
+  return sign+String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0')
+    +(ss?':'+String(ss).padStart(2,'0'):'');
 }
 /* UTC+3 rather than UTC+03:00 when the offset is whole: the chart header and
    the coordinates line both have one line on a phone to spend. */
 function utcLabel(tz){
   return tz===Math.trunc(tz)?`UTC${tz<0?'-':'+'}${Math.abs(tz)}`:`UTC${formatOffset(tz)}`;
 }
+/* What people actually write for an offset, from the form and from other
+   programs' CSV files: +3, +03:00, +0300, +02:01:20, UTC+3, GMT-5, 5.5, -3,5.
+   Anything else is NaN, never a quiet zero: a chart at UTC for a birth in
+   Moscow is three hours out and looks like any other chart. The range is the
+   real one, -12 to +14, plus room for local mean time at the date line. */
 function parseOffset(str){
-  const m=/^\s*([+-])?\s*(\d{1,2})(?::?(\d{2}))?\s*$/.exec(str||'');
-  if(!m) return NaN;
-  return (m[1]==='-'?-1:1)*(+m[2]+(+(m[3]||0))/60);
+  const s=String(str==null?'':str).trim().replace(/^(UTC|GMT)\s*/i,'');
+  let m=/^([+-])?\s*(\d{1,2})(?::?(\d{2})(?::(\d{2}))?)?$/.exec(s), h;
+  if(m){
+    if(+(m[3]||0)>59||+(m[4]||0)>59) return NaN;
+    h=(m[1]==='-'?-1:1)*(+m[2]+(+(m[3]||0))/60+(+(m[4]||0))/3600);
+  }else if((m=/^([+-])?\s*(\d{1,2}[.,]\d+)$/.exec(s))){
+    h=(m[1]==='-'?-1:1)*parseFloat(m[2].replace(',','.'));
+  }else return NaN;
+  return Math.abs(h)<=15?h:NaN;
 }
+/* The offset a zone had at a moment given in its own wall-clock time.
+   Two traps, both of which this once fell into.
+   The moment: the wall time is not UTC, so asking the database about the
+   wall time read as UTC asks about an instant hours away, and inside those
+   hours of a DST change it answered with the offset from the other side -
+   Moscow, 25 March 1990, 00:30 came back +4 instead of +3, an hour of error
+   and fifteen degrees of Ascendant. So both candidate offsets (a day before
+   and a day after) are tried, and the one that maps the wall time back onto
+   itself wins. A wall time that happened twice (the hour repeated in
+   autumn) takes the first of the two, and one that never happened (the hour
+   skipped in spring) is read with the offset in force before the change,
+   which is what a clock that was not yet moved forward would have shown.
+   The seconds: before standard time the database reports local mean time
+   to the second, GMT+02:30:17 for Moscow, and reading only hours and minutes
+   turned it into a neat +2:30 that looks like a zone and is not one. */
 function ianaOffset(zone,y,mo,da,hh,mi){
   try{
-    const guess=new Date(Date.UTC(y,mo-1,da,hh,mi));
     const fmt=new Intl.DateTimeFormat('en-US',{timeZone:zone,timeZoneName:'longOffset',hour12:false,
       year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
-    const part=fmt.formatToParts(guess).find(p=>p.type==='timeZoneName');
-    if(!part) return null;
-    const m=/GMT([+-])(\d{1,2})(?::(\d{2}))?/.exec(part.value);
-    if(!m) return 0;
-    return (m[1]==='-'?-1:1)*(+m[2]+(+(m[3]||0))/60);
+    const at=ms=>{
+      const part=fmt.formatToParts(new Date(ms)).find(p=>p.type==='timeZoneName');
+      if(!part) return null;
+      const m=/GMT([+-])(\d{1,2})(?::(\d{2}))?(?::(\d{2}))?/.exec(part.value);
+      if(!m) return 0;
+      return (m[1]==='-'?-1:1)*(+m[2]+(+(m[3]||0))/60+(+(m[4]||0))/3600);
+    };
+    const wall=Date.UTC(y,mo-1,da,hh,mi), H=3600000;
+    const before=at(wall-24*H), after=at(wall+24*H);
+    if(before==null||after==null) return null;
+    const fits=[...new Set([before,after])].filter(o=>Math.abs(at(wall-o*H)-o)<1e-9);
+    return fits.length?Math.max(...fits):before;
   }catch(e){ return null; }
+}
+/* A standard zone offset is always a whole quarter hour. When the database
+   answers with something else it is reporting local mean time, because the
+   place had not adopted standard time yet - and then it is the LMT of the
+   zone's reference city, which can be a quarter hour from the birthplace.
+   So take the database when it names a real zone, and compute local mean
+   time from the birthplace's own longitude when it does not. This is why
+   the rule is not a year: Brno was already on Central European Time in
+   1897, while Eisenach in 1685 was on nothing but the Sun. The library and
+   the form both come through here, so they cannot disagree about it. */
+function placeOffset(zone,lon,y,mo,da,hh,mi){
+  const off=zone==null?null:ianaOffset(zone,y,mo,da,hh,mi);
+  if(off==null||Math.abs(off*60-Math.round(off*60/15)*15)>0.01) return lon==null?off:LMT(lon);
+  return off;
 }
 
 /* ---------- chart computation ---------- */
@@ -3773,7 +3824,8 @@ function placidusCusps(ramc,lat,ecl,asc,mc){
    historical entries carry tz = longitude/15 rather than a zone offset.
    Russian dates before 1918 and German dates before 1700 are given in the
    Gregorian calendar, with the original Julian date noted in `src`. */
-const LMT=lon=>Math.round(lon/15*60)/60;
+/* Exact, not to the minute: the offset now travels with its seconds. */
+const LMT=lon=>lon/15;
 const CHART_LIBRARY=[
  {id:'alonsocano',z:'Europe/Madrid',k:'a',name:{ru:'Алонсо Кано',en:'Alonso Cano'},y:1601,mo:3,d:19,t:null,lat:37.1750,lon:-3.6000,city:{ru:'Гранада',en:'Granada'},rr:'X',dd:'1667-09-03',src:''},
  {id:'janbrueghelthey',z:'Europe/Brussels',k:'a',name:{ru:'Ян Брейгель Младший',en:'Jan Brueghel the Younger'},y:1601,mo:9,d:13,t:null,lat:51.2211,lon:4.3997,city:{ru:'Антверпен',en:'Antwerp'},rr:'X',dd:'1678-09-01',src:''},
@@ -4806,17 +4858,7 @@ const libTz=e=>{
      lookup: the instant is then right even where the coordinates are not. */
   if(e.tzo!=null) return e.tzo;
   const hh=e.t==null?12:e.t;
-  const off=e.z==null?null:ianaOffset(e.z,e.y,e.mo,e.d,Math.floor(hh),Math.round((hh%1)*60));
-  /* A standard zone offset is always a whole quarter hour. When the database
-     answers with something else it is reporting local mean time, because the
-     place had not adopted standard time yet - and then it is the LMT of the
-     zone's reference city, which can be a quarter hour from the birthplace.
-     So take the database when it names a real zone, and compute local mean
-     time from the birthplace's own longitude when it does not. This is why
-     the rule is not a year: Brno was already on Central European Time in
-     1897, while Eisenach in 1685 was on nothing but the Sun. */
-  if(off==null||Math.abs(off*60-Math.round(off*60/15)*15)>0.01) return LMT(e.lon);
-  return off;
+  return placeOffset(e.z,e.lon,e.y,e.mo,e.d,Math.floor(hh),Math.round((hh%1)*60));
 };
 const HOUSE_SYSTEMS={
   placidus:{ru:'Плацидус',en:'Placidus',fn:(ramc,lat,ecl,asc,mc)=>placidusCusps(ramc,lat,ecl,asc,mc)},
@@ -8074,7 +8116,7 @@ function updateTzAuto(){
   if(!dv||!tv) return;
   const [y,mo,da]=dv.split('-').map(Number);
   const [hh,mi]=tv.split(':').map(Number);
-  const off=ianaOffset(SELECTED_CITY.z,y,mo,da,hh,mi);
+  const off=placeOffset(SELECTED_CITY.z,SELECTED_CITY.lon,y,mo,da,hh,mi);
   if(off!=null) document.getElementById('tz').value=formatOffset(off);
   renderGeoSum();
 }
