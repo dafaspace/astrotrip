@@ -99,9 +99,10 @@ business. If the number in point 6 fails, AstroTrip earns instead:
 Hours saved on his own work: none.
 
 **5. Where the gain is kept.**
-- **Feedback - does not exist.** No contact inside the app, no mailbox named for replies. Needed
-  before the private test: a "Write to the developer" line under Sources and accuracy, and
-  TestFlight's built-in feedback. Which address collects the replies is Dafa's call.
+- **Feedback - partly.** Since 3.18.2 every tester can send a usage report (counts only, on
+  the device, sent by them through the share sheet: Settings > Report for the developer), and
+  replies land wherever they send it - Dafa's messenger. Still missing: a contact inside the app
+  and one place where the reports and answers are kept. Which address is Dafa's call.
 - **Engine - does not exist.** `astro-core.js`, extracted from `index.html` with `parity.txt` as
   the contract (253 lines, held byte for byte on web, iOS and Android). Extract when AstroChat
   starts, or earlier if the ephemeris pages need the engine outside the browser.

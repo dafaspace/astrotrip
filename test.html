@@ -57,7 +57,7 @@ const frame=document.getElementById('app');
   /* The language too: a manual check in Georgian on 2 Oct 2026 left it stored,
      and the next run quietly tested the export in Georgian, where a line
      looked for by its English or Russian label was "missing". */
-  try{ ['astrarium_access','astrarium_ring','astrarium_ring2','astrarium_orbs','astrarium_partner','astrarium_asteroids','astrarium_house3d','astrarium_rulers','astrarium_lang','astrarium_form']
+  try{ ['astrarium_access','astrarium_usage','astrarium_ring','astrarium_ring2','astrarium_orbs','astrarium_partner','astrarium_asteroids','astrarium_house3d','astrarium_rulers','astrarium_lang','astrarium_form']
          .forEach(k=>localStorage.removeItem(k));
        /* The app now starts in the device's language. The suite reads labels in
           English, so it says so rather than inheriting whatever this browser is
@@ -2714,6 +2714,54 @@ function run(){
     if(!/\d{2}\.\d{2}\.\d{4}/.test(r.until)) return 'дата окончания не показана: '+r.until;
     if(!r.hidden||!r.pro) return 'в магазинной сборке поле кода видно или доступ закрыт';
     return r.shown||'в вебе поле кода пропало';
+  });
+  /* ---------- отчёт для разработчика ----------
+     Решение Дафы 14 окт 2026: каждый, кому дан ключ, оставляет отчёт о том, чем
+     пользовался. Счётчики живут на устройстве и уходят только по кнопке; имён,
+     дат рождения и мест в них нет. */
+  t('без ключа ничего не считается и раздела отчёта нет',()=>{
+    const r=ev(`(()=>{const keepU=ACCESS_UNTIL, keepS=localStorage.getItem(USAGE_KEY), out={};
+      try{ ACCESS_UNTIL=0; localStorage.removeItem(USAGE_KEY);
+        track('cast'); out.stored=localStorage.getItem(USAGE_KEY);
+        renderReport(); out.hidden=document.getElementById('reportSec').hidden; }
+      finally{ ACCESS_UNTIL=keepU; if(keepS===null) localStorage.removeItem(USAGE_KEY); else localStorage.setItem(USAGE_KEY,keepS); renderReport(); }
+      return out;})()`);
+    if(r.stored) return 'без ключа записано: '+r.stored;
+    return r.hidden||'раздел отчёта виден без ключа';
+  });
+  t('с ключом действия считаются, а в отчёте нет ни имени, ни даты рождения, ни места',()=>{
+    const r=ev(`(()=>{const keepS=localStorage.getItem(USAGE_KEY), out={}, keepR=[RING_MODE,RING2_MODE];
+      const f=id=>document.getElementById(id), keep={}; ['chartName','city','date','time','lat','lng','tz'].forEach(id=>keep[id]=f(id).value);
+      try{
+        localStorage.removeItem(USAGE_KEY);
+        f('chartName').value='Тайное Имя'; f('city').value='Секретград'; f('date').value='1977-07-07';
+        f('time').value='07:07'; f('lat').value='12.3456'; f('lng').value='65.4321'; f('tz').value='+04:00';
+        f('calc').click(); hideToast();
+        const sel=f('ringSel'); sel.value='synastry'; sel.dispatchEvent(new Event('change',{bubbles:true}));
+        sel.value='none'; sel.dispatchEvent(new Event('change',{bubbles:true}));
+        f('positionsCard').open=true; f('positionsCard').open=false;
+        f('rulerSel').dispatchEvent(new Event('change',{bubbles:true}));
+        const u=JSON.parse(localStorage.getItem(USAGE_KEY)||'{}');
+        out.cast=(u.ev||{}).cast; out.syn=(u.ev||{})['ring:synastry']; out.rulers=(u.ev||{})['set:rulerSel'];
+        out.days=(u.days||[]).length;
+        out.report=buildReport();
+      } finally {
+        Object.entries(keep).forEach(([id,v])=>f(id).value=v);
+        [RING_MODE,RING2_MODE]=keepR; localStorage.setItem('astrarium_ring',RING_MODE); localStorage.setItem('astrarium_ring2',RING2_MODE);
+        renderRingSwitch(); f('calc').click(); hideToast();
+        if(keepS===null) localStorage.removeItem(USAGE_KEY); else localStorage.setItem(USAGE_KEY,keepS);
+      }
+      return out;})()`);
+    const bad=[];
+      if(r.cast!==1) bad.push('построение не посчитано: '+r.cast);
+      if(r.syn!==1) bad.push('синастрия не посчитана');
+      if(r.rulers!==1) bad.push('смена управителей не посчитана');
+      if(r.days!==1) bad.push('день не записан');
+      for(const leak of ['Тайное','Секретград','1977','07.07','12.3456','65.4321','12n','65e'])
+        if(r.report.includes(leak)) bad.push('в отчёте утечка: '+leak);
+      if(!r.report.includes(ev(`t('ring_synastry')`)+' 1')) bad.push('в отчёте нет синастрии');
+      if(!r.report.includes(ev(`t('rpPrivacy')`))) bad.push('в отчёте нет строки о приватности');
+    return bad.length===0||bad.join('; ');
   });
   t('удалённую карту можно вернуть на её место',()=>{
     const r=ev(`(()=>{const kc=localStorage.getItem(LKEY_CHARTS), out={};

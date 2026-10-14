@@ -609,6 +609,9 @@ dialog.panel[open]{animation:panelIn 200ms cubic-bezier(.2,.7,.2,1) both}
 .setstate{margin:2px 0 4px;line-height:1.45}
 #accessSec .setrow input{flex:1;min-width:0}
 #accessSec .setrow button{flex:none;min-height:44px;display:inline-flex;align-items:center;line-height:1}
+.reportpre{white-space:pre-wrap;word-break:break-word;font:12px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;
+  background:var(--paper3);border-radius:10px;padding:10px;margin:0 0 10px}
+#reportSec .setrow button{flex:1;min-height:44px;display:inline-flex;align-items:center;justify-content:center;line-height:1}
 .setfold{border-bottom:1px solid var(--line)}
 .setfold>summary{min-height:52px}
 .setfold>summary .setlab{flex:none}
@@ -750,6 +753,17 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
           <input id="accessCode" type="text" autocomplete="off" autocapitalize="off" spellcheck="false">
           <button type="button" id="accessApply" data-i="accessApply"></button>
         </div>
+      </div>
+      <!-- The tester's report: counts kept on the device while a key is open (or
+           in the test builds), shown in full, sent only by the person. -->
+      <div id="reportSec" hidden>
+        <h3 class="setsec" data-i="reportTitle"></h3>
+        <div class="tiny setstate" data-i="reportNote"></div>
+        <details class="fold setfold" id="reportFold">
+          <summary><span class="setlab" data-i="reportShow"></span></summary>
+          <pre id="reportText" class="reportpre"></pre>
+        </details>
+        <div class="setrow"><button type="button" id="reportSend" data-i="reportSend"></button></div>
       </div>
       <!-- How the chart is calculated: what an astrologer sets once for their
            school and then leaves. The house system is also a chip over the
@@ -1123,7 +1137,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
 /* Bump together with CACHE in sw.js: the two are the same release, and the
    number on screen is how you tell from a phone which one you are looking at. */
-const APP_VERSION='3.18.1';
+const APP_VERSION='3.18.2';
 document.getElementById('ver').textContent=APP_VERSION;
 
 /* ---------- feature flags ----------
@@ -1436,6 +1450,29 @@ const STR = {
   editData:{ru:'Изменить данные рождения',en:'Edit the birth data'},
   geoNone:{ru:'Координаты и пояс возьмутся из города',en:'Coordinates and offset come from the city'},
   undo:{ru:'Вернуть',en:'Undo'},
+  reportTitle:{ru:"Отчёт для разработчика",en:"Report for the developer"},
+  reportNote:{ru:"Пока идёт тест, приложение считает у себя, какими разделами вы пользовались и сколько времени. Без имён, дат рождения и мест. Отчёт уходит только по кнопке и только туда, куда вы сами его отправите.",en:"While the test runs, the app counts on this device which parts you used and for how long. No names, birth dates or places. The report leaves only when you press the button, and only to wherever you send it."},
+  reportShow:{ru:"Что в отчёте",en:"What is in it"},
+  reportSend:{ru:"Отправить отчёт",en:"Send the report"},
+  reportCopied:{ru:"Отчёт скопирован, вставьте его в сообщение",en:"Report copied: paste it into a message"},
+  rpPeriod:{ru:"Период",en:"Period"},
+  rpDays:{ru:"дней с работой",en:"days used"},
+  rpMinutes:{ru:"минут",en:"minutes"},
+  rpCast:{ru:"Построено карт",en:"Charts cast"},
+  rpFromLib:{ru:"из библиотеки",en:"from the library"},
+  rpSaved:{ru:"сохранено",en:"saved"},
+  rpDeleted:{ru:"удалено",en:"deleted"},
+  rpTypes:{ru:"Типы карт",en:"Chart types"},
+  rpOpened:{ru:"Открывали",en:"Opened"},
+  rpPlanet:{ru:"Касания планет",en:"Planet taps"},
+  rpScrub:{ru:"Ползунок и шаги времени",en:"Time slider and steps"},
+  rpUndo:{ru:"Отмены",en:"Undos"},
+  rpCopy:{ru:"Копирования",en:"Copies"},
+  rpEdit:{ru:"Правка данных",en:"Data edits"},
+  rpSettings:{ru:"Меняли настройки",en:"Settings changed"},
+  rpDevice:{ru:"Устройство",en:"Device"},
+  rpPrivacy:{ru:"Только счётчики: ни имён, ни дат рождения, ни мест.",en:"Counts only: no names, birth dates or places."},
+  rpNone:{ru:"нет",en:"none"},
   accessTitle:{ru:'Полный доступ',en:'Full access'},
   accessFree:{ru:'Бесплатно: одна карта и всё, что о ней. Транзиты, прогрессии, дирекции, возвраты, синастрия, композит и тройные карты входят в полный доступ. На неделю его открывает код от разработчика.',
     en:'Free: one chart and everything about it. Transits, progressions, directions, returns, synastry, the composite and the tri-wheels are full access. A key from the developer opens it for a week.'},
@@ -1936,7 +1973,30 @@ Object.assign(I18N.es,{
   enterCode:"Introducir clave",
   accessOpened:"Acceso completo hasta el {d}",
   accessBad:"La clave no es válida o ha caducado",
-  proOnly:"acceso completo"
+  proOnly:"acceso completo",
+  reportTitle:"Informe para el desarrollador",
+  reportNote:"Mientras dura la prueba, la app cuenta en este dispositivo qué partes usaste y durante cuánto tiempo. Sin nombres, fechas de nacimiento ni lugares. El informe sale solo al pulsar el botón y solo hacia donde tú lo envíes.",
+  reportShow:"Qué contiene",
+  reportSend:"Enviar el informe",
+  reportCopied:"Informe copiado: pégalo en un mensaje",
+  rpPeriod:"Periodo",
+  rpDays:"días de uso",
+  rpMinutes:"minutos",
+  rpCast:"Cartas levantadas",
+  rpFromLib:"de la biblioteca",
+  rpSaved:"guardadas",
+  rpDeleted:"borradas",
+  rpTypes:"Tipos de carta",
+  rpOpened:"Abiertos",
+  rpPlanet:"Toques en planetas",
+  rpScrub:"Deslizador y pasos de tiempo",
+  rpUndo:"Deshechos",
+  rpCopy:"Copias",
+  rpEdit:"Ediciones de datos",
+  rpSettings:"Ajustes cambiados",
+  rpDevice:"Dispositivo",
+  rpPrivacy:"Solo contadores: ni nombres, ni fechas de nacimiento, ni lugares.",
+  rpNone:"ninguno"
 });
 Object.assign(I18N.fr,{
   libShort:"Bibliothèque",
@@ -2058,7 +2118,30 @@ Object.assign(I18N.fr,{
   enterCode:"Saisir la clé",
   accessOpened:"Accès complet jusqu’au {d}",
   accessBad:"Cette clé n’est pas valide ou a expiré",
-  proOnly:"accès complet"
+  proOnly:"accès complet",
+  reportTitle:"Rapport pour le développeur",
+  reportNote:"Pendant le test, l’app compte sur cet appareil les parties utilisées et le temps passé. Ni noms, ni dates de naissance, ni lieux. Le rapport ne part que par le bouton, et seulement là où vous l’envoyez.",
+  reportShow:"Contenu",
+  reportSend:"Envoyer le rapport",
+  reportCopied:"Rapport copié : collez-le dans un message",
+  rpPeriod:"Période",
+  rpDays:"jours d’usage",
+  rpMinutes:"minutes",
+  rpCast:"Cartes dressées",
+  rpFromLib:"depuis la bibliothèque",
+  rpSaved:"enregistrées",
+  rpDeleted:"supprimées",
+  rpTypes:"Types de carte",
+  rpOpened:"Ouverts",
+  rpPlanet:"Touches sur les planètes",
+  rpScrub:"Curseur et pas de temps",
+  rpUndo:"Annulations",
+  rpCopy:"Copies",
+  rpEdit:"Modifications des données",
+  rpSettings:"Réglages modifiés",
+  rpDevice:"Appareil",
+  rpPrivacy:"Compteurs seulement : ni noms, ni dates de naissance, ni lieux.",
+  rpNone:"aucun"
 });
 Object.assign(I18N.de,{
   libShort:"Bibliothek",
@@ -2180,7 +2263,30 @@ Object.assign(I18N.de,{
   enterCode:"Schlüssel eingeben",
   accessOpened:"Voller Zugang bis {d}",
   accessBad:"Der Schlüssel ist ungültig oder abgelaufen",
-  proOnly:"voller Zugang"
+  proOnly:"voller Zugang",
+  reportTitle:"Bericht für den Entwickler",
+  reportNote:"Während des Tests zählt die App auf diesem Gerät, welche Teile genutzt wurden und wie lange. Keine Namen, Geburtsdaten oder Orte. Der Bericht geht nur per Knopf hinaus, und nur dorthin, wohin Sie ihn schicken.",
+  reportShow:"Was drinsteht",
+  reportSend:"Bericht senden",
+  reportCopied:"Bericht kopiert: in eine Nachricht einfügen",
+  rpPeriod:"Zeitraum",
+  rpDays:"Tage genutzt",
+  rpMinutes:"Minuten",
+  rpCast:"Berechnete Charts",
+  rpFromLib:"aus der Bibliothek",
+  rpSaved:"gespeichert",
+  rpDeleted:"gelöscht",
+  rpTypes:"Chart-Typen",
+  rpOpened:"Geöffnet",
+  rpPlanet:"Planeten angetippt",
+  rpScrub:"Zeitregler und Schritte",
+  rpUndo:"Rückgängig",
+  rpCopy:"Kopien",
+  rpEdit:"Datenänderungen",
+  rpSettings:"Geänderte Einstellungen",
+  rpDevice:"Gerät",
+  rpPrivacy:"Nur Zähler: keine Namen, Geburtsdaten oder Orte.",
+  rpNone:"keine"
 });
 Object.assign(I18N.it,{
   libShort:"Biblioteca",
@@ -2302,7 +2408,30 @@ Object.assign(I18N.it,{
   enterCode:"Inserisci chiave",
   accessOpened:"Accesso completo fino al {d}",
   accessBad:"La chiave non è valida o è scaduta",
-  proOnly:"accesso completo"
+  proOnly:"accesso completo",
+  reportTitle:"Rapporto per lo sviluppatore",
+  reportNote:"Durante il test l’app conta su questo dispositivo quali parti hai usato e per quanto tempo. Niente nomi, date di nascita o luoghi. Il rapporto parte solo con il pulsante, e solo dove lo mandi tu.",
+  reportShow:"Cosa contiene",
+  reportSend:"Invia il rapporto",
+  reportCopied:"Rapporto copiato: incollalo in un messaggio",
+  rpPeriod:"Periodo",
+  rpDays:"giorni d’uso",
+  rpMinutes:"minuti",
+  rpCast:"Carte calcolate",
+  rpFromLib:"dalla biblioteca",
+  rpSaved:"salvate",
+  rpDeleted:"eliminate",
+  rpTypes:"Tipi di carta",
+  rpOpened:"Aperti",
+  rpPlanet:"Tocchi sui pianeti",
+  rpScrub:"Cursore e passi del tempo",
+  rpUndo:"Annullamenti",
+  rpCopy:"Copie",
+  rpEdit:"Modifiche ai dati",
+  rpSettings:"Impostazioni cambiate",
+  rpDevice:"Dispositivo",
+  rpPrivacy:"Solo contatori: niente nomi, date di nascita o luoghi.",
+  rpNone:"nessuno"
 });
 Object.assign(I18N.uk,{
   libShort:"Бібліотека",
@@ -2424,7 +2553,30 @@ Object.assign(I18N.uk,{
   enterCode:"Ввести код",
   accessOpened:"Повний доступ до {d}",
   accessBad:"Код не підходить або закінчився",
-  proOnly:"повний доступ"
+  proOnly:"повний доступ",
+  reportTitle:"Звіт для розробника",
+  reportNote:"Поки триває тест, застосунок рахує на цьому пристрої, якими розділами ви користувалися і скільки часу. Без імен, дат народження й місць. Звіт іде лише за кнопкою і лише туди, куди ви самі його надішлете.",
+  reportShow:"Що у звіті",
+  reportSend:"Надіслати звіт",
+  reportCopied:"Звіт скопійовано, вставте його в повідомлення",
+  rpPeriod:"Період",
+  rpDays:"днів роботи",
+  rpMinutes:"хвилин",
+  rpCast:"Побудовано карт",
+  rpFromLib:"з бібліотеки",
+  rpSaved:"збережено",
+  rpDeleted:"видалено",
+  rpTypes:"Типи карт",
+  rpOpened:"Відкривали",
+  rpPlanet:"Дотики до планет",
+  rpScrub:"Повзунок і кроки часу",
+  rpUndo:"Скасування",
+  rpCopy:"Копіювання",
+  rpEdit:"Правка даних",
+  rpSettings:"Змінювали налаштування",
+  rpDevice:"Пристрій",
+  rpPrivacy:"Лише лічильники: ні імен, ні дат народження, ні місць.",
+  rpNone:"немає"
 });
 Object.assign(I18N.ka,{
   libShort:"ბიბლიოთეკა",
@@ -2546,7 +2698,30 @@ Object.assign(I18N.ka,{
   enterCode:"კოდის შეყვანა",
   accessOpened:"სრული წვდომა {d}-მდე",
   accessBad:"კოდი არ გამოდგება ან ვადა გაუვიდა",
-  proOnly:"სრული წვდომა"
+  proOnly:"სრული წვდომა",
+  reportTitle:"ანგარიში დეველოპერისთვის",
+  reportNote:"სანამ ტესტი გრძელდება, აპი ამ მოწყობილობაზე ითვლის, რომელ ნაწილებს იყენებდი და რამდენ ხანს. სახელების, დაბადების თარიღებისა და ადგილების გარეშე. ანგარიში მხოლოდ ღილაკით იგზავნება და მხოლოდ იქ, სადაც თავად გაგზავნი.",
+  reportShow:"რა არის ანგარიშში",
+  reportSend:"ანგარიშის გაგზავნა",
+  reportCopied:"ანგარიში დაკოპირდა, ჩასვი შეტყობინებაში",
+  rpPeriod:"პერიოდი",
+  rpDays:"გამოყენების დღე",
+  rpMinutes:"წუთი",
+  rpCast:"აგებული რუკები",
+  rpFromLib:"ბიბლიოთეკიდან",
+  rpSaved:"შენახული",
+  rpDeleted:"წაშლილი",
+  rpTypes:"რუკის ტიპები",
+  rpOpened:"გახსნილი",
+  rpPlanet:"პლანეტებზე შეხება",
+  rpScrub:"დროის სლაიდერი და ნაბიჯები",
+  rpUndo:"გაუქმებები",
+  rpCopy:"კოპირებები",
+  rpEdit:"მონაცემების შესწორება",
+  rpSettings:"შეცვლილი პარამეტრები",
+  rpDevice:"მოწყობილობა",
+  rpPrivacy:"მხოლოდ მთვლელები: არც სახელები, არც დაბადების თარიღები, არც ადგილები.",
+  rpNone:"არა"
 });
 /* STR holds the two languages the app was written in, key-major, which is how
    they were edited. I18N holds the six added afterwards, language-major, which
@@ -7233,7 +7408,7 @@ async function applyAccessKey(code,announce,restore){
   ACCESS_UNTIL=until;
   try{ localStorage.setItem(ACCESS_KEY,String(code).trim()); }catch(e){}
   if(restore&&RING_MODE==='none'&&WANT_RING[0]!=='none'){ RING_MODE=WANT_RING[0]; RING2_MODE=WANT_RING[1]; }
-  renderAccess(); renderRingSwitch(); if(CURRENT) renderTransits(CURRENT);
+  renderAccess(); renderReport(); renderRingSwitch(); if(CURRENT) renderTransits(CURRENT);
   if(announce) toast(t('accessOpened').replace('{d}',fmtDay(until)));
   return true;
 }
@@ -8626,7 +8801,7 @@ document.getElementById('langSel').addEventListener('change',e=>{
   applyStatic(); fillHsys(); fillLil(); fillRulers(); renderOrbs(); fillScrubUnit(); renderRingSwitch();
   setPlaying(PLAYING); fillNamePh(); fillLibSort(); renderLibrary();
   upgradeAllSelects(); repaintDropdowns();
-  renderGeoSum(); setGeoOpen(!document.getElementById('geoFields').hidden); renderAccess();
+  renderGeoSum(); setGeoOpen(!document.getElementById('geoFields').hidden); renderAccess(); renderReport();
   if(CURRENT)run();
 });
 fillLangSel();
@@ -9320,6 +9495,7 @@ function importCsvText(txt){
   const before=savedCharts();
   const n=csvToLib(txt);
   if(n<0){ toast(t('importBad')); return n; }
+  if(n>0) track('csvIn');
   renderLibrary(); renderBackupLine();
   /* The wrong file imported is a hundred rows to delete one by one. */
   const sk=csvToLib.skipped||0;
@@ -9456,7 +9632,7 @@ function hideToast(){
   document.getElementById('toast').hidden=true;
 }
 document.getElementById('toastBtn').addEventListener('click',()=>{
-  const u=TOAST_UNDO; hideToast(); if(u) u();
+  const u=TOAST_UNDO; hideToast(); if(u){ track('undo'); u(); }
 });
 
 /* ---------- panels ----------
@@ -9465,7 +9641,8 @@ document.getElementById('toastBtn').addEventListener('click',()=>{
    or the page. */
 function openPanel(id,byPointer){
   const d=document.getElementById(id); if(!d||d.open) return;
-  closeDropdown();
+  closeDropdown(); track('open:'+id);
+  if(id==='setCard') renderReport();
   if(id==='libCard'){ renderLibrary(); renderBackupLine(); }
   if(typeof d.showModal==='function') d.showModal(); else d.setAttribute('open','');
   /* showModal focuses the first control, and WebKit draws its ring even after a
@@ -9517,15 +9694,20 @@ document.getElementById('accessApply').addEventListener('click',()=>{
   const inp=document.getElementById('accessCode');
   applyAccessKey(inp.value,true,false).then(ok=>{ if(ok) inp.value=''; });
 });
-/* A key arrives as a link (#key=...) or is already stored. The fragment is taken
-   off the address at once, so it is not left in a bookmark or a screenshot. A
-   link opened in a tab where the site is already open changes only the fragment
-   and reloads nothing - the first version missed exactly that - so the change is
-   listened for as well. */
+/* A key arrives as a link (#key=...) or is already stored. The fragment stays in
+   the address. 3.18.0 took it off at once, and then the access lived only in the
+   browser that had opened the link: a tester who opened it inside Telegram and
+   later reached the site from Safari had nothing, and had to be told which
+   browser to use. Kept, the link, a bookmark and a home-screen icon all carry
+   the key for its whole week, in any browser. Forwarding is no easier than
+   forwarding the link itself. The opening line is said only for a key not seen
+   before, so a reload does not announce it again. A link opened in a tab where
+   the site is already open changes only the fragment and reloads nothing, so
+   that change is listened for as well. */
 function keyFromAddress(){
   const m=/^#key=([A-Za-z0-9_-]+)$/.exec(location.hash); if(!m) return false;
-  try{ history.replaceState(history.state,'',location.pathname+location.search); }catch(e){}
-  applyAccessKey(m[1],true,true);
+  let saved=null; try{ saved=localStorage.getItem(ACCESS_KEY); }catch(e){}
+  applyAccessKey(m[1],saved!==m[1],true);
   return true;
 }
 addEventListener('hashchange',keyFromAddress);
@@ -9534,6 +9716,119 @@ if(!keyFromAddress()){
   if(saved) applyAccessKey(saved,false,true);
 }
 renderAccess();
+
+/* ---------- the tester's report ----------
+   Dafa, 14 Oct 2026: every person given a key should leave behind what they used.
+   Not by sending anything on its own: the app promises, in its footer and on
+   dafaspace.com, that nothing leaves the phone, and an astrologer's charts are
+   other people's names and birth dates. So the counting stays on the device -
+   which parts were opened and how often, minutes of use, settings touched, never
+   a name, a date or a place - and only while a key is open or in a test build.
+   The person sees the whole report under Settings and sends it with a button, to
+   wherever they choose. A recorder of every tap was considered and refused: with
+   five testers a conversation tells more, and a click log is exactly the data
+   that would need a privacy policy and a server. */
+const USAGE_KEY='astrarium_usage';
+const reporting=()=>ACCESS_UNTIL>Date.now()||inStoreShell();
+function loadUsage(){ try{ return JSON.parse(localStorage.getItem(USAGE_KEY))||null; }catch(e){ return null; } }
+function track(name){
+  if(!reporting()) return;
+  const u=loadUsage()||{v:1,since:Date.now(),days:[],min:0,ev:{}};
+  u.ev[name]=(u.ev[name]||0)+1;
+  const d=todayStr(); if(!u.days.includes(d)) u.days.push(d);
+  try{ localStorage.setItem(USAGE_KEY,JSON.stringify(u)); }catch(e){}
+}
+/* Minutes in front of the app: a minute counts when the page is visible and was
+   touched within the last two, so a tab left open overnight is not a night of use. */
+let LAST_ACT=0;
+addEventListener('pointerdown',()=>{LAST_ACT=Date.now();},true);
+addEventListener('keydown',()=>{LAST_ACT=Date.now();},true);
+setInterval(()=>{
+  if(!reporting()||document.visibilityState!=='visible'||Date.now()-LAST_ACT>120000) return;
+  const u=loadUsage()||{v:1,since:Date.now(),days:[],min:0,ev:{}};
+  u.min++; const d=todayStr(); if(!u.days.includes(d)) u.days.push(d);
+  try{ localStorage.setItem(USAGE_KEY,JSON.stringify(u)); }catch(e){}
+},60000);
+/* One listener per kind of action, in the capture phase so a handler that stops
+   propagation (the library's delete) is still counted. */
+const CLICK_EVENTS={calc:'cast',saveChart:'save',printBtn:'print',expCsv:'csvOut',formEdit:'edit',
+  momNow:'scrub',momBirth:'scrub',stepBack:'scrub',stepFwd:'scrub',playBtn:'scrub',wzReset:'zoom'};
+document.addEventListener('click',e=>{
+  const el=e.target.closest('button,.libitem,#wheel,.planet-row'); if(!el) return;
+  if(el.id&&CLICK_EVENTS[el.id]) return track(CLICK_EVENTS[el.id]);
+  if(el.matches('[data-del]')) return track('delete');
+  if(el.matches('[data-copy]')) return track('copy');
+  if(el.matches('[data-theme-set]')) return track('set:theme');
+  if(el.matches('.libitem')) return track('library');
+  if(el.matches('#wheel,.planet-row')) return track('planet');
+},true);
+const CHANGE_EVENTS={hsys:'set:hsys',hsysSet:'set:hsys',lilmode:'set:lilmode',rulerSel:'set:rulerSel',
+  astOn:'set:astOn',house3d:'set:house3d',showSeconds:'set:showSeconds',langSel:'set:langSel',
+  scrub:'scrub',transitDate:'scrub',transitTime:'scrub'};
+document.addEventListener('change',e=>{
+  const el=e.target; if(!el) return;
+  if(el.id==='ringSel') return track('ring:'+el.value);
+  if(CHANGE_EVENTS[el.id]) return track(CHANGE_EVENTS[el.id]);
+  if(el.closest&&el.closest('#orbList')) return track('set:orbs');
+},true);
+const OPEN_CARDS=['positionsCard','relocCard','confCard','gridCard','exportCard','balCard','orbCard','aboutCard'];
+document.addEventListener('toggle',e=>{
+  const el=e.target; if(el&&el.open&&OPEN_CARDS.includes(el.id)) track('open:'+el.id);
+},true);
+const OPEN_LABEL={positionsCard:'positions',relocCard:'reloc',confCard:'conf',gridCard:'grid',
+  exportCard:'exportTitle',balCard:'balance',orbCard:'aspects',aboutCard:'aboutTitle',libCard:'libShort',setCard:'settings'};
+const SET_LABEL={hsys:()=>t('setHsys'),lilmode:()=>t('setLil'),rulerSel:()=>t('setRulers'),orbs:()=>t('aspects'),
+  astOn:()=>t('asteroids').split(':')[0],house3d:()=>t('house3d').split('(')[0].trim(),
+  showSeconds:()=>t('secondsLabel'),langSel:()=>t('langLabel'),theme:()=>t('themeLabel')};
+function devicePlatform(){
+  const C=window.Capacitor;
+  if(inStoreShell()&&C&&C.getPlatform) return C.getPlatform()+' app';
+  const ua=navigator.userAgent||'';
+  return (/iPhone|iPad|iPod/.test(ua)?'iOS':/Android/.test(ua)?'Android':/Mac/.test(ua)?'Mac':/Windows/.test(ua)?'Windows':'other')+' web';
+}
+function buildReport(){
+  const u=loadUsage()||{since:Date.now(),days:[],min:0,ev:{}}, ev=u.ev, n=k=>ev[k]||0;
+  const list=pairs=>pairs.length?pairs.map(([l,c])=>l+' '+c).join(', '):t('rpNone');
+  const ringLabel=v=>v.split('+').map(m=>t('ring_'+m)).join(' + ');
+  const rings=Object.keys(ev).filter(k=>k.startsWith('ring:')).sort((a,b)=>ev[b]-ev[a])
+    .map(k=>[ringLabel(k.slice(5)),ev[k]]);
+  const opens=Object.keys(ev).filter(k=>k.startsWith('open:')&&OPEN_LABEL[k.slice(5)]).sort((a,b)=>ev[b]-ev[a])
+    .map(k=>[t(OPEN_LABEL[k.slice(5)]),ev[k]]);
+  const sets=Object.keys(ev).filter(k=>k.startsWith('set:')&&SET_LABEL[k.slice(4)]).sort((a,b)=>ev[b]-ev[a])
+    .map(k=>[SET_LABEL[k.slice(4)](),ev[k]]);
+  return [
+    `AstroTrip ${APP_VERSION} · ${t('reportTitle')}`,
+    `${t('rpPeriod')}: ${fmtDay(u.since)} - ${fmtDay(Date.now())} · ${t('rpDays')}: ${u.days.length} · ${t('rpMinutes')}: ${u.min}`,
+    `${t('rpCast')}: ${n('cast')} (${t('rpFromLib')}: ${n('library')}) · ${t('rpSaved')}: ${n('save')} · ${t('rpDeleted')}: ${n('delete')}`,
+    `${t('rpTypes')}: ${list(rings)}`,
+    `${t('rpOpened')}: ${list(opens)}`,
+    `${t('rpPlanet')}: ${n('planet')} · ${t('rpScrub')}: ${n('scrub')} · ${t('printBtn')}: ${n('print')} · ${t('exportCsv')}: ${n('csvOut')} · ${t('importCsv')}: ${n('csvIn')} · ${t('rpCopy')}: ${n('copy')} · ${t('rpEdit')}: ${n('edit')} · ${t('rpUndo')}: ${n('undo')}`,
+    `${t('rpSettings')}: ${list(sets)}`,
+    `${t('rpDevice')}: ${devicePlatform()} · ${LANG} · ${screen.width}×${screen.height}`,
+    t('rpPrivacy')
+  ].join('\n');
+}
+function renderReport(){
+  const sec=document.getElementById('reportSec'); if(!sec) return;
+  sec.hidden=!reporting();
+  if(!sec.hidden) document.getElementById('reportText').textContent=buildReport();
+}
+document.getElementById('reportFold').addEventListener('toggle',renderReport);
+/* Out through the share sheet where there is one - iOS and Android browsers, the
+   iOS app - through the Share plugin in the Android app, and otherwise copied,
+   for pasting into a message. A cancelled share is left alone. */
+document.getElementById('reportSend').addEventListener('click',async e=>{
+  const text=buildReport(), btn=e.currentTarget;
+  try{
+    if(navigator.share){ await navigator.share({text}); return; }
+    const CP=inStoreShell()&&window.Capacitor&&window.Capacitor.Plugins;
+    if(CP&&CP.Share){ await CP.Share.share({text}); return; }
+  }catch(err){
+    if(err&&(err.name==='AbortError'||/cancel/i.test(err.message||''))) return;
+  }
+  if(await copyText(text,btn)) toast(t('reportCopied'));
+});
+renderReport();
 /* An "i" opens the note that follows its row. One handler for all of them. */
 document.addEventListener('click',e=>{
   const b=e.target.closest('button.info'); if(!b) return;

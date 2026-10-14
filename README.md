@@ -591,9 +591,21 @@ signs a version byte and an end date with an ECDSA P-256 key kept in
 key. The page holds only the public half and checks the signature with WebCrypto: no
 server, no account, nothing sent anywhere. It keeps honest people honest and claims no
 more - a key can be forwarded within its week, and developer tools can open any gate in
-a page. A link opened in a tab where the site is already open changes only the
-fragment, so that is listened for too, and the fragment is taken off the address once
-read.
+a page. The fragment stays in the address, so the link, a bookmark and a
+home-screen icon carry the key in any browser for its whole week; 3.18.0 took it off,
+and then the access lived only in the browser that first opened the link - inside
+Telegram, for a tester who later came back through Safari. A link opened in a tab where
+the site is already open changes only the fragment, so that is listened for too.
+
+**The tester's report.** While a key is open (and in the test builds), the app counts on
+the device what was used: charts cast, chart types, the cards opened, planet taps, the
+time slider, prints and CSV, settings changed, days and active minutes, and the kind of
+device. Never a name, a date or a place - a test enters a name, a city, coordinates and
+a birth date and checks that none of them reaches the report. Settings > Report for the
+developer shows it in full, and the person sends it through the share sheet or copies
+it. Nothing is sent on its own: the app promises that nothing leaves the phone, and a
+recorder of every tap would need a server, consent and a privacy policy, and would cost
+the store's "Data Not Collected".
 
 The store build is full for now. Its purchase - seven days of everything, then one
 payment, as Apple's guideline 3.1.1 allows - is the next step, and the app is not to go
@@ -677,7 +689,7 @@ mattered: before it did, a deliberately broken app passed every check. The runne
 for the city atlas to finish loading, or the atlas tests would silently check the inline
 seed instead.
 
-**355 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
+**357 checks.** Ephemeris against JPL Horizons at 2″ on two anchors and 4″ across the
 library, robustness over 1550-2250 and at polar latitudes, house systems (angles land
 on the cusps, cusps run round the circle without crossing, quadrant systems coincide at
 the equator, zero-latitude bodies get the same house from both methods), library data
