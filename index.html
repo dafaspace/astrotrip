@@ -3730,7 +3730,8 @@ function computeChart(y,mo,day,localH,tzOff,lat,lng,withSpeed){
        so every one turns. */
     houses.cusps=houses.cusps.map(c=>rev(c+180));
   }
-  if(withSpeed!==false){
+  if(withSpeed==='retro') retroFlags(pos,tm,E,V);
+  else if(withSpeed!==false){
     const h=6/24;
     const A=computeChart(y,mo,day,localH-h*24,tzOff,lat,lng,false).pos;
     const B=computeChart(y,mo,day,localH+h*24,tzOff,lat,lng,false).pos;
@@ -3752,6 +3753,25 @@ function computeChart(y,mo,day,localH,tzOff,lat,lng,withSpeed){
                                                  : asc+pos.Sun.lon-pos.Moon.lon)};
   }
   return {pos,asc,mc,ecl,houses,d,ramc,geolat:lat,geolon:lng,jdUT};
+}
+/* Which bodies are retrograde, without casting two more charts. The outer
+   rings were cast with no speed at all to keep the slider smooth (8 ms a
+   frame against 21), so the R they draw never appeared - not for transiting
+   Mercury on a retrograde date, not for the partner's natal retrogrades. The
+   direction of motion is enough for the sign: the geocentric vector and its
+   rate, the planet's from one more evaluation half a day on and the Earth's
+   from the velocity the aberration already uses. Light-time is left out; it
+   moves a station by minutes. Sets retro and nothing else, so no speed in
+   degrees a day is shown that was not computed properly. */
+function retroFlags(pos,tm,E,V){
+  const dt=0.5/MIL;
+  Object.keys(pos).forEach(n=>{
+    const k=VKEY[n]; if(!k||n==='Sun') return;
+    const at=t=>k==='pl'?plutoXYZ(t):k==='ch'?chironXYZ(t):k==='as'?asteroidXYZ(n,t):helioXYZ(k,t);
+    const P=at(tm), Q=at(tm+dt); if(!P||!Q) return;
+    const r=[P[0]-E[0],P[1]-E[1]], w=[(Q[0]-P[0])*2-V[0],(Q[1]-P[1])*2-V[1]];
+    pos[n].retro=r[0]*w[1]-r[1]*w[0]<0;
+  });
 }
 /* Latitude and longitude the way an ephemeris prints them: 59n55, 30e15. */
 function fmtGeo(lat,lon){
@@ -6340,7 +6360,14 @@ function natalReading(ch){
    degree ticks (1°, taller each 5°) | planets | aspects with glyph at line midpoint. */
 let CURRENT=null, ISO=null;
 const S=380, C=S/2;
-function polarFor(asc){ return (lon,r)=>{const a=(180-(lon-asc))*D2R;return [C+r*Math.cos(a), C-r*Math.sin(a)];}; }
+/* The Ascendant on the left and the zodiac running counter-clockwise from it,
+   so the first house lies just BELOW the eastern horizon, the IC at the foot
+   and the Midheaven at the top - the way every Western chart is drawn. From
+   the first prototype until 15 Oct 2026 the y term had the other sign, and the
+   whole wheel was a mirror image: houses running clockwise, the first house
+   above the horizon, the MC at the bottom. Every number on it was right and
+   the picture was upside down. */
+function polarFor(asc){ return (lon,r)=>{const a=(180-(lon-asc))*D2R;return [C+r*Math.cos(a), C+r*Math.sin(a)];}; }
 /* Fanning glyphs apart so their discs do not overlap, without carrying any of
    them far from the body it names.
 
@@ -6375,16 +6402,33 @@ function fanOut(lons,sep){
   /* Unwrap to a monotonic line starting at the body after the gap. */
   const line=[out[seq[0]]];
   for(let k=1;k<n;k++) line.push(line[k-1]+rev(out[seq[k]]-out[seq[k-1]]));
-  const want=line.slice();
-  // forward: nobody closer than sep to the one before
-  for(let k=1;k<n;k++) if(line[k]-line[k-1]<sep) line[k]=line[k-1]+sep;
-  // backward: pull anyone back who was pushed further than needed
-  for(let k=n-2;k>=0;k--) if(line[k+1]-line[k]>sep&&line[k]<want[k]) line[k]=Math.min(want[k],line[k+1]-sep);
-  /* Re-centre on the original centre of mass, so a cluster opens out both ways
-     instead of marching off in one direction - the whole point of the fix. */
-  let shift=0; for(let k=0;k<n;k++) shift+=want[k]-line[k];
-  shift/=n;
-  for(let k=0;k<n;k++) out[seq[k]]=rev(line[k]+shift);
+  /* Each crowd is spread evenly and centred on its own centre of mass, and
+     nobody else moves. The version before this pushed every crowd forward and
+     then shifted the WHOLE wheel back by the average push, so a lone body with
+     no neighbour at all slid by up to six degrees - a glyph for 0 Aries drawn
+     in Pisces beside the number 1. Crowds are built left to right and merged
+     whenever a centred crowd would touch the one before it, which is the exact
+     least-squares answer for "keep this spacing, move as little as possible". */
+  const groups=[];                                 // {from, n, at: first position}
+  for(let k=0;k<n;k++){
+    let g={from:k,n:1,sum:line[k]};
+    for(;;){
+      g.at=g.sum/g.n-(g.n-1)*sep/2;
+      const prev=groups[groups.length-1];
+      if(!prev||prev.at+(prev.n-1)*sep+sep<=g.at+1e-9) break;
+      groups.pop();
+      g={from:prev.from,n:prev.n+g.n,sum:prev.sum+g.sum};   // sum of true positions
+    }
+    groups.push(g);
+  }
+  /* The cut was made at the widest gap, but crowds at both ends can still
+     spread into it from either side and meet. Then the circle is one crowd. */
+  const first=groups[0], last=groups[groups.length-1];
+  if(groups.length>1&&last.at+(last.n-1)*sep-first.at>360-sep){
+    groups.length=0; const sum=line.reduce((a,b)=>a+b,0);
+    groups.push({from:0,n,at:sum/n-(n-1)*sep/2});
+  }
+  groups.forEach(g=>{ for(let j=0;j<g.n;j++) out[seq[g.from+j]]=rev(g.at+j*sep); });
   return out;
 }
 /* Single wheel or bi-wheel. With a transit chart the natal ring moves inward to
@@ -6392,8 +6436,23 @@ function fanOut(lons,sep){
    radius: overlapping glyphs is exactly the failure that makes cheap mobile
    charts unreadable, and the whole reason for the scrubber is that you can see
    which ring a body belongs to while it moves. */
+/* What the wheel last drew, so anything that only changes the highlight can
+   draw the same pair again. Handlers used to redraw drawWheel(natal, outer),
+   which quietly undid the synastry swap and ran the hit chords between the
+   wrong ends. */
+let WHEEL_LAST=null;
+/* Which ring a highlight belongs to. A tap on the wheel lights a body in the
+   ring it was tapped in; the positions list and the configurations are your
+   chart, and with the synastry swap your chart is the outer ring. */
+let LIT_RING='inner';
+function redrawWheel(){ if(WHEEL_LAST) drawWheel(...WHEEL_LAST); }
+const swappedSyn=()=>RING_MODE==='synastry'&&RING_SWAP&&!!TR_CHART;
 function drawWheel(ch,tr,t3=TR3_CHART){
   if(!tr) t3=null;                     // a third ring with no second is not a thing
+  WHEEL_LAST=[ch,tr,t3];
+  /* The inner ring is lit only by a highlight that belongs to it. */
+  const ISO_IN=LIT_RING==='inner'?ISO:null, CONF_IN=LIT_RING==='inner'?CONF_ISO:null;
+  const LIT_OUT=tr&&LIT_RING==='outer'?(CONF_ISO||(ISO?[ISO]:null)):null;
   const asc=ch.asc, polar=polarFor(asc);
   const rHouOut=C-3, rHouIn=C-26, rZodIn=C-52, rTickEnd=C-60;
   /* With three rings the outermost keeps the place the bi-wheel's outer ring
@@ -6449,17 +6508,31 @@ function drawWheel(ch,tr,t3=TR3_CHART){
   function sector(l0,l1,r1,r2,fill,op){
     const [ax,ay]=polar(l0,r2),[bx,by]=polar(l1,r2),[cx,cy]=polar(l1,r1),[dx,dy]=polar(l0,r1);
     const large=rev(l1-l0)>180?1:0;
-    return `<path d="M${ax.toFixed(1)} ${ay.toFixed(1)} A${r2} ${r2} 0 ${large} 1 ${bx.toFixed(1)} ${by.toFixed(1)} L${cx.toFixed(1)} ${cy.toFixed(1)} A${r1} ${r1} 0 ${large} 0 ${dx.toFixed(1)} ${dy.toFixed(1)} Z" fill="${fill}" fill-opacity="${op}" stroke="var(--line)" stroke-width="0.5"/>`;
+    return `<path d="M${ax.toFixed(1)} ${ay.toFixed(1)} A${r2} ${r2} 0 ${large} 0 ${bx.toFixed(1)} ${by.toFixed(1)} L${cx.toFixed(1)} ${cy.toFixed(1)} A${r1} ${r1} 0 ${large} 1 ${dx.toFixed(1)} ${dy.toFixed(1)} Z" fill="${fill}" fill-opacity="${op}" stroke="var(--line)" stroke-width="0.5"/>`;
   }
   let s=`<svg viewBox="0 0 ${S} ${S}" role="img">`;
   s+=`<circle cx="${C}" cy="${C}" r="${rZodIn}" fill="var(--wheelbg)"/>`;
   // --- houses ring (outermost, unequal Placidus sectors) ---
   s+=`<circle cx="${C}" cy="${C}" r="${rHouOut}" fill="none" stroke="var(--line)"/>`;
   s+=`<circle cx="${C}" cy="${C}" r="${rHouIn}" fill="none" stroke="var(--line)"/>`;
+  /* The four angles are the chart's own Ascendant and Midheaven, not cusps 1
+     and 10. They coincide only in the quadrant systems: in whole signs cusp 1
+     is 0 degrees of the rising sign and the wheel said "Asc 1" for an
+     Ascendant at 24; in equal houses cusp 10 is Asc+270 and "MC" stood tens
+     of degrees from the meridian. Where they do not coincide every cusp is an
+     ordinary cusp with its own degree, and the axes are drawn on their own. */
+  const near=(a,b)=>Math.abs(((a-b+540)%360)-180)<1e-6;
+  const quad=near(cusps[0],ch.asc)&&near(cusps[9],ch.mc);
+  const axes=[[ch.asc,'Asc','var(--axis)'],[rev(ch.asc+180),'Dsc','var(--axis)'],
+    [ch.mc,'MC','var(--mc)'],[rev(ch.mc+180),'IC','var(--mc)']];
+  if(!quad) axes.forEach(([lon,,col])=>{
+    const [x1,y1]=polar(lon,rHouIn),[x2,y2]=polar(lon,rHouOut);
+    s+=`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${col}" stroke-width="1.5"/>`;
+  });
   for(let h=0;h<12;h++){
     const a=cusps[h], b=cusps[(h+1)%12];
     const [x1,y1]=polar(a,rHouIn),[x2,y2]=polar(a,rHouOut);
-    const angleCusp=(h===0||h===3||h===6||h===9);
+    const angleCusp=quad&&(h===0||h===3||h===6||h===9);
     s+=`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${angleCusp?(h===0||h===6?'var(--axis)':'var(--mc)'):'var(--line)'}" stroke-width="${angleCusp?1.5:0.7}"/>`;
     const mid=rev(a+rev(b-a)/2);
     const [rx,ry]=polar(mid,rHouOut-8);
@@ -6476,7 +6549,7 @@ function drawWheel(ch,tr,t3=TR3_CHART){
   }
   // angle labels outside - collected here, drawn last
   let angleLabels='';
-  [[cusps[0],'Asc','var(--axis)'],[cusps[6],'Dsc','var(--axis)'],[cusps[9],'MC','var(--mc)'],[cusps[3],'IC','var(--mc)']].forEach(([lon,lbl,col])=>{
+  axes.forEach(([lon,lbl,col])=>{
     const [lx,ly]=polar(lon,rHouOut+1);
     const dx=lx-C;
     let anchor=Math.abs(dx)<30?'middle':(dx>0?'start':'end'), x=lx, y=ly+(ly>C?9:-3);
@@ -6530,7 +6603,7 @@ function drawWheel(ch,tr,t3=TR3_CHART){
      asteroids had a glyph and no tick - drawn where they were fanned to, with
      nothing saying where they actually stand. */
   WHEEL_BODIES.concat(FACT_POINTS).filter(p=>ch.pos[p]).forEach(n=>{
-    const dimT=CONF_ISO?!CONF_ISO.includes(n):(ISO&&ISO!==n);
+    const dimT=CONF_IN?!CONF_IN.includes(n):(ISO_IN&&ISO_IN!==n);
     s+=`<g opacity="${dimT?0.2:1}">${exactTick(ch.pos[n].lon,'var(--ink)',rNatScale,-8)}</g>`;
   });
   /* The middle ring's ticks hang from its own scale, inward, the way the natal
@@ -6564,9 +6637,9 @@ function drawWheel(ch,tr,t3=TR3_CHART){
     const ax=mx-ux*gap, ay=my-uy*gap, bx=mx+ux*gap, by=my+uy*gap;
     /* A lit configuration dims everything that is not part of it, so a grand
        cross reads as a shape instead of as four more chords among twenty. */
-    const inConf=CONF_ISO&&CONF_ISO.includes(a.p1)&&CONF_ISO.includes(a.p2);
-    const dim=CONF_ISO?!inConf:(ISO&&ISO!==a.p1&&ISO!==a.p2);
-    const op=dim?0.07:((ISO||CONF_ISO)?0.95:0.5);
+    const inConf=CONF_IN&&CONF_IN.includes(a.p1)&&CONF_IN.includes(a.p2);
+    const dim=CONF_IN?!inConf:(ISO_IN&&ISO_IN!==a.p1&&ISO_IN!==a.p2);
+    const op=dim?0.07:((ISO_IN||CONF_IN)?0.95:0.5);
     if(L>gap*2.6){
       s+=`<g opacity="${op}">`;
       s+=`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${ax.toFixed(1)}" y2="${ay.toFixed(1)}" stroke="${a.asp.color}" stroke-width="1"/>`;
@@ -6589,9 +6662,9 @@ function drawWheel(ch,tr,t3=TR3_CHART){
     const disp=placed[idx][1];
     const [px,py]=polar(disp,rPl);
     const isPoint=!BODIES.includes(n);      // the small size: everything that is not a planet
-    const dim=CONF_ISO?!CONF_ISO.includes(n)
-      :(ISO&&ISO!==n&&!asps.some(a=>(a.p1===ISO&&a.p2===n)||(a.p2===ISO&&a.p1===n)));
-    const hot=CONF_ISO?CONF_ISO.includes(n):ISO===n;
+    const dim=CONF_IN?!CONF_IN.includes(n)
+      :(ISO_IN&&ISO_IN!==n&&!asps.some(a=>(a.p1===ISO_IN&&a.p2===n)||(a.p2===ISO_IN&&a.p1===n)));
+    const hot=CONF_IN?CONF_IN.includes(n):ISO_IN===n;
     const [tx,ty]=polar(ch.pos[n].lon,rNatScale-8);
     s+=`<g class="pl" data-p="${n}" style="cursor:pointer" opacity="${dim?0.25:1}">`;
     s+=`<line x1="${tx.toFixed(1)}" y1="${ty.toFixed(1)}" x2="${px.toFixed(1)}" y2="${py.toFixed(1)}" stroke="var(--ink3)" stroke-width="0.7" opacity="0.7"/>`;
@@ -6634,7 +6707,7 @@ function drawWheel(ch,tr,t3=TR3_CHART){
   /* One function for every outer ring, so the middle and the outermost are
      drawn by the same code and cannot drift apart the way the natal and the
      transit ring once did, when one lost its disc and the other kept it. */
-  function ringBand(R,rG,colour,cls,sep,leaderR){
+  function ringBand(R,rG,colour,cls,sep,leaderR,lit){
     let o=`<path d="${ring(rG+12)}${ring(rG-12)}" fill-rule="evenodd" fill="var(--paper2)" fill-opacity="0.55" stroke="var(--line)" stroke-width="0.5"/>`;
     const shown=WHEEL_BODIES.filter(n=>R.pos[n]);
     const fan=fanOut(shown.map(n=>R.pos[n].lon),sep);
@@ -6645,13 +6718,13 @@ function drawWheel(ch,tr,t3=TR3_CHART){
       /* Named, not identified by an opacity value: two tests used to find
          these groups by opacity="0.92" and by a radius range, and both broke
          silently when the drawing changed. */
-      o+=`<g class="${cls}" data-p="${n}" opacity="0.92">`;
+      o+=`<g class="${cls}" data-p="${n}" opacity="${lit&&!lit.includes(n)?0.25:0.92}">`;
       o+=`<line x1="${tx.toFixed(1)}" y1="${ty.toFixed(1)}" x2="${px.toFixed(1)}" y2="${py.toFixed(1)}" stroke="${colour}" stroke-width="0.5" opacity="0.6"/>`;
       /* No disc. The rings are told apart by radius and by colour; the disc
          only added the displacement the natal ring has been rid of. */
       o+=`<text x="${px.toFixed(1)}" y="${(py+3.8).toFixed(1)}" text-anchor="middle" font-size="11"`
         +` font-family="Astro,Inter,sans-serif" paint-order="stroke" stroke="var(--paper)" stroke-width="2.6"`
-        +` stroke-linejoin="round" fill="${colour}">${GLYPH[n]}</text>`;
+        +` stroke-linejoin="round" fill="${colour}"${lit&&lit.includes(n)?' font-weight="700"':''}>${GLYPH[n]}</text>`;
       const dg=Math.floor(rev(R.pos[n].lon)%30)+1;
       const [tdx,tdy]=polar(disp,rG-9);
       /* In the ring's colour, not the neutral grey the natal degrees use. The
@@ -6671,11 +6744,13 @@ function drawWheel(ch,tr,t3=TR3_CHART){
        the grid do; the third ring is drawn, not read. */
     TR_HITS.filter(h=>h.orb<=2).forEach(h=>{
       const nlon=h.np==='ASC'?ch.asc:h.np==='MC'?ch.mc:(ch.pos[h.np]?ch.pos[h.np].lon:null);
-      if(nlon==null||!tr.pos[h.tp]) return;
+      /* Only from a body the ring actually draws: the transiting node is in
+         the hit list but has no glyph, and its chord came out of nowhere. */
+      if(nlon==null||!tr.pos[h.tp]||!WHEEL_BODIES.includes(h.tp)) return;
       const [x1,y1]=polar(tr.pos[h.tp].lon,rTrG-11), [x2,y2]=polar(nlon,rPl+12);
       s+=`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${h.asp.color}" stroke-width="1" stroke-dasharray="3 3" opacity="0.55"/>`;
     });
-    s+=ringBand(tr,rTrG,'var(--accent)','trp',sepTr,tri?rMidScale-8:rZodIn-1);
+    s+=ringBand(tr,rTrG,'var(--accent)','trp',sepTr,tri?rMidScale-8:rZodIn-1,LIT_OUT);
     if(tri) s+=ringBand(t3,rTr,'var(--ring3)','trp3',sep3,rZodIn-1);
   }
   /* The angle labels go on top of everything. Turned inward at the left and
@@ -6687,12 +6762,20 @@ function drawWheel(ch,tr,t3=TR3_CHART){
   document.getElementById('wheel').innerHTML=s;
   applyWheelZoom();                       // a redraw keeps the zoom it was given
   document.querySelectorAll('#wheel .pl').forEach(g=>g.addEventListener('click',e=>{
-    e.stopPropagation(); if(wzJustGestured()) return; pick(g.dataset.p);
+    e.stopPropagation(); if(wzJustGestured()||e.detail>1) return; wzTap(()=>pick(g.dataset.p));
   }));
   function pick(p){
+    const was={iso:ISO,conf:CONF_ISO,ring:LIT_RING};
     CONF_ISO=null;                                  // one thing lit at a time
-    ISO=(ISO===p?null:p); drawWheel(ch,tr); showDetail(p,ch);
-    renderConfigurations(ch);
+    ISO=(ISO===p&&LIT_RING==='inner'?null:p); LIT_RING='inner';
+    drawWheel(ch,tr); showDetail(p,ch);
+    /* The configurations are always your chart's, whichever ring it is in. */
+    renderConfigurations(CONF_CH||ch);
+    /* A mouse double click picks on its first click; the zoom that follows
+       takes that back, so a double click only zooms. */
+    LAST_PICK={at:Date.now(),undo:()=>{ ISO=was.iso; CONF_ISO=was.conf; LIT_RING=was.ring;
+      redrawWheel(); renderConfigurations(CONF_CH||ch);
+      if(ISO) showDetail(ISO,ch); else clearDetail(); }};
   }
 
   /* Tap anywhere in the ring, not on the glyph itself. A drawn glyph is 19 px
@@ -6703,11 +6786,11 @@ function drawWheel(ch,tr,t3=TR3_CHART){
      overlaps its neighbour. The drawn disc stays small; only the target grows. */
   const svEl=document.querySelector('#wheel svg');
   svEl.addEventListener('click',e=>{
-    if(wzJustGestured()) return;          // the end of a pinch or a pan is not a tap
+    if(wzJustGestured()||e.detail>1) return;   // the end of a pinch or a pan is not a tap
     const m=svEl.getScreenCTM(); if(!m) return;
     const pt=svEl.createSVGPoint(); pt.x=e.clientX; pt.y=e.clientY;
     const u=pt.matrixTransform(m.inverse());
-    const dx=u.x-C, dy=C-u.y, rad=Math.hypot(dx,dy);
+    const dx=u.x-C, dy=u.y-C, rad=Math.hypot(dx,dy);   // the inverse of polarFor
     /* The band is deliberately deeper than the glyphs: radial depth is the
        scarce direction, and everything between the aspect lines and the zodiac
        ring can only mean one thing. 62 units of depth is about 49 px on a
@@ -6727,7 +6810,7 @@ function drawWheel(ch,tr,t3=TR3_CHART){
        nearest glyph, so the targets tile the ring and there are no dead spots
        between them. A sector is about 26 degrees wide on an even chart, which
        is roughly 39 px of arc on a phone against the 19 px disc. */
-    if(best) pick(best);
+    if(best) wzTap(()=>pick(best));
   });
 }
 /* ---------- zooming the wheel ----------
@@ -6741,7 +6824,15 @@ function drawWheel(ch,tr,t3=TR3_CHART){
    Done by narrowing the SVG's viewBox, not by scaling the element: the drawing
    is redrawn as vectors at every scale, so lines and the tri-wheel's small
    degree numbers stay sharp at 4x instead of being an enlarged bitmap. */
-let WZ={s:1,cx:C,cy:C}, WZ_GESTURE_AT=0;
+let WZ={s:1,cx:C,cy:C}, WZ_GESTURE_AT=0, WZ_TYPE='mouse', WZ_TAP_T=0, LAST_PICK=null;
+/* A finger's first tap waits out the double-tap window before it picks. Picking
+   at once meant a double tap to zoom also lit a planet and opened its card, so
+   the zoomed wheel arrived dimmed to a quarter with one body lit. The mouse has
+   its own dblclick and picks at once. */
+function wzTap(fn){
+  clearTimeout(WZ_TAP_T);
+  if(WZ_TYPE==='mouse') fn(); else WZ_TAP_T=setTimeout(fn,330);
+}
 const WZ_MAX=4, WZ_STEP=2.5;
 const wzJustGestured=()=>Date.now()-WZ_GESTURE_AT<350;
 function wzView(){ const w=S/WZ.s; return [WZ.cx-w/2,WZ.cy-w/2,w,w]; }
@@ -6779,7 +6870,7 @@ function wzZoomAt(s,x,y){
   const el=document.getElementById('wheel'), pts=new Map();
   let pinch=null, pan=null, moved=false, lastTap=null, lastType='mouse';
   el.addEventListener('pointerdown',e=>{
-    lastType=e.pointerType;
+    lastType=e.pointerType; WZ_TYPE=e.pointerType;
     if(e.pointerType==='mouse') return;   // the mouse has double-click and ctrl+wheel
     pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
     if(pts.size===1) moved=false;
@@ -6810,7 +6901,7 @@ function wzZoomAt(s,x,y){
     if(e.type!=='pointerup'||moved||pts.size) return;
     const now=Date.now();                 // a second tap close by in time and place
     if(lastTap&&now-lastTap.t<320&&Math.hypot(e.clientX-lastTap.x,e.clientY-lastTap.y)<30){
-      lastTap=null; WZ_GESTURE_AT=now;
+      lastTap=null; WZ_GESTURE_AT=now; clearTimeout(WZ_TAP_T);
       if(WZ.s>1) resetWheelZoom(); else wzZoomAt(WZ_STEP,e.clientX,e.clientY);
     }else lastTap={t:now,x:e.clientX,y:e.clientY};
   };
@@ -6819,14 +6910,24 @@ function wzZoomAt(s,x,y){
   /* Touch double taps are handled above; browsers can also fire dblclick for them,
      and answering both would zoom in and straight back out. */
   el.addEventListener('dblclick',e=>{ if(lastType!=='mouse') return;
+    if(LAST_PICK&&Date.now()-LAST_PICK.at<700){ const u=LAST_PICK.undo; LAST_PICK=null; u(); }
     if(WZ.s>1) resetWheelZoom(); else wzZoomAt(WZ_STEP,e.clientX,e.clientY); });
   /* A trackpad pinch arrives as a wheel event with ctrlKey; a plain wheel scrolls. */
   el.addEventListener('wheel',e=>{ if(!e.ctrlKey) return; e.preventDefault();
     wzZoomAt(WZ.s*Math.exp(-e.deltaY/100),e.clientX,e.clientY); },{passive:false});
   document.getElementById('wzReset').addEventListener('click',resetWheelZoom);
   addEventListener('resize',()=>{ if(WZ.s>1) applyWheelZoom(); });
-  /* Paper gets the whole wheel. */
-  addEventListener('beforeprint',resetWheelZoom);
+  /* Paper gets the whole wheel, and all of it: a body or a figure lit on the
+     screen printed as a wheel with every other aspect at 7 percent, and the
+     card that explained why is not on paper. The light comes back after. */
+  let printLit=null;
+  addEventListener('beforeprint',()=>{
+    resetWheelZoom(); renderPrintRing();
+    if(ISO||CONF_ISO){ printLit={iso:ISO,conf:CONF_ISO}; ISO=null; CONF_ISO=null; redrawWheel(); }
+  });
+  addEventListener('afterprint',()=>{
+    if(printLit){ ISO=printLit.iso; CONF_ISO=printLit.conf; printLit=null; redrawWheel(); }
+  });
 }
 
 /* ---------- the structural block of the planet card ----------
@@ -7614,8 +7715,13 @@ function returnChart(ch,ms,body){
     const mid=(lo+hi)/2, fm=lonAt(mid).d;
     if((fl<=0)===(fm<=0)){ lo=mid; fl=fm; } else hi=mid;
   }
-  const at=(lo+hi)/2, r=lonAt(at);
-  return {...r.c, returnMs:at, returnBody:body};
+  const at=(lo+hi)/2, dt=new Date(at);
+  /* Recast once at the moment found, with retrograde marked; the search
+     itself does not need it. */
+  const c=computeChart(dt.getUTCFullYear(),dt.getUTCMonth()+1,dt.getUTCDate(),
+    dt.getUTCHours()+dt.getUTCMinutes()/60+(dt.getUTCSeconds()+dt.getUTCMilliseconds()/1000)/3600,0,
+    RELOC?RELOC.lat:ch.geolat, RELOC?RELOC.lon:ch.geolon, 'retro');
+  return {...c, returnMs:at, returnBody:body};
 }
 
 /* ---------- the composite ----------
@@ -7656,7 +7762,9 @@ function ringChart(ch,ms,mode){
   if(mode==='progressed')
     return {...pr, mc, asc:a.asc, ramc:a.ramc, houses:a.houses, arc};
   const pos={};
-  Object.keys(ch.pos).forEach(k=>{ pos[k]={...ch.pos[k], lon:rev(ch.pos[k].lon+arc)}; });
+  /* A directed body moves with the arc and nothing else, so the natal R and
+     speed do not come along with it. */
+  Object.keys(ch.pos).forEach(k=>{ pos[k]={lon:rev(ch.pos[k].lon+arc)}; if(ch.pos[k].lat!=null) pos[k].lat=ch.pos[k].lat; });
   return {...ch, pos, mc, asc:a.asc, ramc:a.ramc, houses:a.houses, arc};
 }
 const RING_MOVERS={
@@ -7701,7 +7809,7 @@ function partnerChart(ch){
      computed so that their Ascendant and MC can receive aspects. */
   const tz=e._own?e.tz:libTz(e);
   const hh=e.t==null?12:e.t;
-  return computeChart(e.y,e.mo,e.d,hh,tz,e.lat,e.lon,false);
+  return computeChart(e.y,e.mo,e.d,hh,tz,e.lat,e.lon,'retro');
 }
 function aspectOrbs(ch,tp){
   const hits=[];
@@ -7881,7 +7989,7 @@ function transitChartAt(ch,ms){
      the outer ring reads it: retrograde and the degree labels belong to the
      natal wheel, which is cast once. With speed on here a scrub frame measured
      21 ms against a 16.7 ms budget and stuttered; without it, 8. */
-  return computeChart(p.y,p.mo,p.d,p.h,0,ch.geolat||0,ch.geolon||0,false);
+  return computeChart(p.y,p.mo,p.d,p.h,0,ch.geolat||0,ch.geolon||0,'retro');
 }
 /* rAF coalescing: a drag fires input events faster than a chart can be cast,
    and without this the queue outruns the finger and the slider feels sticky. */
@@ -8149,8 +8257,9 @@ function renderPositions(ch){
      full-width row taller than the 44 px floor, so the wheel tap is the quick
      way and this is the one that always works. */
   box.querySelectorAll('.planet-row.hit').forEach(r=>{
-    const go=()=>{ const p=r.dataset.p; ISO=(ISO===p?null:p);
-      drawWheel(ch,TR_CHART); showDetail(p,ch); scrollChartIntoView(); };
+    const go=()=>{ const p=r.dataset.p, ring=swappedSyn()?'outer':'inner';
+      ISO=(ISO===p&&LIT_RING===ring?null:p); CONF_ISO=null; LIT_RING=ring;
+      redrawWheel(); showDetail(p,ch); scrollChartIntoView(); };
     r.addEventListener('click',go);
     r.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){e.preventDefault();go();} });
   });
@@ -8452,8 +8561,10 @@ function renderGrid(ch,tr){
    dimming everything outside it is the only way to see a grand cross as a
    shape rather than as four more chords. */
 let CONF_ISO=null;
+let CONF_CH=null;
 function renderConfigurations(ch){
   const box=document.getElementById('confList'); if(!box) return;
+  CONF_CH=ch;
   const found=findConfigurations(ch.pos);
   /* Biggest figures first, then by how tight they are: a grand cross outranks
      a T-square, and among equals the closer one is the one being asked about. */
@@ -8477,9 +8588,9 @@ function renderConfigurations(ch){
     const f=found[+el.dataset.i];
     const same=CONF_ISO&&CONF_ISO.join('|')===f.bodies.join('|');
     CONF_ISO=same?null:f.bodies.slice();
-    ISO=null;
+    ISO=null; LIT_RING=swappedSyn()?'outer':'inner';
     renderConfigurations(ch);
-    drawWheel(ch,TR_CHART);
+    redrawWheel();
     scrollChartIntoView();
   };
   box.querySelectorAll('.confrow').forEach(el=>{
@@ -8687,7 +8798,21 @@ function renderChartMeta(ch,y,mo,da,hh,mi,tz){
   /* The third line is for paper. On screen the chips under it say the same
      thing and can be changed; printed, the chips are gone and this stays. */
   el.innerHTML=[who, line1].filter(Boolean).map(x=>`<div>${x}</div>`).join('')
-    +`<div class="printonly">${line2}</div>`;
+    +`<div class="printonly">${line2}</div><div class="printonly" id="printRing"></div>`;
+}
+/* What the outer rings are, on paper. The ring chips and the slider are not
+   printed, so a sheet with two or three rings of glyphs said neither which
+   technique they were nor for what moment, and could not be checked later.
+   Filled when printing starts, because the slider moves after the chart is
+   cast and this has to name the moment on the wheel, not the one at casting. */
+function renderPrintRing(){
+  const el=document.getElementById('printRing'); if(!el) return;
+  if(!TR_CHART||RING_MODE==='none'){ el.textContent=''; return; }
+  const modes=[RING_MODE].concat(TR3_CHART?[RING2_MODE]:[]).map(m=>t('ring_'+m));
+  let when='';
+  if(RING_MODE==='solar'||RING_MODE==='lunar'){ if(TR_CHART.returnMs!=null) when=momText(TR_CHART.returnMs,0)+' UT'; }
+  else if(!STATIC_RING.includes(RING_MODE)||TR3_CHART) when=momText(TR_MS,0)+' UT';
+  el.textContent=[modes.join(' + '),when].filter(Boolean).join(' · ');
 }
 function scrollChartIntoView(){
   const card=document.getElementById('chartCard'), hdr=document.querySelector('header');
@@ -8727,6 +8852,9 @@ function restoreForm(){
   return !!(o.date&&o.time);
 }
 
+function clearDetail(){
+  const d=document.getElementById('detail'); d.className='detail empty'; d.textContent=t('tapdetail');
+}
 function run(){
   const dv=document.getElementById('date').value, tv=document.getElementById('time').value;
   /* Ranges too, not only presence: a latitude of 95 or an offset of +25 made a
@@ -8744,7 +8872,7 @@ function run(){
      person's houses in a city they never mentioned. */
   CAST_ARGS={y,mo,da,hh,mi,tz,lat,lng};
   RELOC=null;
-  CURRENT=computeChart(y,mo,da,hh+mi/60,tz,lat,lng); ISO=null; CONF_ISO=null;
+  CURRENT=computeChart(y,mo,da,hh+mi/60,tz,lat,lng); ISO=null; CONF_ISO=null; LIT_RING='inner';
   WZ={s:1,cx:C,cy:C};                     // a new chart starts with the whole wheel
   TR_TZ=tz;
   BIRTH_MS=utcMs(y,mo,da,0,0,0)+Math.round((hh+mi/60-tz)*3600000);
@@ -8757,8 +8885,7 @@ function run(){
   renderRelocBrief();
   if(FEATURES.interpretation) document.getElementById('reading').innerHTML=natalReading(CURRENT);
   renderTransits(CURRENT);          // casts the transit ring and draws the wheel
-  document.getElementById('detail').className='detail empty';
-  document.getElementById('detail').textContent=t('tapdetail');
+  clearDetail();
   /* Land on the chart. Without this the wheel is cast below the fold and the
      first thing you see after pressing the button is the form you just filled
      in. The header is sticky and translucent, so the offset is measured rather
@@ -8786,7 +8913,7 @@ function applyRelocation(){
   const a=CAST_ARGS; if(!a) return;
   const lat=RELOC?RELOC.lat:a.lat, lng=RELOC?RELOC.lon:a.lng;
   CURRENT=computeChart(a.y,a.mo,a.da,a.hh+a.mi/60,a.tz,lat,lng);
-  ISO=null; CONF_ISO=null;
+  ISO=null; CONF_ISO=null; LIT_RING='inner';
   document.getElementById('charttitle').textContent=chartTitle(CURRENT);
   renderPositions(CURRENT); renderBalance(CURRENT);
   renderChartMeta(CURRENT,a.y,a.mo,a.da,a.hh,a.mi,a.tz);
@@ -8848,6 +8975,8 @@ document.getElementById('reset').addEventListener('click',()=>{localStorage.remo
   });
   document.getElementById('synaSwap').addEventListener('click',()=>{
     RING_SWAP=!RING_SWAP;
+    /* A lit body stays on the person it belongs to, who has just changed ring. */
+    if(ISO||CONF_ISO) LIT_RING=LIT_RING==='inner'?'outer':'inner';
     renderRingSwitch();
     if(CURRENT) renderTransits(CURRENT);
     scrollChartIntoView();

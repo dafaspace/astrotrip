@@ -1165,7 +1165,7 @@ function run(){
         return b.width&&b.left>R.left&&b.right<R.right&&b.top>R.top&&b.bottom<R.bottom;});
       if(!g) return {none:true};
       const b=g.querySelector('text').getBoundingClientRect(); ISO=null;
-      document.querySelector('#wheel svg').dispatchEvent(new MouseEvent('click',{bubbles:true,
+      (document.getElementById('wheel').dispatchEvent(new PointerEvent('pointerdown',{pointerType:'mouse',bubbles:true})),document.querySelector('#wheel svg')).dispatchEvent(new MouseEvent('click',{bubbles:true,
         clientX:b.left+b.width/2, clientY:b.top+b.height/2}));
       const got=ISO; ISO=null; drawWheel(CURRENT,TR_CHART); return {want:g.dataset.p, got};}`);
     if(r.none) return 'в увеличенном виде не нашлось планеты';
@@ -1174,7 +1174,7 @@ function run(){
   t('конец щипка или сдвига не считается касанием',()=>{
     const r=WZT(`()=>{WZ_GESTURE_AT=Date.now(); ISO=null;
       const R=document.querySelector('#wheel svg').getBoundingClientRect();
-      document.querySelector('#wheel svg').dispatchEvent(new MouseEvent('click',{bubbles:true,
+      (document.getElementById('wheel').dispatchEvent(new PointerEvent('pointerdown',{pointerType:'mouse',bubbles:true})),document.querySelector('#wheel svg')).dispatchEvent(new MouseEvent('click',{bubbles:true,
         clientX:R.left+R.width*0.3, clientY:R.top+R.height*0.5}));
       const got=ISO; WZ_GESTURE_AT=0; ISO=null; return {got};}`);
     return r.got===null||'после жеста выбралась планета '+r.got;
@@ -1268,7 +1268,7 @@ function run(){
       if(!centres.length||!centres[0].w) return null;
       let ok=0, miss=[];
       for(const c of centres){ ISO=null;
-        document.querySelector('#wheel svg').dispatchEvent(new MouseEvent('click',{bubbles:true,clientX:c.cx,clientY:c.cy}));
+        (document.getElementById('wheel').dispatchEvent(new PointerEvent('pointerdown',{pointerType:'mouse',bubbles:true})),document.querySelector('#wheel svg')).dispatchEvent(new MouseEvent('click',{bubbles:true,clientX:c.cx,clientY:c.cy}));
         if(ISO===c.p) ok++; else miss.push(c.p+'->'+ISO);
         ISO=null; drawWheel(CURRENT,TR_CHART); }
       return {n:centres.length, ok, miss};}`);
@@ -3392,7 +3392,7 @@ function run(){
   });
   t('ретроградность видна и на колесе, и в таблице',()=>{
     const r=ev(`(()=>{const sv=document.querySelector('#wheel svg');
-      const onWheel=(sv.innerHTML.match(/\\u211e/g)||[]).length;
+      const onWheel=[...sv.querySelectorAll('.pl')].filter(g=>/\\u211e/.test(g.textContent)).length;
       const inTable=document.querySelectorAll('#positions .rx').length;
       const retro=BODIES.concat(POINTS).filter(p=>CURRENT.pos[p]&&CURRENT.pos[p].retro).length;
       return {onWheel,inTable,retro};})()`);
@@ -4220,7 +4220,7 @@ function run(){
     /* Глиф не может её показать: чтобы диски не перекрывались, их разводят на
        градусы. Деления - единственные метки на колесе, нарисованные точно. */
     const r=ev(`(()=>{const sv=document.querySelector('#wheel svg'), C=190, asc=CURRENT.asc;
-      const lonOf=(x,y)=>{const a=Math.atan2(C-y,x-C)*180/Math.PI;return ((asc+180-a)%360+360)%360;};
+      const lonOf=(x,y)=>{const a=Math.atan2(y-C,x-C)*180/Math.PI;return ((asc+180-a)%360+360)%360;};
       const pick=col=>[...sv.querySelectorAll('line')]
         .filter(l=>l.getAttribute('stroke')==='var('+col+')'&&l.getAttribute('stroke-width')==='1.7')
         .map(l=>lonOf(+l.getAttribute('x1'),+l.getAttribute('y1'))).sort((a,b)=>a-b);
@@ -4253,7 +4253,7 @@ function run(){
        которых он не образует. Порог привязан к самому разведению, а не взят
        из головы: дальше двух шагов разведения уезжать незачем. */
     const r=ev(`(()=>{const sv=document.querySelector('#wheel svg'), C=190, asc=CURRENT.asc;
-      const lonOf=(x,y)=>{const a=Math.atan2(C-y,x-C)*180/Math.PI;return ((asc+180-a)%360+360)%360;};
+      const lonOf=(x,y)=>{const a=Math.atan2(y-C,x-C)*180/Math.PI;return ((asc+180-a)%360+360)%360;};
       let worst=0, who='';
       sv.querySelectorAll('.pl').forEach(g=>{
         const c=g.querySelector('text[font-family^="Astro"]');
@@ -4294,7 +4294,7 @@ function run(){
     /* Узлы точно противоположны по построению, и на скриншоте они оказались
        рядом - это и было тем, что видно глазом. */
     const r=ev(`(()=>{const sv=document.querySelector('#wheel svg'), C=190, asc=CURRENT.asc;
-      const lonOf=(x,y)=>{const a=Math.atan2(C-y,x-C)*180/Math.PI;return ((asc+180-a)%360+360)%360;};
+      const lonOf=(x,y)=>{const a=Math.atan2(y-C,x-C)*180/Math.PI;return ((asc+180-a)%360+360)%360;};
       const at=n=>{const e=sv.querySelector('.pl[data-p="'+n+'"] text[font-family^="Astro"]');
         return e?lonOf(+e.getAttribute('x'),+e.getAttribute('y')):null;};
       const dataOpp=Math.abs(rev(CURRENT.pos.SNode.lon-CURRENT.pos.NNode.lon)-180);
@@ -4469,6 +4469,7 @@ function run(){
         return {p:g.dataset.p,cx:b.left+b.width/2,cy:b.top+b.height/2,w:b.width};});
       if(!centres.length||!centres[0].w) return null;
       const probe=(x,y)=>{ISO=null;
+        document.getElementById('wheel').dispatchEvent(new PointerEvent('pointerdown',{pointerType:'mouse',bubbles:true}));
         document.querySelector('#wheel svg').dispatchEvent(
           new MouseEvent('click',{bubbles:true,clientX:x,clientY:y}));
         const got=ISO; ISO=null; drawWheel(CURRENT,TR_CHART); return got;};
@@ -5027,6 +5028,125 @@ function run(){
       const b=ev(`document.getElementById('tz').value='+25:00';run()`);
       return (a===false&&b===false&&said===2)||`широта 95: ${a}, смещение +25: ${b}, сообщений ${said}`;
     }finally{ W.alert=al; W.__p=prev; ev(`FORM_FIELDS.forEach((id,i)=>document.getElementById(id).value=__p[i]);syncSaveBtn();run()`); }
+  });
+  t('#30 на колесе подписан настоящий Асцендент и MC, в любой системе домов',()=>{
+    const r=ev(`(()=>{const k=HSYS; try{
+      const out=[];
+      for(const sys of ['whole','equal','placidus']){
+        HSYS=sys; run();
+        const lab=l=>[...document.querySelectorAll('#wheel text')].map(x=>x.textContent).find(x=>x.startsWith(l+' '));
+        out.push({sys, asc:lab('Asc'), mc:lab('MC'),
+          wantAsc:'Asc '+(Math.floor(rev(CURRENT.asc)%30)+1), wantMc:'MC '+(Math.floor(rev(CURRENT.mc)%30)+1)});
+      }
+      return out;
+    }finally{ HSYS=k; run(); }})()`);
+    const bad=r.filter(x=>x.asc!==x.wantAsc||x.mc!==x.wantMc).map(x=>`${x.sys}: ${x.asc}/${x.mc} вместо ${x.wantAsc}/${x.wantMc}`);
+    return !bad.length||bad.join('; ');
+  });
+  t('#31 одиночные глифы стоят на своём градусе, скопление раскрыто вокруг своего центра',()=>{
+    const lons=[10,40,75,100,100.5,101,101.5,102,102.5,150,200,250,300,340];
+    const f=ev(`fanOut(${JSON.stringify(lons)},8)`);
+    const d=lons.map((v,i)=>((f[i]-v+540)%360)-180);
+    const bad=[];
+    [0,1,9,10,11,12,13].forEach(i=>{ if(Math.abs(d[i])>1e-9) bad.push(`${lons[i]}° сдвинут на ${d[i].toFixed(2)}`); });
+    const crowd=[2,3,4,5,6,7,8], mean=crowd.reduce((a,i)=>a+d[i],0)/crowd.length;
+    if(Math.abs(mean)>1e-9) bad.push(`центр скопления уехал на ${mean.toFixed(2)}`);
+    const g=ev(`fanOut([0],8)`); if(g[0]!==0) bad.push('одно тело на 0° нарисовано на '+g[0]);
+    return !bad.length||bad.join('; ');
+  });
+  t('#35 ℞ во внешнем кольце: транзитный Меркурий в апреле 2024 ретрограден',()=>{
+    const r=ev(`(()=>{
+      const a=transitChartAt(CURRENT,utcMs(2024,4,10,12,0,0)), b=transitChartAt(CURRENT,utcMs(2024,5,10,12,0,0));
+      const full=computeChart(2024,4,10,12,0,0,0);
+      const names=Object.keys(full.pos).filter(n=>full.pos[n].retro!=null&&a.pos[n]&&a.pos[n].retro!=null);
+      const disagree=names.filter(n=>full.pos[n].retro!==a.pos[n].retro);
+      return {apr:a.pos.Mercury.retro, may:b.pos.Mercury.retro, disagree, n:names.length};})()`);
+    if(r.apr!==true||r.may!==false) return `апрель ${r.apr}, май ${r.may}`;
+    return (!r.disagree.length&&r.n>=9)||`расходится с полным расчётом: ${r.disagree.join(', ')} (${r.n} тел)`;
+  });
+  t('#35 у дирекции нет ℞, взятого из натала',()=>{
+    const r=ev(`(()=>{const c=ringChart(CURRENT,utcMs(2030,1,1,0,0,0),'directed');
+      return Object.keys(c.pos).filter(n=>c.pos[n].retro);})()`);
+    return !r.length||'у дирекции ретроградны '+r.join(', ');
+  });
+  t('#36 пунктир транзита идёт только от нарисованного тела',()=>{
+    const r=ev(`(()=>{const keep=TR_HITS, tr=transitChartAt(CURRENT,TR_MS);
+      try{ TR_HITS=[{tp:'NNode',np:'Sun',orb:0.5,asp:ASPECTS[0]}]; drawWheel(CURRENT,tr,null);
+        return document.querySelectorAll('#wheel line[stroke-dasharray]').length;
+      }finally{ TR_HITS=keep; redrawAspects(); }})()`);
+    return r===0||`пунктиров от Узла: ${r}`;
+  });
+  t('#22 #32 в синастрии с обменом касание строки не снимает обмен и фигуры остаются вашими',()=>{
+    const r=ev(`(()=>{const keep={m:RING_MODE,p:PARTNER,s:RING_SWAP};
+      try{
+        PARTNER={src:'lib',id:CHART_LIBRARY[0].id}; RING_MODE='synastry'; RING_SWAP=true;
+        renderTransits(CURRENT);
+        const before=WHEEL_LAST[0];
+        document.querySelector('#positions .planet-row.hit').click();
+        const afterRow=WHEEL_LAST[0], ring=LIT_RING;
+        const g=document.querySelector('#wheel .pl'); g.dispatchEvent(new MouseEvent('click',{bubbles:true}));
+        return {swappedInner:before===TR_CHART, rowKeeps:afterRow===before, ring, confFor:CONF_CH===CURRENT};
+      }finally{ RING_MODE=keep.m; PARTNER=keep.p; RING_SWAP=keep.s; ISO=null; CONF_ISO=null; LIT_RING='inner'; renderTransits(CURRENT); }})()`);
+    const bad=[];
+    if(!r.swappedInner) bad.push('партнёр не внутри после обмена');
+    if(!r.rowKeeps) bad.push('касание строки вернуло натал внутрь');
+    if(r.ring!=='outer') bad.push('строка подсветила не ваше кольцо: '+r.ring);
+    if(!r.confFor) bad.push('после тапа фигуры считаются не по вашей карте');
+    return !bad.length||bad.join('; ');
+  });
+  t('#33 #34 на печать колесо идёт без подсветки и с подписью колец',()=>{
+    const r=ev(`(()=>{const keep=RING_MODE;
+      try{
+        RING_MODE='transit'; renderTransits(CURRENT); ISO='Sun'; redrawWheel();
+        dispatchEvent(new Event('beforeprint'));
+        const during=ISO, txt=(document.getElementById('printRing')||{}).textContent||'';
+        dispatchEvent(new Event('afterprint'));
+        return {during, after:ISO, txt, want:t('ring_transit')};
+      }finally{ ISO=null; RING_MODE=keep; renderTransits(CURRENT); }})()`);
+    const bad=[];
+    if(r.during!==null) bad.push('на печати подсвечено '+r.during);
+    if(r.after!=='Sun') bad.push('после печати подсветка не вернулась');
+    if(!r.txt.includes(r.want)||!/UT$/.test(r.txt)) bad.push('подпись колец: "'+r.txt+'"');
+    return !bad.length||bad.join('; ');
+  });
+  t('#37 двойной тап только увеличивает: палец ждёт, мышь откатывает выбор',()=>{
+    const r=ev(`(()=>{const el=document.getElementById('wheel'), sv=document.querySelector('#wheel svg');
+      const g=document.querySelector('#wheel .pl text').getBoundingClientRect(), x=g.left+g.width/2, y=g.top+g.height/2;
+      resetWheelZoom(); ISO=null; WZ_GESTURE_AT=0;
+      el.dispatchEvent(new PointerEvent('pointerdown',{pointerType:'touch',pointerId:7,clientX:x,clientY:y,bubbles:true}));
+      el.dispatchEvent(new PointerEvent('pointerup',{pointerType:'touch',pointerId:7,clientX:x,clientY:y,bubbles:true}));
+      sv.dispatchEvent(new MouseEvent('click',{bubbles:true,clientX:x,clientY:y}));
+      const touchNow=ISO; clearTimeout(WZ_TAP_T);
+      el.dispatchEvent(new PointerEvent('pointerdown',{pointerType:'mouse',bubbles:true}));
+      sv.dispatchEvent(new MouseEvent('click',{bubbles:true,clientX:x,clientY:y,detail:1}));
+      const mouseFirst=ISO;
+      sv.dispatchEvent(new MouseEvent('click',{bubbles:true,clientX:x,clientY:y,detail:2}));
+      el.dispatchEvent(new MouseEvent('dblclick',{bubbles:true,clientX:x,clientY:y}));
+      const r={touchNow, mouseFirst, after:ISO, zoom:WZ.s};
+      resetWheelZoom(); ISO=null; redrawWheel(); return r;})()`);
+    const bad=[];
+    if(r.touchNow!==null) bad.push('палец выбрал планету до конца окна двойного тапа');
+    if(!r.mouseFirst) bad.push('одиночный щелчок мыши ничего не выбрал');
+    if(r.after!==null) bad.push('после двойного щелчка осталась подсветка '+r.after);
+    if(!(r.zoom>1)) bad.push('двойной щелчок не увеличил');
+    return !bad.length||bad.join('; ');
+  });
+  t('колесо стоит как у всех: MC наверху, I дом под Асцендентом, знаки против часовой',()=>{
+    const r=ev(`(()=>{const k=HSYS; try{ HSYS='placidus'; run();
+      const sv=document.querySelector('#wheel svg'), R=sv.getBoundingClientRect(), cy=R.top+R.height/2, cx=R.left+R.width/2;
+      const at=txt=>{const e=[...sv.querySelectorAll('text')].find(x=>x.textContent===txt||x.textContent.startsWith(txt+' '));
+        const b=e.getBoundingClientRect(); return {x:b.left+b.width/2-cx, y:b.top+b.height/2-cy};};
+      const p=polarFor(CURRENT.asc), a=p(CURRENT.asc+30,100), C0=190;
+      return {mc:at('MC'), ic:at('IC'), asc:at('Asc'), h1:at('I'), h10:at('X'), next:{x:a[0]-C0,y:a[1]-C0}};
+    }finally{ HSYS=k; run(); }})()`);
+    const bad=[];
+    if(!(r.mc.y<0)) bad.push('MC не в верхней половине');
+    if(!(r.ic.y>0)) bad.push('IC не в нижней половине');
+    if(!(r.asc.x<0)) bad.push('Асцендент не слева');
+    if(!(r.h1.y>0&&r.h1.x<0)) bad.push('I дом не под горизонтом слева');
+    if(!(r.h10.y<0)) bad.push('X дом не наверху');
+    if(!(r.next.y>0)) bad.push('Асцендент + 30° ушёл вверх: зодиак идёт по часовой');
+    return !bad.length||bad.join('; ');
   });
   /* REVIEW-2026-10-15-END */
 
