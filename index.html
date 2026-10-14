@@ -3712,13 +3712,13 @@ function computeChart(y,mo,day,localH,tzOff,lat,lng,withSpeed){
     });
   }
   /* Last, because it is built from the angles and from two of the bodies, and
-     both have to exist first. Sect is read from the Sun's house, which needs
-     the cusps, which is why this cannot move earlier. */
+     both have to exist first. Day or night is the Sun's altitude, the same
+     test chartFacts uses for sect, so the two can never disagree; it was the
+     Sun's house once, and in whole signs that put a risen Sun underground. */
   {
     const ch0={pos,asc,mc,ecl,houses,ramc,geolat:lat};
-    const sunH=bodyHouse(ch0,'Sun');
-    pos.Fortune={lon:rev(sunH>=7 ? asc+pos.Moon.lon-pos.Sun.lon
-                                 : asc+pos.Sun.lon-pos.Moon.lon)};
+    pos.Fortune={lon:rev(aboveHorizon(ch0,'Sun') ? asc+pos.Moon.lon-pos.Sun.lon
+                                                 : asc+pos.Sun.lon-pos.Moon.lon)};
   }
   return {pos,asc,mc,ecl,houses,d,ramc,geolat:lat,geolon:lng,jdUT};
 }
@@ -4985,6 +4985,23 @@ function bodyHouse(ch,name){
   }
   return houseOf(b.lon,ch.houses.cusps);
 }
+/* Above the horizon, read from the sky and not from a house number. Houses 7
+   to 12 are "above" only where cusps 1 and 7 are the Ascendant and the
+   Descendant; in whole signs the first house starts at 0 degrees of the
+   rising sign, so a Sun that rose forty minutes ago sits in house 1 and the
+   chart was being called nocturnal. The altitude is the definition, so it is
+   used directly: equatorial coordinates from the ecliptic ones, hour angle
+   from the local sidereal time the chart already carries. Geocentric, no
+   refraction - the horizon an astrologer draws, not the one a camera sees. */
+function altitudeOf(ch,name){
+  const b=ch.pos[name]; if(!b) return null;
+  const l=b.lon*D2R, bt=(b.lat||0)*D2R, e=ch.ecl*D2R, f=ch.geolat*D2R;
+  const dec=Math.asin(Math.sin(bt)*Math.cos(e)+Math.cos(bt)*Math.sin(e)*Math.sin(l));
+  const ra=Math.atan2(Math.sin(l)*Math.cos(e)-Math.tan(bt)*Math.sin(e),Math.cos(l));
+  const H=ch.ramc*D2R-ra;
+  return Math.asin(Math.sin(f)*Math.sin(dec)+Math.cos(f)*Math.cos(dec)*Math.cos(H))*R2D;
+}
+function aboveHorizon(ch,name){ const a=altitudeOf(ch,name); return a==null?null:a>0; }
 
 /* ---------- ChartFacts: the structural layer ----------
    Everything about a chart that follows from a rule and that nobody argues
@@ -5135,7 +5152,7 @@ function chartFacts(ch,mode=RULER_MODE){
      fuller traditional schemes need "above the horizon" and "diurnal by
      nature" separately, and recovering them from the verdict later is not
      possible. */
-  const sunAbove=house.Sun>=7;
+  const sunAbove=aboveHorizon(ch,'Sun');
   const chartSect=sunAbove?'day':'night';
   /* Mercury takes the sect of the half of the sky it rises in: ahead of the
      Sun in zodiacal order it rises after, behind it rises before. */
@@ -5245,7 +5262,7 @@ function chartFacts(ch,mode=RULER_MODE){
       branches:paths.map(x=>({via:x.chain.slice(1),terminal:x.terminal,loop:x.loop})),
       rulesHouses:rules, carries,
       angularity, nearestAngle:nearest, distanceToAngle:dist,
-      sect:{planet:natal, aboveHorizon:hs==null?null:hs>=7,
+      sect:{planet:natal, aboveHorizon:aboveHorizon(ch,p),
             status:natal==null?'neutral':natal===(sunAbove?'diurnal':'nocturnal')
               ?'inSect':'contraryToSect'},
       solar:{condition:solar, elongation:elong},

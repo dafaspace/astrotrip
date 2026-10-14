@@ -821,8 +821,11 @@ function run(){
     const bad=ev(`(()=>{const out=[];
       for(let i=0;i<CHART_LIBRARY.length;i+=Math.ceil(CHART_LIBRARY.length/${FSAMPLE})){
         const e=CHART_LIBRARY[i], hh=e.t==null?12:e.t;
-        const F=chartFacts(computeChart(e.y,e.mo,e.d,hh,libTz(e),e.lat,e.lon));
-        if((F.sect.chart==='day')!==(F.sect.sunHouse>=7)) out.push(e.id+': секта против дома Солнца');
+        const ch=computeChart(e.y,e.mo,e.d,hh,libTz(e),e.lat,e.lon), F=chartFacts(ch);
+        /* Солнце над горизонтом, если оно позади Асцендента по зодиаку: та
+           половина эклиптики уже взошла. Не дом Солнца - в целых знаках дом 1
+           начинается раньше Асцендента. */
+        if((F.sect.chart==='day')!==(rev(ch.pos.Sun.lon-ch.asc)>180)) out.push(e.id+': секта против горизонта');
         if(F.planets.Sun.solar.condition!==null) out.push(e.id+': у Солнца есть солнечное состояние');
         for(const [p,f] of Object.entries(F.planets)){
           const el=f.solar.elongation; if(el==null) continue;
@@ -4900,6 +4903,36 @@ function run(){
     const z=ev(`SEED_CITIES.find(c=>c.e==='Hanoi').z`);
     const off=ev(`ianaOffset(${JSON.stringify(z)},1965,6,1,12,0)`);
     return off===7||`${z}: ${off}`;
+  });
+  t('#13 #9 день и ночь не зависят от системы домов: восход в целых знаках',()=>{
+    /* Москва 10.05.1990 04:45 (UTC+3): Солнце 49°, Асцендент 53°, Солнце уже
+       взошло, но в целых знаках стоит в 1 доме. */
+    const r=ev(`(()=>{const k=HSYS; try{
+      const out=[];
+      for(const sys of ['whole','equal','placidus','porphyry']){
+        HSYS=sys; const ch=computeChart(1990,5,10,4.75,3,55.75,37.62), F=chartFacts(ch);
+        out.push([sys,F.sect.chart,rev(ch.pos.Fortune.lon-rev(ch.asc+ch.pos.Moon.lon-ch.pos.Sun.lon))]);
+      }
+      /* сутки с шагом 15 минут: секта одна и та же в целых знаках и в Плацидусе */
+      let diff=0;
+      for(let m=0;m<1440;m+=15){
+        HSYS='whole'; const a=chartFacts(computeChart(1990,5,10,m/60,3,55.75,37.62)).sect.chart;
+        HSYS='placidus'; const b=chartFacts(computeChart(1990,5,10,m/60,3,55.75,37.62)).sect.chart;
+        if(a!==b) diff++;
+      }
+      return {out,diff};
+    }finally{HSYS=k;}})()`);
+    const bad=r.out.filter(([sys,sect,fd])=>sect!=='day'||Math.min(fd,360-fd)>1e-9)
+      .map(([sys,sect,fd])=>`${sys}: ${sect}, Фортуна в стороне от дневной формулы на ${fd.toFixed(2)}°`);
+    if(r.diff) bad.push(`за сутки секта расходится в ${r.diff} моментах из 96`);
+    return !bad.length||bad.join('; ');
+  });
+  t('#13 над горизонтом у планет считается по небу, а не по номеру дома',()=>{
+    const r=ev(`(()=>{const k=HSYS; try{ HSYS='whole';
+      const ch=computeChart(1990,5,10,4.75,3,55.75,37.62), F=chartFacts(ch);
+      return Object.keys(F.planets).filter(p=>ch.pos[p]&&F.planets[p].sect.aboveHorizon!==(altitudeOf(ch,p)>0));
+    }finally{HSYS=k;}})()`);
+    return !r.length||'не совпало у '+r.join(', ');
   });
   /* REVIEW-2026-10-15-END */
 
