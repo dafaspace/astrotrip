@@ -5434,6 +5434,22 @@ function run(){
       const e=arcsec(c,v); return e<=3?null:`${y}: ${e.toFixed(1)}″`;}).filter(Boolean);
     return !bad.length||bad.join('; ');
   });
+  t('подписи на колесе: подробные дают градус, знак и минуты, краткие только градус',()=>{
+    const r=ev(`(()=>{const keep=WHEEL_LABELS, out={};
+      try{ for(const m of ['full','brief']){ WHEEL_LABELS=m; drawWheel(CURRENT,null);
+          const g=document.querySelector('#wheel .pl[data-p="Sun"]');
+          out[m]={texts:g.querySelectorAll('text').length, last:[...g.querySelectorAll('text')].pop().textContent,
+            dots:document.querySelectorAll('#wheel .ap').length}; }
+      }finally{ WHEEL_LABELS=keep; drawWheel(CURRENT,null); }
+      const L=rev(CURRENT.pos.Sun.lon); out.min=String(Math.floor((L%1)*60)).padStart(2,'0');
+      return out;})()`);
+    const bad=[];
+    if(r.full.texts!==4) bad.push('подробных подписей у Солнца '+r.full.texts);
+    if(!r.full.last.startsWith(r.min+'′')) bad.push('минуты '+r.full.last+' вместо '+r.min);
+    if(!r.full.dots) bad.push('нет точек на круге аспектов');
+    if(r.brief.texts!==2||r.brief.dots) bad.push('краткие: подписей '+r.brief.texts+', точек '+r.brief.dots);
+    return !bad.length||bad.join('; ');
+  });
   /* REVIEW-2026-10-15-END */
 
   render();

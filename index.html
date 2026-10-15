@@ -853,6 +853,8 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
       <div class="setrow">
         <label class="chk"><input id="showSeconds" type="checkbox"><span data-i="secondsLabel"></span></label>
       </div>
+      <div class="setrow"><span class="setlab" data-i="wheelLabels"></span>
+        <select id="wheelLabels" class="langsel"></select></div>
     </div>
   </div>
 </dialog>
@@ -1264,6 +1266,10 @@ const STR = {
   lil_true:{ru:'Истинная (оскулирующая)',en:'True (osculating)'},
   transittime:{ru:'Время UT',en:'Time UT'},
   secondsLabel:{ru:'Показывать угловые секунды в позициях',en:'Show arc-seconds in positions'},
+  wheelLabels:{ru:'Подписи на колесе',en:'Labels on the wheel'},
+  wlAuto:{ru:'По размеру экрана',en:'By screen size'},
+  wlFull:{ru:'Подробные: градус, знак, минуты',en:'Full: degree, sign, minutes'},
+  wlBrief:{ru:'Краткие: градус',en:'Brief: degree'},
   needdata:{ru:'Заполните дату, время и место.',en:'Fill in date, time and place.'},
   empty:{ru:'Введите данные рождения и постройте карту.',en:'Enter birth data and cast the chart.'},
   natal:{ru:'Натальная карта',en:'Natal chart'},
@@ -1594,7 +1600,7 @@ const I18N={
     noTime:"hora de nacimiento desconocida, carta al mediodía", rrKnown:"hora tomada de un documento",
     delChart:"eliminar", hsysLabel:"SISTEMA DE CASAS", wzReset:"Ver la rueda completa", rulersLabel:"REGENTES", rulers_modern:"Modernos", rulers_classical:"Tradicionales", rulers_both:"Ambos", lil_mean:"Media (Lilith)", lil_mean_s:"Media",
     lil_true:"Verdadera (osculatriz)", lil_true_s:"Verdadera", transittime:"Hora UT",
-    secondsLabel:"Mostrar segundos de arco en las posiciones",
+    secondsLabel:"Mostrar segundos de arco en las posiciones", wheelLabels:"Etiquetas en la rueda", wlAuto:"Según la pantalla", wlFull:"Completas: grado, signo, minutos", wlBrief:"Breves: grado",
     needdata:"Rellena la fecha, la hora y el lugar.",
     empty:"Introduce los datos de nacimiento y levanta la carta.", natal:"Carta natal",
     era1:"Antes del cine", era2:"Nacidos 1880-1919 · la era de los estudios", era3:"Nacidos 1920-1949",
@@ -1647,7 +1653,7 @@ const I18N={
     libNone:"Rien trouvé. Essayez une partie du nom ou de la ville.",
     noTime:"heure de naissance inconnue, carte dressée à midi", rrKnown:"heure tirée d’un document",
     delChart:"supprimer", hsysLabel:"SYSTÈME DE MAISONS", wzReset:"Afficher toute la roue", rulersLabel:"MAÎTRES", rulers_modern:"Modernes", rulers_classical:"Traditionnels", rulers_both:"Les deux", lil_mean:"Moyenne (Lilith)", lil_mean_s:"Moyenne", lil_true:"Vraie (osculatrice)", lil_true_s:"Vraie", transittime:"Heure UT",
-    secondsLabel:"Afficher les secondes d’arc dans les positions",
+    secondsLabel:"Afficher les secondes d’arc dans les positions", wheelLabels:"Libellés sur la roue", wlAuto:"Selon l’écran", wlFull:"Complets : degré, signe, minutes", wlBrief:"Brefs : degré",
     needdata:"Renseignez la date, l’heure et le lieu.",
     empty:"Saisissez les données de naissance et dressez la carte.", natal:"Carte natale",
     era1:"Avant le cinéma", era2:"Nés en 1880-1919 · l’ère des studios", era3:"Nés en 1920-1949",
@@ -1699,7 +1705,7 @@ const I18N={
     noTime:"Geburtszeit unbekannt, Chart auf Mittag gerechnet", rrKnown:"Zeit aus einem Dokument",
     delChart:"löschen", hsysLabel:"HÄUSERSYSTEM", wzReset:"Ganzes Rad zeigen", rulersLabel:"HERRSCHER", rulers_modern:"Modern", rulers_classical:"Traditionell", rulers_both:"Beide", lil_mean:"Mittlere (Lilith)", lil_mean_s:"Mittlere",
     lil_true:"Wahre (oskulierend)", lil_true_s:"Wahre", transittime:"Zeit UT",
-    secondsLabel:"Bogensekunden in den Positionen zeigen", needdata:"Datum, Zeit und Ort ausfüllen.",
+    secondsLabel:"Bogensekunden in den Positionen zeigen", wheelLabels:"Beschriftung im Rad", wlAuto:"Nach Bildschirmgröße", wlFull:"Ausführlich: Grad, Zeichen, Minuten", wlBrief:"Kurz: Grad", needdata:"Datum, Zeit und Ort ausfüllen.",
     empty:"Geburtsdaten eingeben und das Chart berechnen.", natal:"Radix", era1:"Vor dem Kino",
     era2:"Geboren 1880-1919 · die Studio-Ära", era3:"Geboren 1920-1949", era4:"Geboren ab 1950",
     tapdetail:"Für Details einen Planeten antippen.", positions:"Positionen",
@@ -1750,7 +1756,7 @@ const I18N={
     noTime:"ora di nascita ignota, carta calcolata a mezzogiorno", rrKnown:"ora presa da un documento",
     delChart:"elimina", hsysLabel:"SISTEMA DI CASE", wzReset:"Mostra la ruota intera", rulersLabel:"GOVERNATORI", rulers_modern:"Moderni", rulers_classical:"Tradizionali", rulers_both:"Entrambi", lil_mean:"Media (Lilith)", lil_mean_s:"Media",
     lil_true:"Vera (osculatrice)", lil_true_s:"Vera", transittime:"Ora UT",
-    secondsLabel:"Mostra i secondi d’arco nelle posizioni", needdata:"Compila data, ora e luogo.",
+    secondsLabel:"Mostra i secondi d’arco nelle posizioni", wheelLabels:"Etichette sulla ruota", wlAuto:"In base allo schermo", wlFull:"Complete: grado, segno, minuti", wlBrief:"Brevi: grado", needdata:"Compila data, ora e luogo.",
     empty:"Inserisci i dati di nascita e calcola la carta.", natal:"Carta natale", era1:"Prima del cinema",
     era2:"Nati nel 1880-1919 · l’era degli studios", era3:"Nati nel 1920-1949", era4:"Nati dal 1950",
     tapdetail:"Tocca un pianeta per il dettaglio.", positions:"Posizioni",
@@ -1800,7 +1806,7 @@ const I18N={
     noTime:"час народження невідомий, карта на полудень", rrKnown:"час із документа", delChart:"видалити",
     hsysLabel:"СИСТЕМА ДОМІВ", wzReset:"Показати коло повністю", rulersLabel:"УПРАВИТЕЛІ", rulers_modern:"Сучасні", rulers_classical:"Класичні", rulers_both:"Обидва набори", lil_mean:"Середній (Ліліт)", lil_mean_s:"Середній",
     lil_true:"Істинний (оскулюючий)", lil_true_s:"Істинний", transittime:"Час UT",
-    secondsLabel:"Показувати кутові секунди в позиціях", needdata:"Заповніть дату, час і місце.",
+    secondsLabel:"Показувати кутові секунди в позиціях", wheelLabels:"Підписи на колі", wlAuto:"За розміром екрана", wlFull:"Докладні: градус, знак, хвилини", wlBrief:"Короткі: градус", needdata:"Заповніть дату, час і місце.",
     empty:"Введіть дані народження і побудуйте карту.", natal:"Натальна карта", era1:"До кінематографа",
     era2:"Народжені 1880-1919 · доба студій", era3:"Народжені 1920-1949", era4:"Народжені від 1950",
     tapdetail:"Торкніться планети, щоб побачити деталі.", positions:"Позиції",
@@ -1850,7 +1856,7 @@ const I18N={
     noTime:"დაბადების დრო უცნობია, რუკა შუადღეზეა აგებული", rrKnown:"დრო დოკუმენტიდან", delChart:"წაშლა",
     hsysLabel:"სახლების სისტემა", wzReset:"მთლიანი წრის ჩვენება", rulersLabel:"მმართველები", rulers_modern:"თანამედროვე", rulers_classical:"ტრადიციული", rulers_both:"ორივე", lil_mean:"საშუალო (ლილიტი)", lil_mean_s:"საშუალო",
     lil_true:"ჭეშმარიტი (ოსკულირებადი)", lil_true_s:"ჭეშმარიტი", transittime:"დრო UT",
-    secondsLabel:"რკალის წამების ჩვენება პოზიციებში", needdata:"შეავსე თარიღი, დრო და ადგილი.",
+    secondsLabel:"რკალის წამების ჩვენება პოზიციებში", wheelLabels:"წარწერები ბორბალზე", wlAuto:"ეკრანის ზომით", wlFull:"სრული: გრადუსი, ნიშანი, წუთები", wlBrief:"მოკლე: გრადუსი", needdata:"შეავსე თარიღი, დრო და ადგილი.",
     empty:"შეიყვანე დაბადების მონაცემები და ააგე რუკა.", natal:"ნატალური რუკა", era1:"კინომდე",
     era2:"დაბადებულები 1880-1919 · სტუდიების ეპოქა", era3:"დაბადებულები 1920-1949",
     era4:"დაბადებულები 1950-იდან", tapdetail:"დეტალისთვის შეეხე პლანეტას.", positions:"პოზიციები",
@@ -5931,7 +5937,7 @@ function drawWheel(ch,tr,t3=TR3_CHART){
   const ISO_IN=LIT_RING==='inner'?ISO:null, CONF_IN=LIT_RING==='inner'?CONF_ISO:null;
   const LIT_OUT=tr&&LIT_RING==='outer'?(CONF_ISO||(ISO?[ISO]:null)):null;
   const asc=ch.asc, polar=polarFor(asc);
-  const rich=!tr;
+  const rich=!tr&&fullLabels();
   /* The sign band is narrower in a natal chart alone, 20 units against 26, and
      the room goes to the bodies: Astro Gold spends about a tenth of the radius
      on its outer band and two fifths on the planets. */
@@ -6122,7 +6128,19 @@ function drawWheel(ch,tr,t3=TR3_CHART){
   if(tri) s+=innerScale(rMidScale);
   // --- aspects with glyph at midpoint, line broken there ---
   const asps=findAspects(ch.pos);
-  if(rich) s+=`<circle cx="${C}" cy="${C}" r="${rAsp}" fill="none" stroke="var(--line)" stroke-width="0.7"/>`;
+  if(rich){
+    s+=`<circle cx="${C}" cy="${C}" r="${rAsp}" fill="none" stroke="var(--line)" stroke-width="0.7"/>`;
+    /* Each body's own point on the aspect circle, at its true longitude, with a
+       faint line out to its scale tick. Without them an aspect ended on a bare
+       circle, and with the glyphs fanned apart nothing said whose end it was:
+       on Berlioz's chart the lines read as a second chart's. */
+    WHEEL_BODIES.concat(FACT_POINTS).filter(p=>ch.pos[p]).forEach(n=>{
+      const L=ch.pos[n].lon, [qx,qy]=polar(L,rAsp), [ox,oy]=polar(L,rAsp+5);
+      const dimP=CONF_IN?!CONF_IN.includes(n):(ISO_IN&&ISO_IN!==n&&!asps.some(a=>(a.p1===ISO_IN&&a.p2===n)||(a.p2===ISO_IN&&a.p1===n)));
+      s+=`<g class="ap" opacity="${dimP?0.3:1}"><line x1="${qx.toFixed(1)}" y1="${qy.toFixed(1)}" x2="${ox.toFixed(1)}" y2="${oy.toFixed(1)}" stroke="var(--ink2)" stroke-width="1.1"/>`
+        +`<circle cx="${qx.toFixed(1)}" cy="${qy.toFixed(1)}" r="1.6" fill="var(--ink)"/></g>`;
+    });
+  }
   asps.forEach(a=>{
     const [x1,y1]=polar(ch.pos[a.p1].lon,rAsp),[x2,y2]=polar(ch.pos[a.p2].lon,rAsp);
     const mx=(x1+x2)/2,my=(y1+y2)/2;
@@ -6160,7 +6178,10 @@ function drawWheel(ch,tr,t3=TR3_CHART){
       :(ISO_IN&&ISO_IN!==n&&!asps.some(a=>(a.p1===ISO_IN&&a.p2===n)||(a.p2===ISO_IN&&a.p1===n)));
     const hot=CONF_IN?CONF_IN.includes(n):ISO_IN===n;
     const [tx,ty]=polar(ch.pos[n].lon,rNatScale-8);
-    s+=`<g class="pl" data-p="${n}" style="cursor:pointer" opacity="${dim?0.25:1}">`;
+    /* Dimmed to 0.25 the unrelated stacks turned into a ghost ring, and a natal
+       chart with one body lit looked like two charts. 0.4 keeps them read as
+       the same chart, set back. */
+    s+=`<g class="pl" data-p="${n}" style="cursor:pointer" opacity="${dim?(rich?0.4:0.25):1}">`;
     s+=`<line x1="${tx.toFixed(1)}" y1="${ty.toFixed(1)}" x2="${px.toFixed(1)}" y2="${py.toFixed(1)}" stroke="var(--ink3)" stroke-width="0.7" opacity="0.7"/>`;
     /* No disc. The disc was 19 px across and the fan-out has to keep that much
        room between neighbours, which is what pushed a glyph up to 38 degrees
@@ -8675,6 +8696,24 @@ document.getElementById('reset').addEventListener('click',()=>{localStorage.remo
   document.getElementById('transitDate').addEventListener('change',jump);
   document.getElementById('transitTime').addEventListener('change',jump);
 }
+/* The full stack under each body reads well from tablet width up; on a phone
+   its minutes come out at 7 px, so there the brief labels are the default.
+   Either can be chosen anywhere. */
+let WHEEL_LABELS=(()=>{try{return localStorage.getItem('astrarium_wlabels')||'auto';}catch(e){return 'auto';}})();
+const WIDE_MQ=window.matchMedia?window.matchMedia('(min-width:700px)'):{matches:true};
+function fullLabels(){ return WHEEL_LABELS==='full'||(WHEEL_LABELS==='auto'&&WIDE_MQ.matches); }
+function redrawForLabels(){ if(typeof WHEEL_LAST!=='undefined'&&WHEEL_LAST&&WHEEL_LAST[0]) drawWheel(...WHEEL_LAST); }
+function fillWheelLabels(){
+  const sel=document.getElementById('wheelLabels'); if(!sel) return;
+  sel.innerHTML=[['auto','wlAuto'],['full','wlFull'],['brief','wlBrief']]
+    .map(([v,k])=>`<option value="${v}"${v===WHEEL_LABELS?' selected':''}>${t(k)}</option>`).join('');
+}
+fillWheelLabels();
+document.getElementById('wheelLabels').addEventListener('change',e=>{
+  WHEEL_LABELS=e.target.value; try{localStorage.setItem('astrarium_wlabels',WHEEL_LABELS);}catch(_){}
+  redrawForLabels();
+});
+if(WIDE_MQ.addEventListener) WIDE_MQ.addEventListener('change',()=>{ if(WHEEL_LABELS==='auto') redrawForLabels(); });
 document.getElementById('showSeconds').checked=SHOW_SECONDS;
 document.getElementById('showSeconds').addEventListener('change',e=>{
   SHOW_SECONDS=e.target.checked;
@@ -8689,7 +8728,7 @@ document.getElementById('langSel').addEventListener('change',e=>{
   LANG=e.target.value; localStorage.setItem('astrarium_lang',LANG);
   document.documentElement.lang=LANG;
   applyStatic(); fillHsys(); fillLil(); fillRulers(); renderOrbs(); fillScrubUnit(); renderRingSwitch();
-  setPlaying(PLAYING); fillNamePh(); fillLibSort(); renderLibrary();
+  setPlaying(PLAYING); fillNamePh(); fillLibSort(); renderLibrary(); try{ fillWheelLabels(); }catch(e){}
   upgradeAllSelects(); repaintDropdowns();
   renderGeoSum(); setGeoOpen(!document.getElementById('geoFields').hidden); renderAccess(); renderReport();
   if(CURRENT)run();
@@ -9758,7 +9797,7 @@ document.addEventListener('click',e=>{
   if(el.matches('#wheel,.planet-row')) return track('planet');
 },true);
 const CHANGE_EVENTS={hsys:'set:hsys',hsysSet:'set:hsys',lilmode:'set:lilmode',rulerSel:'set:rulerSel',
-  astOn:'set:astOn',house3d:'set:house3d',showSeconds:'set:showSeconds',langSel:'set:langSel',
+  astOn:'set:astOn',house3d:'set:house3d',showSeconds:'set:showSeconds',wheelLabels:'set:wheelLabels',langSel:'set:langSel',
   scrub:'scrub',transitDate:'scrub',transitTime:'scrub'};
 document.addEventListener('change',e=>{
   const el=e.target; if(!el) return;
@@ -9774,7 +9813,7 @@ const OPEN_LABEL={positionsCard:'positions',relocCard:'reloc',confCard:'conf',gr
   exportCard:'exportTitle',balCard:'balance',orbCard:'aspects',aboutCard:'aboutTitle',libCard:'libShort',setCard:'settings'};
 const SET_LABEL={hsys:()=>t('setHsys'),lilmode:()=>t('setLil'),rulerSel:()=>t('setRulers'),orbs:()=>t('aspects'),
   astOn:()=>t('asteroids').split(':')[0],house3d:()=>t('house3d').split('(')[0].trim(),
-  showSeconds:()=>t('secondsLabel'),langSel:()=>t('langLabel'),theme:()=>t('themeLabel')};
+  showSeconds:()=>t('secondsLabel'),wheelLabels:()=>t('wheelLabels'),langSel:()=>t('langLabel'),theme:()=>t('themeLabel')};
 function devicePlatform(){
   const C=window.Capacitor;
   if(inStoreShell()&&C&&C.getPlatform) return C.getPlatform()+' app';
