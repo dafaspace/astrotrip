@@ -3448,8 +3448,132 @@ const SEED_CITIES=[
 {r:'Гавана',e:'Havana',c:'CU',lat:23.1136,lon:-82.3666,z:'America/Havana'}
 ];
 /* NFD first, then strip the combining marks: without the decomposition step
-   "Zürich" keeps its precomposed ü and never matches a typed "zurich". */
-function normStr(s){ return (s||'').normalize('NFD').toLowerCase().replace(/[̀-ͯ]/g,''); }
+   "Zürich" keeps its precomposed ü and never matches a typed "zurich".
+   Hyphens, dots and apostrophes count as a space, and runs of spaces as one:
+   "Ростов на Дону" did not find Ростов-на-Дону, nor "Saint-Petersburg" Saint
+   Petersburg. */
+function normStr(s){
+  return (s||'').normalize('NFD').toLowerCase().replace(/[̀-ͯ]/g,'')
+    .replace(/[-‐‑‒–—.'’ʼ`]+/g,' ').replace(/\s+/g,' ');
+}
+/* Names a place is also looked for by. The atlas carries one Latin name and
+   one Russian name per place, so the names people actually type for the
+   largest cities were missing: the Ukrainian and Georgian forms the interface
+   offers (Київ, თბილისი), the old and foreign ones birth records use (Kiev,
+   Odessa, Leningrad, Tiflis, Bombay), and the local ones (München, Köln).
+   Keyed by country and the atlas's own name; the first, most populous row
+   with that name takes them. A curated list, not GeoNames' alternate names,
+   which are hundreds of megabytes - so smaller towns are still found only by
+   their Latin and Russian names. */
+const CITY_ALIASES={
+ 'UA|Kyiv':'Kiev;Київ;Киев;Kijów;Kiew;Kijev;კიევი',
+ 'UA|Kharkiv':'Kharkov;Харків;Charkiw;Kharkow;ხარკოვი',
+ 'UA|Odesa':'Odessa;Одеса;Odessa;ოდესა',
+ 'UA|Lviv':'Lvov;Lwów;Lemberg;Львів;Leopolis;ლვოვი',
+ 'UA|Dnipro':'Dnepropetrovsk;Dnipropetrovsk;Ekaterinoslav;Yekaterinoslav;Дніпро;Днепропетровск;Екатеринослав',
+ 'UA|Zaporizhzhya':'Zaporizhzhia;Zaporozhye;Запоріжжя;Александровск',
+ 'UA|Donetsk':'Донецьк;Stalino;Yuzovka;Юзовка;Сталино',
+ 'UA|Mykolayiv':'Mykolaiv;Nikolaev;Nikolayev;Миколаїв',
+ 'UA|Vinnytsya':'Vinnytsia;Vinnitsa;Вінниця',
+ 'UA|Chernihiv':'Chernigov;Чернігів',
+ 'UA|Poltava':'Полтава',
+ 'UA|Sumy':'Суми',
+ 'UA|Zhytomyr':'Zhitomir;Житомир',
+ 'UA|Ivano-Frankivsk':'Stanislav;Stanisławów;Івано-Франківськ;Станислав',
+ 'UA|Ternopil':'Tarnopol;Тернопіль',
+ 'UA|Uzhhorod':'Uzhgorod;Ungvár;Ужгород',
+ 'UA|Chernivtsi':'Chernovtsy;Czernowitz;Cernăuți;Чернівці',
+ 'UA|Kherson':'Херсон',
+ 'UA|Kropyvnytskyi':'Kirovohrad;Kirovograd;Yelisavetgrad;Elisavetgrad;Кропивницький;Кировоград;Елисаветград',
+ 'UA|Simferopol':'Сімферополь',
+ 'UA|Sevastopol':'Севастополь',
+ 'UA|Kryvyy Rih':'Kryvyi Rih;Krivoy Rog;Кривий Ріг',
+ 'UA|Luhansk':'Lugansk;Voroshilovgrad;Луганськ;Ворошиловград',
+ 'UA|Mariupol':'Маріуполь;Zhdanov;Жданов',
+ 'GE|Tbilisi':'თბილისი;Tiflis;Тифлис;Тбілісі',
+ 'GE|Batumi':'ბათუმი;Batum;Батум;Батумі',
+ 'GE|Kutaisi':'ქუთაისი;Кутаїсі',
+ 'GE|Rustavi':'რუსთავი',
+ 'GE|Zugdidi':'ზუგდიდი',
+ 'GE|Gori':'გორი',
+ 'GE|Poti':'ფოთი',
+ 'GE|Telavi':'თელავი',
+ 'GE|Sokhumi':'Sukhumi;Sukhum;Сухуми;სოხუმი',
+ 'RU|Moscow':'Moskau;Mosca;Moscou;Moscú;Москва;მოსკოვი',
+ 'RU|Saint Petersburg':'St Petersburg;Sankt Petersburg;San Pietroburgo;Saint Pétersbourg;San Petersburgo;Leningrad;Petrograd;Ленинград;Петроград;Санкт-Петербург;სანქტ-პეტერბურგი',
+ 'RU|Nizhniy Novgorod':'Nizhny Novgorod;Gorky;Gorki;Горький',
+ 'RU|Yekaterinburg':'Ekaterinburg;Sverdlovsk;Свердловск;Єкатеринбург',
+ 'RU|Samara':'Kuybyshev;Kuibyshev;Куйбышев',
+ 'RU|Volgograd':'Stalingrad;Tsaritsyn;Сталинград;Царицын',
+ 'RU|Tver':'Kalinin;Калинин',
+ 'RU|Kaliningrad':'Königsberg;Koenigsberg;Кёнигсберг',
+ 'RU|Tolyatti':'Togliatti;Stavropol on Volga',
+ 'RU|Ulyanovsk':'Simbirsk;Симбирск',
+ 'RU|Kirov':'Vyatka;Вятка',
+ 'RU|Izhevsk':'Ustinov',
+ 'RU|Vladikavkaz':'Ordzhonikidze;Орджоникидзе',
+ 'RU|Perm':'Molotov',
+ 'RU|Rostov-on-Don':'Rostov na Donu;Rostov',
+ 'BY|Minsk':'Мінськ;მინსკი',
+ 'MD|Chisinau':'Kishinev;Chișinău;Кишинев;Кишинів',
+ 'LT|Vilnius':'Wilno;Vilna;Wilna;Вільнюс',
+ 'EE|Tallinn':'Reval;Таллінн',
+ 'AM|Yerevan':'Erivan;Єреван;ერევანი',
+ 'AZ|Baku':'ბაქო',
+ 'KZ|Almaty':'Alma Ata;Алма-Ата;Verny',
+ 'KG|Bishkek':'Frunze;Фрунзе',
+ 'TJ|Dushanbe':'Stalinabad;Сталинабад',
+ 'TM|Ashgabat':'Ashkhabad;Poltoratsk',
+ 'MN|Ulan Bator':'Ulaanbaatar;Urga',
+ 'IN|Bengaluru':'Bangalore',
+ 'IN|Mumbai':'Bombay;Бомбей',
+ 'IN|Chennai':'Madras;Мадрас',
+ 'IN|Kolkata':'Calcutta;Калькутта',
+ 'CN|Beijing':'Peking;Pékin;Pechino',
+ 'MM|Yangon':'Rangoon',
+ 'VN|Ho Chi Minh City':'Saigon;Сайгон',
+ 'TR|Istanbul':'Constantinople;Konstantinopel;Константинополь;სტამბოლი',
+ 'DE|Munich':'München;Monaco di Baviera;Múnich',
+ 'DE|Köln':'Cologne;Koeln;Colonia',
+ 'DE|Nuremberg':'Nürnberg;Norimberga',
+ 'DE|Frankfurt am Main':'Frankfurt;Francfort',
+ 'CZ|Prague':'Praha;Prag;Praga;Прага;პრაღა',
+ 'CZ|Pilsen':'Plzeň;Plzen',
+ 'DK|Århus':'Aarhus',
+ 'DK|Copenhagen':'København;Kopenhagen;Copenhague;Copenaghen',
+ 'SE|Gothenburg':'Göteborg',
+ 'PL|Warsaw':'Warszawa;Warschau;Varsovie;Varsavia;Varsovia;Варшава;ვარშავა',
+ 'PL|Kraków':'Krakau;Cracovie;Cracovia;Cracow',
+ 'PL|Gdańsk':'Danzig',
+ 'PL|Wrocław':'Breslau',
+ 'PL|Poznań':'Posen',
+ 'SK|Bratislava':'Pressburg;Pozsony',
+ 'AT|Vienna':'Wien;Vienne;Viena;Відень;ვენა',
+ 'IT|Rome':'Roma;Rom;რომი',
+ 'IT|Milan':'Milano;Mailand',
+ 'IT|Naples':'Napoli;Neapel',
+ 'IT|Florence':'Firenze;Florenz;Florencia',
+ 'IT|Venice':'Venezia;Venedig;Venise;Venecia',
+ 'IT|Turin':'Torino',
+ 'IT|Genoa':'Genova;Genua;Gênes',
+ 'PT|Lisbon':'Lisboa;Lissabon;Lisbonne',
+ 'BE|Brussels':'Bruxelles;Brussel;Brüssel;Bruselas',
+ 'BE|Antwerp':'Antwerpen;Anvers;Amberes',
+ 'NL|The Hague':'Den Haag;s Gravenhage;La Haye;L Aia',
+ 'CH|Geneva':'Genève;Genf;Ginevra;Ginebra',
+ 'CH|Zürich':'Zurich;Zurigo',
+ 'CH|Basel':'Bâle;Basilea',
+ 'CH|Bern':'Berne;Berna',
+ 'CH|Luzern':'Lucerne;Lucerna',
+ 'GR|Athens':'Athína;Athen;Athènes;Atene;Atenas',
+ 'RO|Bucharest':'București;Bukarest;Bucarest',
+ 'RS|Belgrade':'Beograd;Belgrad;Belgrado',
+ 'GB|London':'Londres;Londra;Лондон;ლონდონი',
+ 'FR|Paris':'Parigi;Париж;პარიზი',
+ 'DE|Berlin':'Берлін;ბერლინი',
+ 'US|New York City':'New York;NYC;Нью-Йорк;Нью Йорк;ნიუ-იორკი',
+ 'MX|Mexico City':'Ciudad de México;Mexiko Stadt;Città del Messico;Mexico'
+};
 
 /* The atlas is searched as one flat string rather than 235k objects: building
    objects costs about 90 MB of heap on a phone and half a second of parse,
@@ -3466,7 +3590,7 @@ function atlasParse(text){
      is also findable as Zuerich). Every name therefore starts right after a
      newline, which is what lets one "\n"+query search find a prefix in any of
      them; a plain query search then finds it anywhere inside a name. */
-  const rowAt=[], foldAt=[], parts=[];
+  const rowAt=[], foldAt=[], parts=[], aliasUsed=new Set();
   let pos=0, at=0;
   while(pos<body.length){
     let e=body.indexOf('\n',pos); if(e===-1) e=body.length;
@@ -3474,6 +3598,8 @@ function atlasParse(text){
     const f=body.slice(pos,e).split('\t');
     let folded='\n'+normStr(f[0])+'\n'+normStr(f[1]);
     if(f[6]) folded+='\n'+normStr(f[6]);
+    const ak=f[4]+'|'+f[0], al=CITY_ALIASES[ak];
+    if(al&&!aliasUsed.has(ak)){ aliasUsed.add(ak); al.split(';').forEach(n=>{ folded+='\n'+normStr(n); }); }
     rowAt.push(pos); foldAt.push(at); at+=folded.length; parts.push(folded);
     pos=e+1;
   }
@@ -3586,7 +3712,10 @@ function searchCities(q){
     return out.map(atlasRow);
   }
   atlasLoad();
-  return SEED_CITIES.filter(c=>normStr(c.r).includes(q)||normStr(c.e).includes(q)).slice(0,8);
+  const aliasOf=c=>{ const k=Object.keys(CITY_ALIASES).find(k=>{const [cc,n]=k.split('|');
+    return cc===c.c&&(n===c.e||CITY_ALIASES[k].split(';').includes(c.e));}); return k?CITY_ALIASES[k]+';'+k.split('|')[1]:''; };
+  return SEED_CITIES.filter(c=>normStr(c.r).includes(q)||normStr(c.e).includes(q)
+    ||aliasOf(c).split(';').some(n=>n&&normStr(n).includes(q))).slice(0,8);
 }
 /* Seconds are written only when there are any. A zone offset never has them;
    local mean time almost always does - St Petersburg's is +02:01:20 - and a
@@ -8864,10 +8993,19 @@ function refreshCityListAfterAtlas(){
   const typing=document.activeElement===el||(box&&box.style.display==='block');
   if(typing) renderCityList(searchCities(el.value));
 }
+/* One row per place. Two places with the same name in the same country -
+   seven Springfields, two Kirovsks 700 km apart - looked identical, and one
+   was picked at random with its coordinates and sometimes its zone. Those
+   rows carry their coordinates beside the country. */
+function cityRows(items){
+  const key=c=>cityLabel(c)+'|'+c.c, n={};
+  items.forEach(c=>n[key(c)]=(n[key(c)]||0)+1);
+  return items.map(c=>`<div><span>${escH(cityLabel(c))}</span><span class="cc">${escH(c.c)}${n[key(c)]>1?' · '+escH(fmtGeo(c.lat,c.lon)):''}</span></div>`).join('');
+}
 function renderCityList(items){
   const box=document.getElementById('citylist');
   if(!items.length){box.style.display='none';box.innerHTML='';return;}
-  box.innerHTML=items.map(c=>`<div><span>${escH(cityLabel(c))}</span><span class="cc">${escH(c.c)}</span></div>`).join('');
+  box.innerHTML=cityRows(items);
   box.style.display='block';
   [...box.children].forEach((el,i)=>el.addEventListener('mousedown',ev=>{ev.preventDefault();selectCity(items[i]);}));
 }
@@ -9297,7 +9435,10 @@ applyStatic();
 upgradeAllSelects();
 /* The atlas is 3.8 MB over the wire, so it starts after first paint rather
    than blocking it: the seed answers meanwhile and the swap is invisible. */
-if('requestIdleCallback' in window) requestIdleCallback(atlasLoad,{timeout:4000});
+/* Wrapped, because requestIdleCallback hands its callback an IdleDeadline,
+   which atlasLoad took as immediate=true: the bar then flashed "loading,
+   only once" on every launch, even from the cache. */
+if('requestIdleCallback' in window) requestIdleCallback(()=>atlasLoad(),{timeout:4000});
 else setTimeout(atlasLoad,1200);
 
 
@@ -9910,7 +10051,7 @@ document.getElementById('expCsv').addEventListener('click',async()=>{
   const show=()=>{
     const items=searchCities(f.value);
     if(!items.length){ box.style.display='none'; box.innerHTML=''; return; }
-    box.innerHTML=items.map(c=>`<div><span>${escH(cityLabel(c))}</span><span class="cc">${escH(c.c)}</span></div>`).join('');
+    box.innerHTML=cityRows(items);
     box.style.display='block';
     [...box.children].forEach((el,i)=>el.addEventListener('mousedown',ev=>{
       ev.preventDefault();

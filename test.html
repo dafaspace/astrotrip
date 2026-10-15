@@ -3272,8 +3272,12 @@ function run(){
     return r==='Zürich'||`получилось ${r}`;
   });
   t('совпадение с начала имени идёт раньше совпадения внутри',()=>{
-    const r=ev(`searchCities('san')[0].e`);
-    return /^San/i.test(r)||`первым выдан ${r}`;
+    /* С начала любого из имён места, включая синонимы: Санкт-Петербург,
+       найденный как San Pietroburgo, это совпадение с начала, а Пусан нет. */
+    const r=ev(`(()=>{const c=searchCities('san')[0];
+      const names=[c.e,c.r].concat((CITY_ALIASES[c.c+'|'+c.e]||'').split(';'));
+      return {e:c.e, ok:names.some(n=>normStr(n).startsWith('san'))};})()`);
+    return r.ok||`первым выдан ${r.e}`;
   });
   t('часовой пояс из атласа даёт верное смещение для даты',()=>{
     /* Москва в 1984 году это UTC+4 летом: пояс из атласа должен пройти через
@@ -5326,6 +5330,21 @@ function run(){
         keep[1]==null?localStorage.removeItem(FORM_KEY):localStorage.setItem(FORM_KEY,keep[1]);
         restoreForm(CAST_KEY)||restoreForm(FORM_KEY); run(); }})()`);
     return (r.castY===1990&&r.formDate==='2001-01-01')||JSON.stringify(r);
+  });
+  t('#61 #62 #63 город находится по-украински, по-грузински, по старому имени и через пробел',()=>{
+    if(ev('ATLAS.state')!=='ready') return 'атлас не загрузился';
+    const want=[['Київ','Kyiv'],['Kiev','Kyiv'],['Odessa','Odesa'],['Львів','Lviv'],['თბილისი','Tbilisi'],['ბათუმი','Batumi'],
+      ['München','Munich'],['Cologne','Köln'],['Bangalore','Bengaluru'],['Leningrad','Saint Petersburg'],['Ulaanbaatar','Ulan Bator'],
+      ['Ростов на Дону','Rostov-on-Don'],['Saint-Petersburg','Saint Petersburg'],['St. Petersburg','Saint Petersburg'],
+      ['Нью Йорк','New York City'],['Улан Удэ','Ulan-Ude']];
+    const bad=want.map(([q,e])=>{const c=ev(`(searchCities(${JSON.stringify(q)})[0]||{}).e`);
+      return c===e?null:`${q} -> ${c}`;}).filter(Boolean);
+    return !bad.length||bad.join('; ');
+  });
+  t('#59 одноимённые места в списке различаются координатами',()=>{
+    const h=ev(`cityRows([{e:'Kirovsk',r:'Кировск',c:'RU',lat:67.61,lon:33.67},{e:'Kirovsk',r:'Кировск',c:'RU',lat:59.88,lon:30.99},{e:'Moscow',r:'Москва',c:'RU',lat:55.75,lon:37.62}])`);
+    const n=(h.match(/ · /g)||[]).length;
+    return n===2||`координаты у ${n} строк из 2 одноимённых`;
   });
   /* REVIEW-2026-10-15-END */
 
