@@ -8,7 +8,9 @@
 
 - верно сейчас: 105
 - исправлено ночью (высокая уверенность: обе Википедии или явное указание обоих стилей): 17
-- ждут решения: 15
+- исправлено днём после сверки тремя агентами (биографические словари, метрики, попытка опровергнуть): 12
+- оставлено как есть, подтверждено: 1 (Кандинский)
+- ждут решения: 3 (Шопен, Падеревский, Цадкин)
 
 ## Исправлено
 
@@ -32,37 +34,37 @@
 | Иоганн Христиан Бах | 01.09.1735 | 05.09.1735 | Leipzig (Saxony): Protestant German states used the Julian calendar until Feb 1700 (then the 'improved' calendar, equal to Gregorian). 1735 is Gregorian. en/de/ |
 | Иоганн Генрих Фюссли | 06.02.1741 | 07.02.1741 | Zurich: Gregorian since Jan 1701. en/de/ru all give 7 February 1741; stored 6 Feb matches none (not a calendar shift). |
 
+## Исправлено днём, после сверки тремя агентами
+
+Днём спорные записи сверили три независимых агента: один по биографическим словарям и метрикам
+(DNB, ODNB, Grove, Третьяковская галерея, ЖЗЛ, PAP), второй пытался опровергнуть и старую, и
+новую дату, третий по астрологическим базам (не вернулся, его результат не использован).
+Ниже только записи, где первые два сошлись, или где старая дата не выдерживает ни одной версии.
+
+| запись | было | стало | основание |
+|---|---|---|---|
+| Генри Пёрселл | 10.09.1659 | 20.09.1659 | Англия жила по юлианскому; 10 сентября старого стиля. Сам день держится на неясной надписи (Grove), год на мемориальной доске. |
+| Уильям Хогарт | 10.11.1697 | 20.11.1697 | Англия до 1752 года, дата по старому стилю. |
+| Джошуа Рейнолдс | 16.07.1723 | 27.07.1723 | то же. |
+| Джордж Стаббс | 25.08.1724 | 05.09.1724 | старый стиль; день спорен сам по себе: 25 августа у Egerton и ODNB, 24 у DNB и Britannica. Взято 25. |
+| Томас Гейнсборо | 14.05.1727 | 25.05.1727 | старый стиль; это дата крещения, день рождения неизвестен, так и сказано в `src`. |
+| Джозеф Райт | 03.09.1734 | 14.09.1734 | старый стиль. |
+| Готфрид Кнеллер | 08.08.1646 | 18.08.1646 | Любек, протестантский, юлианский до 1700. |
+| Мария Сибилла Мериан | 02.04.1647 | 12.04.1647 | Франкфурт, то же. |
+| Ульрика Элеонора Датская | 11.09.1656 | 21.09.1656 | Дания-Норвегия, юлианский до 1700. |
+| Исаак Левитан | 15.10.1860, Кедайняй | 30.08.1860, Кибартай | 18 (30) августа 1860, Кибарты: общепринятая дата, хроника Третьяковской галереи (2010). Запись 1860 года из Кедайняя относится к Ицику-Лейбу, сыну Хацкеля, а не Эльяша; отождествление с Левитаном - гипотеза. |
+| Сергей Прокофьев | 23.03.1891 | 27.04.1891 | старая дата не совпадает ни с одним источником. Метрическая книга Петропавловской церкви: родился 15 апреля по юлианскому (Вишневецкий, ЖЗЛ, цитирует справку консистории 1904 года). Сам он отмечал 23 апреля; это сказано в `src`. Взят документ, а не обычай. |
+| Тамара Лемпицка | 16.05.1898 | 28.06.1894 | 1898 - год, который она называла сама. Запись о крещении: 16 июня 1894 по юлианскому, 28 июня по григорианскому (PAP, Национальный музей в Люблине, 2024). Место рождения спорно (Варшава или Москва), город оставлен. |
+
+## Подтверждено, не менялось
+
+**Кандинский, 04.12.1866.** Оба агента: 22 ноября по старому стилю = 4 декабря по новому, крещён
+30 ноября; хранимое 04.12.1866 уже григорианское. Английское «16 декабря» - ошибка пересчёта.
+
 ## Ждут решения Дафы
 
-Средняя или низкая уверенность, спорная дата или дата крещения вместо рождения. Ничего из этого не менялось.
-
-| запись | сейчас | предлагается | почему не исправлено |
+| запись | сейчас | другая версия | почему не исправлено |
 |---|---|---|---|
-| Генри Пёрселл | 10.09.1659 | 20.09.1659 | medium: Wikipedia gives c. 10 September 1659 with an explicit footnote that England then used the Julian calendar; the day itself is uncertain (no baptism record; year from memorial tablet). Gregorian computed (+10). |
-| Уильям Хогарт | 10.11.1697 | 20.11.1697 | medium: Sources give 10 November 1697 without a style marker; England used the Julian calendar until Sept 1752; English Wikipedia and ODNB give pre-1752 English dates as recorded (Old Style, year from 1 Jan). Not a Jan-Mar date, |
-| Джошуа Рейнолдс | 16.07.1723 | 27.07.1723 | medium: Sources give 16 July 1723 (ODNB-based) without marker; England used the Julian calendar until Sept 1752; English Wikipedia and ODNB give pre-1752 English dates as recorded (Old Style, year from 1 Jan). Not a Jan-Mar date |
-| Джордж Стаббс | 25.08.1724 | 05.09.1724 | medium: en gives 25 August 1724; ru and Wikidata (preferred) give 24 August. England used the Julian calendar until Sept 1752; English Wikipedia and ODNB give pre-1752 English dates as recorded (Old Style, year from 1 Jan). Not  |
-| Томас Гейнсборо | 14.05.1727 | 25.05.1727 | medium: 14 May 1727 is the BAPTISM date (birth date unknown). England used the Julian calendar until Sept 1752; English Wikipedia and ODNB give pre-1752 English dates as recorded (Old Style, year from 1 Jan). Not a Jan-Mar date, |
-| Джозеф Райт | 03.09.1734 | 14.09.1734 | medium: Sources give 3 September 1734 without marker; England used the Julian calendar until Sept 1752; English Wikipedia and ODNB give pre-1752 English dates as recorded (Old Style, year from 1 Jan). Not a Jan-Mar date, so no d |
-| Фредерик Шопен | 22.02.1810 | 01.03.1810 | medium: Duchy of Warsaw used the Gregorian calendar, so no style issue. Stored 22 Feb is the birthday written in the parish baptismal record (dated 23 Apr 1810); Chopin and his family used 1 March, which en/ru Wikipedia lead wit |
-| Игнаций Ян Падеревский | 18.11.1860 | 06.11.1860 | medium: Kurilivka, Podolia, Russian Empire. en: 6 November [O.S. 25 October] 1860; pl: 25 października/6 listopada 1860. ru instead says 6 (18) ноября, treating 6 Nov as Old Style. Stored 18 Nov follows ru; two sources (en, pl)  |
-| Василий Васильевич Кандинский | 04.12.1866 | 16.12.1866 | medium: en (and most references incl. Britannica): 16 December [O.S. 4 December] 1866. CONFLICT: ru Wikipedia gives 22 ноября [4 декабря] 1866 and says he was baptised in the Church of St Nicholas in Khlynov on 30 November 1866  |
-| Осип Цадкин | 14.07.1890 | ? | low: Disputed beyond calendar style. en (archival research): born 28 January 1888 in Vitebsk, style not stated. ru: 14 июля 1890 (the date Zadkine himself gave). Wikidata prefers 4 July 1888. Stored 1890-07-14 is his self-rep |
-| Сергей Сергеевич Прокофьев | 23.03.1891 | 23.04.1891 | medium: ru: 11 [23] апреля 1891, the date Prokofiev gave repeatedly in his diary; en: 27 April [O.S. 15 April] 1891, from a copy of the birth (metric) record. Stored 1891-03-23 is a month off and matches neither. 1891-04-23 reco |
-| Тамара Лемпицка | 16.05.1898 | 16.06.1894 | medium: en and pl: 16 June 1894 (Warsaw, or Moscow per pl); ru: 16 мая 1898, the date she gave herself (she shaved years off). Stored follows ru. If born in Warsaw, Gregorian applies and no style issue; if Moscow, the style of 1 |
-| Готфрид Кнеллер | 08.08.1646 | 18.08.1646 | medium: Lübeck, Protestant Free City: Julian calendar in force (until 1700). Sources give 8 August 1646 with no style marker; as Lübeck (and his later home, England) were both Julian, it is the recorded Old Style date. Gregorian |
-| Мария Сибилла Мериан | 02.04.1647 | 12.04.1647 | medium: Frankfurt am Main, Protestant Free Imperial City: Julian calendar in force (until 1700). All sources give 2 April 1647 with no style marker = the recorded Old Style date. Gregorian computed (+10). |
-| Ульрика Элеонора Датская | 11.09.1656 | 21.09.1656 | medium: Copenhagen: Denmark-Norway used the Julian calendar until Feb 1700. en/da/sv give 11 September 1656 unmarked; Danish and Swedish historiography give pre-1700 dates in Old Style. Gregorian computed (+10). |
-
-**Мой совет по британским записям до 1752 года** (Пёрселл, Хогарт, Рейнолдс, Стаббс,
-Гейнсборо, Райт): английская традиция и Oxford DNB дают даты до 1752 года по старому стилю, так
-что перевод на новый (+10 или +11 дней) почти наверняка верен; уверенность средняя только потому,
-что ни один источник не пишет это явно у самой даты. То же для Кнеллера (Любек), Мериан
-(Франкфурт) и Ульрики Элеоноры (Копенгаген): протестантские земли жили по юлианскому до 1700 года.
-
-**Кандинский:** английская Википедия и Britannica дают 16 декабря [4 декабря ст. ст.], русская
-22 ноября [4 декабря] с крещением 30 ноября 1866 по старому стилю. Если права русская, нынешнее
-04.12.1866 уже григорианское. Нужна метрическая запись.
-
-**Шопен, Задкин, Прокофьев, Лемпицка, Падеревский, Левитан:** дата спорная сама по себе, не из-за
-календаря. Решение, какую версию держать, за вами; в карточке стоит назвать вторую версию в `src`.
+| Фредерик Шопен | 22.02.1810 | 01.03.1810 | не вопрос календаря: 22 февраля в метрике, 1 марта праздновала семья и он сам. Вопрос правила, `src` уже называет вторую дату. |
+| Игнаций Ян Падеревский | 18.11.1860 | 06.11.1860 | агенты разошлись: en и pl дают 6 ноября нового стиля (25 октября старого), ru даёт 6 (18) ноября. Метрики не найдено. |
+| Осип Цадкин | 14.07.1890 | 28.01.1888 или 04.07.1888 | 1890 - дата, которую он называл сам; архивные версии 1888 года расходятся между собой. Метрики не найдено. |

@@ -5449,6 +5449,16 @@ function run(){
       const e=arcsec(c,v); return e<=3?null:`${y}: ${e.toFixed(1)}″`;}).filter(Boolean);
     return !bad.length||bad.join('; ');
   });
+  t('спорные даты библиотеки: по григорианскому, Левитан в Кибартае, библиотека по порядку дат',()=>{
+    const want={henrypurcell:'1659-9-20',williamhogarth:'1697-11-20',joshuareynolds:'1723-7-27',georgestubbs:'1724-9-5',
+      thomasgainsboro:'1727-5-25',josephwrightofd:'1734-9-14',isaaclevitan:'1860-8-30',sergeiprokofiev:'1891-4-27',
+      tamaradelempick:'1894-6-28',godfreykneller:'1646-8-18',mariasibyllamer:'1647-4-12',ulrikaeleonorao:'1656-9-21'};
+    const r=ev(`JSON.stringify(CHART_LIBRARY.map(e=>[e.id,e.y+'-'+e.mo+'-'+e.d,e.city.en,e.y*400+e.mo*32+e.d]))`), L=JSON.parse(r);
+    const bad=Object.entries(want).filter(([id,v])=>{const e=L.find(x=>x[0]===id); return !e||e[1]!==v;}).map(([id])=>id);
+    if(L.find(x=>x[0]==='isaaclevitan')[2]!=='Kybartai') bad.push('Levitan city');
+    for(let i=1;i<L.length;i++) if(L[i][3]<L[i-1][3]){ bad.push('order at '+L[i][0]); break; }
+    return !bad.length||bad.join(', ');
+  });
   /* REVIEW-2026-10-15-END */
 
   render();
