@@ -246,6 +246,22 @@ svg{display:block;width:100%;height:auto;touch-action:manipulation}
    the screen and takes its full width back. */
 #chartCard.bare #wheel svg{max-height:62vh}
 @media (max-width:430px){ #chartCard.bare #wheel svg{max-width:100%} }
+/* A wide screen is where an astrologer works with a client, and there the wheel
+   is the page: it stands on the left at the full height of the window and stays
+   in view, while everything read off it scrolls in a column on the right. That
+   is the layout of Astro Gold and Solar Fire, and the 420px ceiling above was a
+   phone's rule applied to a desk. The window's own size is the control: no
+   setting for the wheel's size, the wheel fills whatever room it is given. */
+@media (min-width:1100px){
+  header,.wrap{max-width:1440px}
+  #results{display:grid;grid-template-columns:minmax(0,1fr) minmax(380px,460px);gap:0 20px;align-items:start}
+  #results>#chartCard{grid-column:1;grid-row:1/span 30;position:sticky;top:8px;margin-top:0}
+  #results>:not(#chartCard){grid-column:2}
+  #results>:not(#chartCard):first-of-type{margin-top:0}
+  #chartCard #wheel{max-width:none}
+  #chartCard #wheel svg{max-height:calc(100vh - 330px);min-height:420px}
+  #chartCard.bare #wheel svg{max-height:calc(100vh - 270px)}
+}
 .scrub{border:1px solid var(--line);border-radius:12px;padding:10px 12px 12px;margin:10px 0 0;background:var(--paper3)}
 .momrow{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:4px}
 .mom{font-family:'Literata',Georgia,serif;font-size:17px;font-variant-numeric:tabular-nums}
@@ -5915,7 +5931,11 @@ function drawWheel(ch,tr,t3=TR3_CHART){
   const ISO_IN=LIT_RING==='inner'?ISO:null, CONF_IN=LIT_RING==='inner'?CONF_ISO:null;
   const LIT_OUT=tr&&LIT_RING==='outer'?(CONF_ISO||(ISO?[ISO]:null)):null;
   const asc=ch.asc, polar=polarFor(asc);
-  const rHouOut=C-3, rHouIn=C-26, rZodIn=C-52, rTickEnd=C-60;
+  const rich=!tr;
+  /* The sign band is narrower in a natal chart alone, 20 units against 26, and
+     the room goes to the bodies: Astro Gold spends about a tenth of the radius
+     on its outer band and two fifths on the planets. */
+  const rHouOut=C-3, rHouIn=C-26, rZodIn=rich?C-46:C-52, rTickEnd=C-60;
   /* With three rings the outermost keeps the place the bi-wheel's outer ring
      had, against the zodiac scale, and the middle ring takes the place the
      natal one had, against a scale of its own at C-82. Natal moves in by one
@@ -5941,8 +5961,14 @@ function drawWheel(ch,tr,t3=TR3_CHART){
      leader, it is 4.57 and 31.1 - level with the bi-wheel once asteroids are
      on. Two radial lanes were tried on paper and lost: the inner lane is at a
      smaller radius, so it needs a wider angle, which eats most of the gain. */
-  const rPl=rNatScale-(tri?16:19);
-  const natFoot=tri?4.5:5.5, natFs=tri?11:13, natPtFs=tri?9.5:11, natDegFs=tri?7.5:8.5;
+  /* A natal chart on its own reads like Astro Gold's, measured from its window
+     at the same scale: the bodies take about two fifths of the radius, each one
+     carries its full position as a stack - glyph, degree, sign, minutes - and
+     the aspects sit inside a circle of their own. Glyphs are 17 units on a
+     190-unit radius against Astro Gold's 26 on 330, the same 8 per cent. With
+     a second ring there is no room for the stack and the compact layout stays. */
+  const rPl=rich?rNatScale-17:rNatScale-(tri?16:19);
+  const natFoot=rich?8.5:(tri?4.5:5.5), natFs=rich?17:(tri?11:13), natPtFs=rich?14:(tri?9.5:11), natDegFs=rich?10.5:(tri?7.5:8.5);
   const rDeg=rPl-16;
   /* Aspect chords start where the body's exact tick ends, not on a small inner
      circle. A chord drawn between two points on a circle of radius 91 has its
@@ -5951,7 +5977,7 @@ function drawWheel(ch,tr,t3=TR3_CHART){
      Read on the wheel that looks like an aspect line pointing at nothing in
      particular, which is what it was. Running them from tick to tick removes
      the question: each end is on the body's own degree. */
-  const rAsp=rNatScale-8;
+  const rAsp=rich?rPl-52:rNatScale-8;
   /* How far apart two glyphs must sit so their discs do not overlap. It is an
      angle, and an angle that depends on the radius: the same 8.5 degrees that
      kept them clear at radius 114 leaves 12.7 units between centres at radius
@@ -5964,7 +5990,10 @@ function drawWheel(ch,tr,t3=TR3_CHART){
      wedge now, not the disc, so the drawing no longer has to carry the finger. */
   const sepFor=(R,rad)=>2*Math.asin(Math.min(1,(rad+1)/R))*R2D;
   /* Half the glyph's footprint, not half a disc: 5.5 against the old 9.5. */
-  const sepPl=sepFor(rPl,natFoot), sepTr=tr?sepFor(rTrG,5):0, sep3=tri?sepFor(rTr,5):0;
+  /* The full stack runs 40 units in towards the centre, and the same angle is
+     narrower there: two stacks clear at the glyph overlapped at the minutes.
+     So the spacing is solved at the stack's inner end, for the minutes' width. */
+  const sepPl=rich?Math.max(sepFor(rPl,natFoot),sepFor(rPl-42,11)):sepFor(rPl,natFoot), sepTr=tr?sepFor(rTrG,5):0, sep3=tri?sepFor(rTr,5):0;
   const cusps=ch.houses.cusps;
   function sector(l0,l1,r1,r2,fill,op){
     const [ax,ay]=polar(l0,r2),[bx,by]=polar(l1,r2),[cx,cy]=polar(l1,r1),[dx,dy]=polar(l0,r1);
@@ -6036,7 +6065,7 @@ function drawWheel(ch,tr,t3=TR3_CHART){
        from 1.55 to 1.15, which is what made the sectors look washed out. */
     s+=sector(i*30,(i+1)*30,rZodIn,rHouIn,ELEM_VAR[i%4],1);
     const [gx,gy]=polar(i*30+15,(rZodIn+rHouIn)/2);
-    s+=`<text x="${gx.toFixed(1)}" y="${(gy+5.5).toFixed(1)}" text-anchor="middle" font-size="15" font-family="Astro,Inter,sans-serif" fill="var(--ink)">${SIGN_GLYPH[i]}</text>`;
+    s+=`<text x="${gx.toFixed(1)}" y="${(gy+(rich?4.8:5.5)).toFixed(1)}" text-anchor="middle" font-size="${rich?13:15}" font-family="Astro,Inter,sans-serif" fill="var(--ink)">${SIGN_GLYPH[i]}</text>`;
   }
   // --- degree tick ring: every 1°, taller every 5° ---
   let ticks='';
@@ -6090,6 +6119,7 @@ function drawWheel(ch,tr,t3=TR3_CHART){
   if(tri) s+=innerScale(rMidScale);
   // --- aspects with glyph at midpoint, line broken there ---
   const asps=findAspects(ch.pos);
+  if(rich) s+=`<circle cx="${C}" cy="${C}" r="${rAsp}" fill="none" stroke="var(--line)" stroke-width="0.7"/>`;
   asps.forEach(a=>{
     const [x1,y1]=polar(ch.pos[a.p1].lon,rAsp),[x2,y2]=polar(ch.pos[a.p2].lon,rAsp);
     const mx=(x1+x2)/2,my=(y1+y2)/2;
@@ -6153,10 +6183,21 @@ function drawWheel(ch,tr,t3=TR3_CHART){
        thing. */
     /* Inward, not outward. Outward is where the leader line runs and where the
        scale is, and in a stellium the numbers landed on both. */
-    const [dx2,dy2]=polar(disp,rPl-fs*0.82);
-    s+=`<text x="${dx2.toFixed(1)}" y="${(dy2+3).toFixed(1)}" text-anchor="middle"`
-      +` font-size="${natDegFs}" paint-order="stroke" stroke="var(--paper)" stroke-width="2.5"`
-      +` stroke-linejoin="round" fill="var(--ink3)">${deg}${retro}</text>`;
+    const [dx2,dy2]=polar(disp,rPl-fs*(rich?0.95:0.82));
+    const halo=` paint-order="stroke" stroke="var(--paper)" stroke-width="2.5" stroke-linejoin="round"`;
+    /* In the full stack the degree is the position counted from zero, as the
+       sign and minutes after it are: 5 deg 36 min of Scorpio reads 5 Sc 36.
+       Alone it stays the ordinal the cusps use. */
+    const L=rev(ch.pos[n].lon), d0=Math.floor(L%30), mn=Math.floor((L%1)*60);
+    s+=`<text x="${dx2.toFixed(1)}" y="${(dy2+3.6).toFixed(1)}" text-anchor="middle"`
+      +` font-size="${natDegFs}"${halo} fill="${rich?'var(--ink)':'var(--ink3)'}">${rich?d0+'°':deg+retro}</text>`;
+    if(rich){
+      const [sx,sy]=polar(disp,rPl-fs*0.95-12.5), [mx2,my2]=polar(disp,rPl-fs*0.95-24);
+      s+=`<text x="${sx.toFixed(1)}" y="${(sy+3.6).toFixed(1)}" text-anchor="middle" font-size="10.5"`
+        +` font-family="Astro,Inter,sans-serif"${halo} fill="var(--ink2)">${SIGN_GLYPH[Math.floor(L/30)]}</text>`;
+      s+=`<text x="${mx2.toFixed(1)}" y="${(my2+3).toFixed(1)}" text-anchor="middle" font-size="8.5"`
+        +`${halo} fill="var(--ink2)">${String(mn).padStart(2,'0')}′${retro}</text>`;
+    }
     s+=`</g>`;
   });
   // --- the outer rings: one in a bi-wheel, two in a tri-wheel ---
