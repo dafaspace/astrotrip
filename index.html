@@ -2761,6 +2761,14 @@ Object.assign(I18N.ka,{
   importRejected:"ვერ წაიკითხა: {n} (შეამოწმე თარიღი, დრო, კოორდინატები და UTC წანაცვლება)",
   storageFull:"არ შეინახა: აპის ადგილი ამ მოწყობილობაზე სავსეა. გაიტანე CSV, შემდეგ შეამოკლე შენიშვნები ან წაშალე რუკები."
 });
+Object.assign(STR,{accessEnded:{ru:'Неделя полного доступа закончилась. Одна карта и всё о ней остаются бесплатными.',
+  en:'The week of full access has ended. One chart and everything about it stays free.'}});
+Object.assign(I18N.es,{accessEnded:"La semana de acceso completo ha terminado. Una carta y todo lo que contiene siguen siendo gratis."});
+Object.assign(I18N.fr,{accessEnded:"La semaine d’accès complet est terminée. Une carte et tout ce qui la concerne restent gratuits."});
+Object.assign(I18N.de,{accessEnded:"Die Woche mit vollem Zugang ist vorbei. Ein Chart und alles dazu bleiben kostenlos."});
+Object.assign(I18N.it,{accessEnded:"La settimana di accesso completo è finita. Una carta e tutto ciò che la riguarda restano gratuiti."});
+Object.assign(I18N.uk,{accessEnded:"Тиждень повного доступу закінчився. Одна карта й усе про неї лишаються безкоштовними."});
+Object.assign(I18N.ka,{accessEnded:"სრული წვდომის კვირა დასრულდა. ერთი რუკა და ყველაფერი მასზე უფასო რჩება."});
 /* STR holds the two languages the app was written in, key-major, which is how
    they were edited. I18N holds the six added afterwards, language-major, which
    is how a translator reads them. Lookup order: added pack, then STR for this
@@ -7642,9 +7650,16 @@ function isPro(){ return inStoreShell()||ACCESS_UNTIL>Date.now(); }
 const fromB64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
 /* A key is 69 bytes: version, the end date in seconds (4 bytes, big-endian), and
    the ECDSA P-256 signature of those five, in the raw form WebCrypto verifies. */
+/* The key itself out of whatever was pasted: a bare key, or the whole link
+   whose fragment carries one. The link is what tools-access-key.mjs prints
+   first, and pasting it whole was answered with "not valid or expired". */
+function keyPart(code){
+  const s=String(code||'').trim(), m=/[#?&]key=([A-Za-z0-9_-]+)/.exec(s);
+  return m?m[1]:s;
+}
 async function verifyAccessKey(code){
   try{
-    let s=String(code||'').trim().replace(/-/g,'+').replace(/_/g,'/');
+    let s=keyPart(code).replace(/-/g,'+').replace(/_/g,'/');
     while(s.length%4) s+='=';
     const b=fromB64(s);
     if(b.length!==69||b[0]!==1||!(window.crypto&&crypto.subtle)) return 0;
@@ -7669,13 +7684,33 @@ const fmtDay=ms=>{ const d=new Date(ms); return `${pad2(d.getDate())}.${pad2(d.g
 async function applyAccessKey(code,announce,restore){
   const until=await verifyAccessKey(code);
   if(!(until>Date.now())){ if(announce) toast(t('accessBad')); return false; }
-  ACCESS_UNTIL=until;
-  try{ localStorage.setItem(ACCESS_KEY,String(code).trim()); }catch(e){}
+  ACCESS_UNTIL=until; scheduleAccessEnd();
+  try{ localStorage.setItem(ACCESS_KEY,keyPart(code)); }catch(e){}
   if(restore&&RING_MODE==='none'&&WANT_RING[0]!=='none'){ RING_MODE=WANT_RING[0]; RING2_MODE=WANT_RING[1]; }
   renderAccess(); renderReport(); renderRingSwitch(); if(CURRENT) renderTransits(CURRENT);
   if(announce) toast(t('accessOpened').replace('{d}',fmtDay(until)));
   return true;
 }
+/* The week ends while the app is open, not only at the next launch: a paid
+   ring cast in the morning kept working into the evening after the key ran
+   out. A timer at the end date (re-armed in steps, since setTimeout holds at
+   most 24.8 days) and a check whenever the app comes back to the front. */
+let ACCESS_T=0;
+function scheduleAccessEnd(){
+  clearTimeout(ACCESS_T);
+  if(inStoreShell()||!(ACCESS_UNTIL>Date.now())) return;
+  ACCESS_T=setTimeout(accessCheck,Math.min(ACCESS_UNTIL-Date.now()+500,2147483000));
+}
+function accessCheck(){
+  if(isPro()){ scheduleAccessEnd(); return; }
+  if(!ACCESS_UNTIL) return;
+  ACCESS_UNTIL=0;
+  const paid=RING_MODE!=='none';
+  RING_MODE='none'; RING2_MODE='none';
+  renderAccess(); renderRingSwitch(); if(CURRENT) renderTransits(CURRENT);
+  if(paid) toast(t('accessEnded'));
+}
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') accessCheck(); });
 function renderAccess(){
   const sec=document.getElementById('accessSec'); if(!sec) return;
   sec.hidden=inStoreShell();
@@ -8962,16 +8997,29 @@ function scrollChartIntoView(){
    storing a result that a later version might compute differently. */
 const FORM_KEY='astrarium_form';
 const FORM_FIELDS=['date','time','city','chartName','lat','lng','tz'];
-function saveForm(){
+/* Two records, not one. The form as it stands is a draft and is written
+   whenever the app goes to the background; the chart last CAST is written
+   only when a chart is cast. A cold start used to cast whatever the draft
+   held, so a date changed for the next client and left unfinished came back
+   as a chart - new date, old time, old place, the old name on top - with the
+   form closed and no way back to the chart that was on screen. Now the cast
+   chart comes back, and an unfinished draft comes back in the open form. */
+const CAST_KEY='astrarium_cast';
+function formNow(){
+  const o={};
+  FORM_FIELDS.forEach(id=>{const e=document.getElementById(id); if(e) o[id]=e.value;});
+  if(typeof SELECTED_CITY!=='undefined'&&SELECTED_CITY) o.__city=SELECTED_CITY;
+  return o;
+}
+function saveForm(cast){
   try{
-    const o={};
-    FORM_FIELDS.forEach(id=>{const e=document.getElementById(id); if(e) o[id]=e.value;});
-    if(typeof SELECTED_CITY!=='undefined'&&SELECTED_CITY) o.__city=SELECTED_CITY;
-    localStorage.setItem(FORM_KEY,JSON.stringify(o));
+    const o=JSON.stringify(formNow());
+    localStorage.setItem(FORM_KEY,o);
+    if(cast===true) localStorage.setItem(CAST_KEY,o);
   }catch(e){}
 }
-function restoreForm(){
-  let o; try{ o=JSON.parse(localStorage.getItem(FORM_KEY)); }catch(e){ return false; }
+function restoreForm(key){
+  let o; try{ o=JSON.parse(localStorage.getItem(key||FORM_KEY)); }catch(e){ return false; }
   if(!o) return false;
   FORM_FIELDS.forEach(id=>{const e=document.getElementById(id);
     if(e&&o[id]!=null&&o[id]!=='') e.value=o[id];});
@@ -9009,7 +9057,7 @@ function run(){
   document.getElementById('charttitle').textContent=chartTitle(CURRENT);
   renderPositions(CURRENT); renderBalance(CURRENT); renderChartMeta(CURRENT,y,mo,da,hh,mi,tz);
   fillExport();
-  saveForm();
+  saveForm(true);
   renderRelocBrief();
   if(FEATURES.interpretation) document.getElementById('reading').innerHTML=natalReading(CURRENT);
   renderTransits(CURRENT);          // casts the transit ring and draws the wheel
@@ -10136,10 +10184,20 @@ document.getElementById('accessApply').addEventListener('click',()=>{
    before, so a reload does not announce it again. A link opened in a tab where
    the site is already open changes only the fragment and reloads nothing, so
    that change is listened for as well. */
+/* A key in the address is weighed against the stored one, not put over it.
+   A home-screen icon keeps the link it was made from, so a week later it
+   arrives with last week's key while a newer one sits in storage: that used
+   to say "not valid" and close the paid part, or, while the old key still
+   ran, overwrite the newer one. The later of the two valid keys wins, and a
+   stale link over a good stored key says nothing at all. */
 function keyFromAddress(){
   const m=/^#key=([A-Za-z0-9_-]+)$/.exec(location.hash); if(!m) return false;
   let saved=null; try{ saved=localStorage.getItem(ACCESS_KEY); }catch(e){}
-  applyAccessKey(m[1],saved!==m[1],true);
+  if(!saved||saved===m[1]){ applyAccessKey(m[1],saved!==m[1],true); return true; }
+  Promise.all([verifyAccessKey(m[1]),verifyAccessKey(saved)]).then(([link,kept])=>{
+    if(kept>Date.now()&&kept>=link) applyAccessKey(saved,false,true);
+    else applyAccessKey(m[1],true,true);
+  });
   return true;
 }
 addEventListener('hashchange',keyFromAddress);
@@ -10270,8 +10328,22 @@ document.addEventListener('click',e=>{
 });
 renderGeoSum(); setGeoOpen(false);
 
-if(restoreForm()&&run()){ setFormOpen(false); LAST_CAST=snapForm(); }
-else setFormOpen(true);
+function restoreSession(){
+  let cast=null, draft=null;
+  try{ cast=localStorage.getItem(CAST_KEY); draft=localStorage.getItem(FORM_KEY); }catch(e){}
+  if(restoreForm(cast?CAST_KEY:FORM_KEY)&&run()){
+    setFormOpen(false); LAST_CAST=snapForm();
+    /* An edit that was never cast goes back into the form, open, over the
+       chart it was being made from. Taken from the copy read above: run()
+       has just written the cast chart over the stored draft. */
+    if(cast&&draft&&draft!==cast){
+      try{ localStorage.setItem(FORM_KEY,draft); }catch(e){}
+      if(restoreForm(FORM_KEY)) setFormOpen(true);
+    }
+  }
+  else setFormOpen(true);
+}
+restoreSession();
 /* iOS does not reload the page when the app returns from the background, so
    nothing else would write the form back; and when it does reclaim the app,
    the last thing written is what comes back. */

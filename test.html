@@ -241,6 +241,22 @@ const frame=document.getElementById('app');
       out.garbage=await verifyAccessKey('hello');
       out.applied=await applyAccessKey(good,false,false);
       out.stored=localStorage.getItem(ACCESS_KEY)===good;
+      /* #52: вся ссылка, вставленная в поле */
+      out.wholeLink=await verifyAccessKey('https://dafaspace.github.io/astrotrip/#key='+good);
+      /* #42: старая ссылка с иконки против более нового ключа в хранилище */
+      const newer=await make(now+20*86400,kp.privateKey), stale=await make(now-3600,kp.privateKey), older=await make(now+2*86400,kp.privateKey);
+      const keepHash=location.hash, tick=()=>new Promise(r=>setTimeout(r,60));
+      const viaLink=async(link)=>{ localStorage.setItem(ACCESS_KEY,newer); ACCESS_UNTIL=0; hideToast();
+        history.replaceState(null,'','#key='+link); keyFromAddress(); await tick(); await tick();
+        return {until:ACCESS_UNTIL, kept:localStorage.getItem(ACCESS_KEY)===newer,
+          toast:document.getElementById('toast').hidden?'':document.getElementById('toastText').textContent}; };
+      out.staleLink=await viaLink(stale); out.olderLink=await viaLink(older);
+      history.replaceState(null,'',location.pathname+location.search+keepHash);
+      out.newerUntil=(now+20*86400)*1000;
+      /* #53: неделя кончилась при открытом приложении */
+      const ringKeep=RING_MODE; RING_MODE='transit'; ACCESS_UNTIL=Date.now()-1; accessCheck();
+      out.afterEnd=RING_MODE; RING_MODE=ringKeep;
+      await applyAccessKey(good,false,false);
       localStorage.removeItem(ACCESS_KEY);
       return out;})()`); }catch(e){ ACCESS_CHECK={error:e.message}; }
     /* The asteroid file is a third of a megabyte and is fetched only when the
@@ -5287,6 +5303,29 @@ function run(){
       const w=d.split('-').map(Number).join('-');
       return e===w?null:`${id}: ${e} вместо ${w}`;}).filter(Boolean);
     return !bad.length||bad.join('; ');
+  });
+  t('#52 #42 #53 ключ из целой ссылки, старая ссылка не перебивает новый ключ, неделя кончается без перезагрузки',()=>{
+    const r=ACCESS_CHECK; if(!r||r.error) return 'проверка ключей не запустилась: '+(r&&r.error);
+    const bad=[];
+    if(r.wholeLink!==r.want) bad.push('целая ссылка в поле не принята');
+    if(r.staleLink.until!==r.newerUntil||!r.staleLink.kept||r.staleLink.toast) bad.push('истёкшая ссылка: '+JSON.stringify(r.staleLink));
+    if(r.olderLink.until!==r.newerUntil||!r.olderLink.kept) bad.push('более ранняя ссылка перебила новый ключ: '+JSON.stringify(r.olderLink));
+    if(r.afterEnd!=='none') bad.push('после конца недели остался режим '+r.afterEnd);
+    return !bad.length||bad.join('; ');
+  });
+  t('#44 холодный старт строит последнюю построенную карту, а недописанное возвращает в открытую форму',()=>{
+    const r=ev(`(()=>{const keep=[localStorage.getItem(CAST_KEY),localStorage.getItem(FORM_KEY)];
+      try{
+        const cast=formNow(); cast.date='1990-05-10'; cast.time='04:45'; cast.lat='55.75'; cast.lng='37.62'; cast.tz='+04:00';
+        const draft={...cast, date:'2001-01-01'};
+        localStorage.setItem(CAST_KEY,JSON.stringify(cast)); localStorage.setItem(FORM_KEY,JSON.stringify(draft));
+        restoreSession(); const castY=CAST_ARGS.y;
+        const formDate=document.getElementById('date').value, open=!document.getElementById('formCard')||document.getElementById('formCard').open!==false;
+        return {castY, formDate};
+      }finally{ keep[0]==null?localStorage.removeItem(CAST_KEY):localStorage.setItem(CAST_KEY,keep[0]);
+        keep[1]==null?localStorage.removeItem(FORM_KEY):localStorage.setItem(FORM_KEY,keep[1]);
+        restoreForm(CAST_KEY)||restoreForm(FORM_KEY); run(); }})()`);
+    return (r.castY===1990&&r.formDate==='2001-01-01')||JSON.stringify(r);
   });
   /* REVIEW-2026-10-15-END */
 
