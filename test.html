@@ -2059,7 +2059,7 @@ function run(){
     const lam=LIB.length/366, lim=Math.max(8,Math.ceil(lam+5*Math.sqrt(lam)));
     if(worst[1]>lim) return `на ${worst[0]} приходится ${worst[1]} записей при ожидаемых ${lam.toFixed(1)}`;
     const jan=c['1-1']||0;
-    return jan<=3||`на 1 января ${jan} записей — похоже на дату из Wikidata с точностью до года`;
+    return jan<=3||`на 1 января ${jan} записей, похоже на дату из Wikidata с точностью до года`;
   });
   t('у каждой записи с рейтингом AA есть время и ссылка на источник',()=>{
     const bad=LIB.filter(e=>e.rr==='AA'&&(e.t==null||!e.src)).map(e=>e.id);
