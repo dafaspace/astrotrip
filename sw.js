@@ -27,6 +27,8 @@ const ASSETS = [
   `./ephemeris.js?v=${V}`,
   // Jupiter to Neptune fitted to JPL; as critical as the series.
   `./planets.js?v=${V}`,
+  // The Moon's correction to JPL; a kilobyte, and the Moon is wrong without it.
+  `./moon.js?v=${V}`,
   // The city atlas: 235,779 places, 6.7 MB of text. Optional on purpose - the
   // app boots, casts and reads without it, falling back to the inline seed of
   // the 131 largest cities, so a failed or slow fetch here must not fail the
@@ -56,7 +58,7 @@ const ASSETS = [
    would fall back to a platform font, the exact layout shift self-hosting
    exists to prevent. Icons are cosmetic and may miss. */
 const CRITICAL = ASSETS.filter(u => u === './' || u.endsWith('.html')
-  || u.endsWith('.woff2') || u.startsWith('./ephemeris.js') || u.startsWith('./planets.js'));
+  || u.endsWith('.woff2') || u.startsWith('./ephemeris.js') || u.startsWith('./planets.js') || u.startsWith('./moon.js'));
 const OPTIONAL = ASSETS.filter(u => !CRITICAL.includes(u));
 
 /* Whether an earlier cache holds the asteroid file, i.e. whether this person

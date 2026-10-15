@@ -65,7 +65,7 @@ echo "  name     $(pb CFBundleDisplayName)"
 USAGE=$(/usr/libexec/PlistBuddy -c Print "$P" | { grep -o 'NS[A-Za-z]*UsageDescription' || true; } | sort -u | tr '\n' ' ')
 [ -z "$USAGE" ] && echo "  ok   no permission prompts" || echo "  CHECK permission strings present: $USAGE"
 PUB="$APP/public"
-for f in index.html ephemeris.js planets.js asteroids.js cities.txt OFL.txt; do
+for f in index.html ephemeris.js planets.js moon.js asteroids.js cities.txt OFL.txt; do
   [ -f "$PUB/$f" ] || { echo "  FAIL $f missing from the built app"; exit 1; }
 done
 for f in probe.js parity.txt test.html sw.js; do

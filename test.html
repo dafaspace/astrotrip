@@ -5398,8 +5398,8 @@ function run(){
     return e<=1.5||`Луна 1550-01-01 на ${e.toFixed(2)}″`;
   });
   t('Нептун и Уран у краёв идут по подгонке к JPL, а не по урезанному ряду',()=>{
-    const r=ev(`[typeof PLANET_FIT!=='undefined'&&!!PLANET_FIT.Neptune, !!chebFit(fitOf("Uranus"),(2300000-2451545)/365250),
-      chebFit(fitOf("Neptune"),(2600000-2451545)/365250)===null]`);
+    const r=ev(`[typeof PLANET_FIT!=="undefined"&&!!PLANET_FIT.NeptuneB, !!chebFit(fitOf("UranusB"),(2300000-2451545)/365250),
+      chebFit(fitOf("NeptuneB"),(2600000-2451545)/365250)===null]`);
     return (r[0]&&r[1]&&r[2])||'подгонки нет, или она отвечает за пределами своего отрезка: '+r.join(',');
   });
   t('нутация: член 0,071″ по аномалии Луны на месте',()=>{

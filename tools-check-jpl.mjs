@@ -40,7 +40,7 @@ function engine() {
   const html = fs.readFileSync('index.html', 'utf8');
   const a = html.indexOf('const D2R=Math.PI/180'), b = html.indexOf('/* ---------- symbols (embedded OFL font');
   const src = fs.readFileSync('ephemeris.js', 'utf8') + '\n' + fs.readFileSync('planets.js', 'utf8') + '\n'
-    + html.slice(a, b) + `
+    + fs.readFileSync('moon.js', 'utf8') + '\n' + html.slice(a, b) + `
 return function geo(name, jdTT){
   const Tc=(jdTT-2451545)/36525, tm=(jdTT-2451545)/365250;
   const [dpsi]=nutation(Tc), E=helioXYZ('ea',tm), V=earthVel(tm);

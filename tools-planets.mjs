@@ -49,10 +49,17 @@ const ALL = [
   ['Venus',   '2', 2, 1500, 14, 0.26, 've'],
   ['EMB',     '3', 2, 1500, 12, 0.26, 'ea'],
   ['Mars',    '4', 2, 1200, 12, 0.37, 'ma'],
-  ['Jupiter', '5', 5,  560, 12, 1],
-  ['Saturn',  '6', 10, 100, 12, 1],
-  ['Uranus',  '7', 20,  56, 14, 1],
-  ['Neptune', '8', 20,  28, 16, 1],
+  /* The outer bodies about the solar-system barycentre ('@0'), where their
+     orbits are smooth. About the Sun they carry the Sun's own wobble from
+     Venus and the Earth, months long and hundreds of km, which a segment of
+     years cannot follow: that floor held Saturn to Chiron at 0.15-0.2". The
+     app puts the Sun back from the planets' masses (sunBary in index.html). */
+  ['JupiterB', '5', 5, 140, 12, 1, null, '@0'],
+  ['SaturnB',  '6', 10, 140, 12, 1, null, '@0'],
+  ['UranusB',  '7', 20,  56, 12, 1, null, '@0'],
+  ['NeptuneB', '8', 20,  56, 12, 1, null, '@0'],
+  ['PlutoB',   '9', 20,  56, 12, 1, null, '@0'],
+  ['ChironB',  '2060;', 10, 140, 12, 1, null, '@0', 2305447.5],
 ];
 if (process.env.MERCURY) ALL.unshift(['Mercury', '199', 1, 4000, 12, 0.55, 'me']);
 const BODIES = ALL.filter(b => !process.env.ONLY || process.env.ONLY.split(',').includes(b[0]));
@@ -74,10 +81,10 @@ const toDate = (x, y, z, jd) => {
   return [r * Math.cos(b) * Math.cos(l), r * Math.cos(b) * Math.sin(l), r * Math.sin(b)];
 };
 
-async function chunk(id, a, b, step) {
+async function chunk(id, a, b, step, center = '@sun') {
   const q = new URLSearchParams({
     format: 'text', COMMAND: `'${id}'`, OBJ_DATA: 'NO', MAKE_EPHEM: 'YES',
-    EPHEM_TYPE: 'VECTORS', CENTER: "'@sun'", REF_PLANE: 'ECLIPTIC',
+    EPHEM_TYPE: 'VECTORS', CENTER: `'${center}'`, REF_PLANE: 'ECLIPTIC',
     VEC_TABLE: '1', OUT_UNITS: 'AU-D', CSV_FORMAT: 'YES',
     START_TIME: `'JD${a}'`, STOP_TIME: `'JD${b}'`, STEP_SIZE: `'${step} d'`
   });
@@ -119,10 +126,10 @@ const round = v => +(Math.round(v / 1e-9) * 1e-9).toPrecision(12);
 /* Fit one body at one setting. The residual is reported as the angle the
    position error makes seen from the Earth at the planet's closest, which is
    the pessimistic case and the one the chart cares about. */
-function fitBody(rows, nseg, deg, near = 1) {
-  const SEG = (JD1 - JD0) / nseg, out = []; let worst = 0;
+function fitBody(rows, nseg, deg, near = 1, jd0 = JD0) {
+  const SEG = (JD1 - jd0) / nseg, out = []; let worst = 0;
   for (let s = 0; s < nseg; s++) {
-    const lo = JD0 + s * SEG, hi = lo + SEG;
+    const lo = jd0 + s * SEG, hi = lo + SEG;
     const seg = rows.filter(r => r.jd >= lo - 1e-6 && r.jd <= hi + 1e-6);
     if (seg.length < deg + 2) throw new Error(`segment ${s} has ${seg.length} samples`);
     const us = seg.map(r => 2 * (r.jd - lo) / SEG - 1);
@@ -151,14 +158,14 @@ function vsop() {
 }
 const resid = (rows, k) => rows.map(r => { const p = vsop()(k, (r.jd - 2451545) / 365250); return { jd: r.jd, v: r.v.map((x, i) => x - p[i]) }; });
 if (!fs.existsSync(CACHE_DIR)) fs.mkdirSync(CACHE_DIR);
-async function load(name, id, step) {
+async function load(name, id, step, center, jd0 = JD0) {
   const cache = `${CACHE_DIR}/${name}.json`;
   let all = [];
   if (fs.existsSync(cache)) all = JSON.parse(fs.readFileSync(cache, 'utf8'));
   else {
-    for (let jd = JD0; jd < JD1; jd += 36525) {
+    for (let jd = jd0; jd < JD1; jd += 36525) {
       process.stderr.write(`${name} .`);
-      all.push(...await chunk(id, jd.toFixed(1), Math.min(jd + 36525, JD1).toFixed(1), step));
+      all.push(...await chunk(id, jd.toFixed(1), Math.min(jd + 36525, JD1).toFixed(1), step, center));
       await new Promise(r => setTimeout(r, 400));
     }
     process.stderr.write('\n');
@@ -171,14 +178,14 @@ async function load(name, id, step) {
 
 if (process.env.SWEEP) {
   console.log('body      nseg deg    worst"     KB');
-  for (const [name, id, step, nseg0, deg0, near, vk] of BODIES) {
-    let rows = await load(name, id, step);
+  for (const [name, id, step, nseg0, deg0, near, vk, center, jd0] of BODIES) {
+    let rows = await load(name, id, step, center, jd0);
     if (process.env.RESID) rows = resid(rows, vk);
     const grid = process.env.GRID ? process.env.GRID.split(',').map(x => x.split('x').map(Number))
       : [[0.5, deg0], [1, deg0 - 2], [1, deg0], [2, deg0 - 2], [2, deg0]].map(([f, d]) => [Math.round(nseg0 * f), d]);
     for (const [nseg, deg] of grid) {
       try {
-        const { worst } = fitBody(rows, nseg, deg, near);
+        const { worst } = fitBody(rows, nseg, deg, near, jd0);
         console.log(`${name.padEnd(8)} ${String(nseg).padStart(5)} ${String(deg).padStart(3)} `
           + `${worst.toFixed(4).padStart(9)} ${(nseg * 3 * (deg + 1) * 13 / 1024).toFixed(0).padStart(6)}`);
       } catch (e) { console.log(`${name} ${nseg}x${deg}: ${e.message}`); }
@@ -191,18 +198,18 @@ if (process.env.SWEEP) {
    half the length of the decimals; the app decodes a body the first time it
    is asked for. The rounding is the same 1e-9 AU as before. */
 const parts = [
-  `/* Venus, the Earth-Moon barycentre, Mars, Jupiter, Saturn, Uranus and Neptune`,
-  ` * fitted to JPL DE441 (public domain). Generated by tools-planets.mjs from`,
-  ` * JPL Horizons, ${new Date().toISOString().slice(0, 10)}. Heliocentric rectangular, AU, ecliptic of date,`,
-  ` * over 1550-01-01 to 2250-01-01; outside that span the app uses VSOP87D.`,
+  `/* Fitted to JPL DE441 (public domain) by tools-planets.mjs from JPL Horizons,`,
+  ` * ${new Date().toISOString().slice(0, 10)}. Rectangular, AU, ecliptic of date (IAU 1976 precession),`,
+  ` * over 1550-01-01 to 2250-01-01 (Chiron from 1600). Venus, EMB and Mars about`,
+  ` * the Sun; names ending in B about the solar-system barycentre.`,
   ` * Each body: segments of degree deg, x then y then z, base-36 integers of 1e-9 AU. */`,
   `const PLANET_FIT={};`,
 ];
-for (const [name, id, step, nseg, deg, near] of BODIES) {
-  const rows = await load(name, id, step);
-  const { out, worst, SEG } = fitBody(rows, nseg, deg, near);
+for (const [name, id, step, nseg, deg, near, vk, center, jd0 = JD0] of BODIES) {
+  const rows = await load(name, id, step, center, jd0);
+  const { out, worst, SEG } = fitBody(rows, nseg, deg, near, jd0);
   const enc = out.map(sg => sg.map(c => c.map(v => Math.round(v / 1e-9).toString(36)).join(',')).join(',')).join(',\n');
-  parts.push(`PLANET_FIT[${JSON.stringify(name)}]={jd0:${JD0},seg:${SEG},nseg:${nseg},deg:${deg},e:\``+enc+`\`};`);
+  parts.push(`PLANET_FIT[${JSON.stringify(name)}]={jd0:${jd0},seg:${SEG},nseg:${nseg},deg:${deg},e:\``+enc+`\`};`);
   console.error(`${name.padEnd(8)} worst ${worst.toFixed(4).padStart(8)}"  ${rows.length} samples`);
 }
 const text = parts.join('\n') + '\n';

@@ -39,6 +39,7 @@ ASSETS=(
   index.html
   ephemeris.js
   planets.js
+  moon.js
   asteroids.js
   cities.txt
   inter-400.woff2
