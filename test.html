@@ -68,12 +68,19 @@ const frame=document.getElementById('app');
   /* The golden ChartFacts, fetched here because t() is synchronous. */
   try{ PARITY_GOLD=await (await fetch('./parity.txt?notacache='+Date.now())).text(); }catch(e){}
   try{ SWE_REF=await (await fetch('./swe_reference.json?notacache='+Date.now())).json(); }catch(e){}
+  /* The charts the invariants are checked on. Until 15 Oct 2026 these were the
+     library's own 1019 entries; the library was then cut to the charts whose
+     time comes from a document, too few for a sample. Their dates and places
+     stay here, as test data only: real people, real latitudes, real eras,
+     which is what makes them a fair sample. Nothing here is shown to anyone. */
+  try{ SAMPLE=await (await fetch('./test-sample.json?notacache='+Date.now())).json(); }catch(e){}
   /* The city atlas is fetched after first paint, so the run waits for it -
      otherwise the atlas tests would silently check the inline seed instead and
      pass on the wrong data. Capped, because a failed fetch must still let the
      other ninety tests report. */
   frame.addEventListener('load',()=>setTimeout(async()=>{
     const W=frame.contentWindow;
+    W.SAMPLE_CHARTS=SAMPLE;
     try{ W.eval('atlasLoad()'); }catch(e){}
     for(let i=0;i<200;i++){
       let st=''; try{ st=W.eval('ATLAS.state'); }catch(e){}
@@ -278,7 +285,7 @@ const frame=document.getElementById('app');
   },220));
   frame.src='./index.html?notacache='+Date.now();
 })();
-let ACCESS_CHECK=null, STORE_CHECK=null, SHARE_CHECK=null, SW_SRC='', PARITY_GOLD='', SWE_REF=null, ATLAS_REAL_BYTES=null, ATLAS_BAR=null, ATLAS_FAIL=null, DEFAULT_RING=null;
+let SAMPLE=[], ACCESS_CHECK=null, STORE_CHECK=null, SHARE_CHECK=null, SW_SRC='', PARITY_GOLD='', SWE_REF=null, ATLAS_REAL_BYTES=null, ATLAS_BAR=null, ATLAS_FAIL=null, DEFAULT_RING=null;
 
 function run(){
   const W=frame.contentWindow, D=frame.contentDocument;
@@ -577,8 +584,8 @@ function run(){
        а не число путей. Проверяется на всей выборке: каждое тело в графе один
        раз, и строк не больше, чем тел плюс две итоговые. */
     const bad=ev(`(()=>{const out=[];
-      for(let i=0;i<CHART_LIBRARY.length;i+=7){
-        const e=CHART_LIBRARY[i], hh=e.t==null?12:e.t;
+      for(let i=0;i<SAMPLE_CHARTS.length;i+=7){
+        const e=SAMPLE_CHARTS[i], hh=e.t==null?12:e.t;
         const c=computeChart(e.y,e.mo,e.d,hh,libTz(e),e.lat,e.lon,false), F=chartFacts(c,'both');
         const n=Object.keys(F.planets).length;
         for(const p of Object.keys(F.planets)){
@@ -711,8 +718,8 @@ function run(){
     /* В режиме обоих наборов цепочка ветвится, и заканчиваться обязана каждая
        ветвь, а не первая. */
     const bad=ev(`(()=>{const out=[];
-      for(let i=0;i<CHART_LIBRARY.length;i+=Math.ceil(CHART_LIBRARY.length/${FSAMPLE})){
-        const e=CHART_LIBRARY[i], hh=e.t==null?12:e.t;
+      for(let i=0;i<SAMPLE_CHARTS.length;i+=Math.ceil(SAMPLE_CHARTS.length/${FSAMPLE})){
+        const e=SAMPLE_CHARTS[i], hh=e.t==null?12:e.t;
         const c=computeChart(e.y,e.mo,e.d,hh,libTz(e),e.lat,e.lon);
         for(const mode of RULER_MODES){ const F=chartFacts(c,mode);
           for(const [p,f] of Object.entries(F.planets)) f.branches.forEach(b=>{
@@ -731,8 +738,8 @@ function run(){
        у знака управитель, и цепочка идёт дальше, что и проверяет тест выше во
        всех трёх режимах. */
     const bad=ev(`(()=>{const out=[], outer=['Uranus','Neptune','Pluto','Chiron'];
-      for(let i=0;i<CHART_LIBRARY.length;i+=Math.ceil(CHART_LIBRARY.length/${FSAMPLE})){
-        const e=CHART_LIBRARY[i], hh=e.t==null?12:e.t;
+      for(let i=0;i<SAMPLE_CHARTS.length;i+=Math.ceil(SAMPLE_CHARTS.length/${FSAMPLE})){
+        const e=SAMPLE_CHARTS[i], hh=e.t==null?12:e.t;
         const F=chartFacts(computeChart(e.y,e.mo,e.d,hh,libTz(e),e.lat,e.lon),'classical');
         for(const [p,f] of Object.entries(F.planets)){
           if(outer.includes(f.dispositor)) out.push(e.id+'/'+p+': диспозитор '+f.dispositor);
@@ -809,8 +816,8 @@ function run(){
        вместе со своим противоположным. Если тест падает, ошибка в куспидах,
        а не в перехвате. */
     const bad=ev(`(()=>{const out=[];
-      for(let i=0;i<CHART_LIBRARY.length;i+=Math.ceil(CHART_LIBRARY.length/${FSAMPLE})){
-        const e=CHART_LIBRARY[i], hh=e.t==null?12:e.t;
+      for(let i=0;i<SAMPLE_CHARTS.length;i+=Math.ceil(SAMPLE_CHARTS.length/${FSAMPLE})){
+        const e=SAMPLE_CHARTS[i], hh=e.t==null?12:e.t;
         const F=chartFacts(computeChart(e.y,e.mo,e.d,hh,libTz(e),e.lat,e.lon));
         const set=new Set(F.intercepted);
         F.intercepted.forEach(x=>{if(!set.has((x+6)%12)) out.push(e.id+': знак '+x+' без пары');});
@@ -830,8 +837,8 @@ function run(){
   });
   t('перенос темы не указывает на дом, в котором планета и так стоит',()=>{
     const bad=ev(`(()=>{const out=[];
-      for(let i=0;i<CHART_LIBRARY.length;i+=Math.ceil(CHART_LIBRARY.length/${FSAMPLE})){
-        const e=CHART_LIBRARY[i], hh=e.t==null?12:e.t;
+      for(let i=0;i<SAMPLE_CHARTS.length;i+=Math.ceil(SAMPLE_CHARTS.length/${FSAMPLE})){
+        const e=SAMPLE_CHARTS[i], hh=e.t==null?12:e.t;
         const F=chartFacts(computeChart(e.y,e.mo,e.d,hh,libTz(e),e.lat,e.lon));
         for(const [p,f] of Object.entries(F.planets))
           f.carries.forEach(c=>{if(c.into!==f.house||c.from===f.house)
@@ -842,8 +849,8 @@ function run(){
   });
   t('секта и солнечное состояние согласованы с положениями',()=>{
     const bad=ev(`(()=>{const out=[];
-      for(let i=0;i<CHART_LIBRARY.length;i+=Math.ceil(CHART_LIBRARY.length/${FSAMPLE})){
-        const e=CHART_LIBRARY[i], hh=e.t==null?12:e.t;
+      for(let i=0;i<SAMPLE_CHARTS.length;i+=Math.ceil(SAMPLE_CHARTS.length/${FSAMPLE})){
+        const e=SAMPLE_CHARTS[i], hh=e.t==null?12:e.t;
         const ch=computeChart(e.y,e.mo,e.d,hh,libTz(e),e.lat,e.lon), F=chartFacts(ch);
         /* Солнце над горизонтом, если оно позади Асцендента по зодиаку: та
            половина эклиптики уже взошла. Не дом Солнца - в целых знаках дом 1
@@ -1270,8 +1277,8 @@ function run(){
       const sepFor=(r,h)=>2*Math.asin(Math.min(1,(h+1)/r))*180/Math.PI;
       const AST=['Ceres','Pallas','Juno','Vesta'];
       let worst=0,sum=0,n=0;
-      for(let i=0;i<CHART_LIBRARY.length;i+=11){
-        const e=CHART_LIBRARY[i], hh=e.t==null?12:e.t;
+      for(let i=0;i<SAMPLE_CHARTS.length;i+=11){
+        const e=SAMPLE_CHARTS[i], hh=e.t==null?12:e.t;
         const c=computeChart(e.y,e.mo,e.d,hh,libTz(e),e.lat,e.lon,false);
         const lons=WHEEL_BODIES.concat(FACT_POINTS).filter(p=>c.pos[p]&&!AST.includes(p)).map(p=>c.pos[p].lon);
         fanOut(lons,sepFor(R,fs*0.41)).forEach((v,k)=>{const d=Math.abs(((v-lons[k]+540)%360)-180);
@@ -1500,8 +1507,8 @@ function run(){
        чтобы возврат к диску провалил тест. */
     const r=ev(`(()=>{const sepFor=(r,h)=>2*Math.asin(Math.min(1,h/r))*180/Math.PI;
       let worst=0,sum=0,n=0;
-      for(let i=0;i<CHART_LIBRARY.length;i+=11){
-        const e=CHART_LIBRARY[i], hh=e.t==null?12:e.t;
+      for(let i=0;i<SAMPLE_CHARTS.length;i+=11){
+        const e=SAMPLE_CHARTS[i], hh=e.t==null?12:e.t;
         const c=computeChart(e.y,e.mo,e.d,hh,libTz(e),e.lat,e.lon,false);
         const shown=WHEEL_BODIES.concat(FACT_POINTS).filter(p=>c.pos[p]);
         const lons=shown.map(p=>c.pos[p].lon);
@@ -1715,7 +1722,7 @@ function run(){
   const SHEET=`(()=>{const el=document.getElementById('printFacts');
     const keep=el.innerHTML, keepLang=LANG, keepR=RULER_MODE;
     RULER_MODE='classical';
-    const pick=id=>{const e=CHART_LIBRARY.find(x=>x.id===id), hh=e.t==null?12:e.t;
+    const pick=id=>{const e=SAMPLE_CHARTS.find(x=>x.id===id), hh=e.t==null?12:e.t;
       return computeChart(e.y,e.mo,e.d,hh,libTz(e),e.lat,e.lon);};
     const read=(ch,lang)=>{LANG=lang||keepLang; el.innerHTML=printFactsSheet(ch);
       return {html:el.innerHTML,
@@ -1921,8 +1928,8 @@ function run(){
        houses» и прямо пишет, что это не стандартная система деления домов. */
     const r=ev(`(()=>{const k=HSYS, k3=HOUSE_3D; HSYS='placidus';
       let off=0, on=0, n=0;
-      for(let i=0;i<CHART_LIBRARY.length;i+=3){
-        const e=CHART_LIBRARY[i], hh=e.t==null?12:e.t;
+      for(let i=0;i<SAMPLE_CHARTS.length;i+=3){
+        const e=SAMPLE_CHARTS[i], hh=e.t==null?12:e.t;
         const c=computeChart(e.y,e.mo,e.d,hh,libTz(e),e.lat,e.lon,false);
         if(c.houses.system!=='placidus') continue;
         n++;
@@ -1940,8 +1947,8 @@ function run(){
        рисуется по долготе, и подпись обязана говорить о том же доме. */
     const bad=ev(`(()=>{const k=HSYS, k3=HOUSE_3D; HOUSE_3D=false; HSYS='placidus';
       const out=[];
-      for(let i=0;i<CHART_LIBRARY.length;i+=7){
-        const e=CHART_LIBRARY[i], hh=e.t==null?12:e.t;
+      for(let i=0;i<SAMPLE_CHARTS.length;i+=7){
+        const e=SAMPLE_CHARTS[i], hh=e.t==null?12:e.t;
         const c=computeChart(e.y,e.mo,e.d,hh,libTz(e),e.lat,e.lon,false);
         WHEEL_BODIES.concat(FACT_POINTS).filter(p=>c.pos[p]).forEach(p=>{
           if(bodyHouse(c,p)!==houseOf(c.pos[p].lon,c.houses.cusps))
@@ -2035,58 +2042,45 @@ function run(){
   /* ---------- библиотека карт ---------- */
   group('Библиотека карт');
   const LIB=ev('CHART_LIBRARY');
-  t('1019 карт: 643 художника, 184 кинокомпозитора, 192 классика',()=>{
-    if(LIB.length!==1019) return `записей ${LIB.length}`;
-    const n=k=>LIB.filter(e=>e.k===k).length;
-    return (n('a')===643&&n('f')===184&&n('c')===192)
-      ||`художники ${n('a')}, кино ${n('f')}, классика ${n('c')}`;
+  /* С 15 октября 2026 в библиотеке только карты, у которых дата, время и
+     место подтверждены документом и вторым независимым источником, без
+     единой другой версии. Карта на полдень без времени сюда больше не
+     попадает: для астролога без асцендента и домов это не карта. */
+  t('в библиотеке только карты с полными данными из документа',()=>{
+    const bad=LIB.filter(e=>e.rr!=='AA'||e.t==null||!e.src||(e.tzo==null&&!e.z)
+      ||!isFinite(e.lat)||!isFinite(e.lon)||!e.city||!e.city.ru||!e.city.en).map(e=>e.id);
+    return !bad.length||'неполные: '+bad.join(', ');
   });
-  t('у каждой записи есть род занятий',()=>{
-    const bad=LIB.filter(e=>!['a','f','c'].includes(e.k)).map(e=>e.id);
-    return !bad.length||'без рода занятий: '+bad.join(', ');
+  t('у каждой записи есть род занятий, и поиск его знает',()=>{
+    const bad=LIB.filter(e=>!['a','f','c','s','w','m','v','p'].includes(e.k)).map(e=>e.id);
+    if(bad.length) return 'без рода занятий: '+bad.join(', ');
+    D.getElementById('libFind').value='учёный'; ev('renderLibrary()');
+    const sci=D.querySelectorAll('#libList .libitem').length;
+    D.getElementById('libFind').value='художник'; ev('renderLibrary()');
+    const art=[...D.querySelectorAll('#libList .libitem .libname')].map(x=>x.textContent);
+    D.getElementById('libFind').value=''; ev('renderLibrary()');
+    if(!sci) return 'по слову «учёный» ничего';
+    return art.some(n=>/Гог|Gogh/.test(n))||'по слову «художник» не найден ван Гог: '+art.join(', ');
   });
   /* Wikidata сериализует дату, у которой известен только год, как 1 января.
-     Массовый импорт молча превратил «родился в 1835 году» в «родился 1 января
-     1835», и таких записей набралось 19 при ожидаемых 1,4 - вместе с Генделем,
-     Телеманом и Паганини, у которых даты известны прекрасно. По году карту
-     построить нельзя, поэтому такие записи либо получают настоящую дату, либо
-     уходят. Тест ловит возвращение этой кучи. */
+     Массовый импорт однажды молча превратил «родился в 1835 году» в «родился
+     1 января 1835». Тест ловит возвращение этой кучи, если библиотеку снова
+     будут пополнять из Wikidata. */
   t('нет кучи записей на одну календарную дату',()=>{
     const c={}; LIB.forEach(e=>{const k=e.mo+'-'+e.d; c[k]=(c[k]||0)+1;});
     const worst=Object.entries(c).sort((a,b)=>b[1]-a[1])[0];
-    /* Порог привязан к размеру базы: при 1020 записях на день приходится 2,8,
-       и девять на одну дату - обычный хвост Пуассона, а не сбой импорта.
-       Ловим настоящую кучу, а не совпадение дней рождения. */
     const lam=LIB.length/366, lim=Math.max(8,Math.ceil(lam+5*Math.sqrt(lam)));
     if(worst[1]>lim) return `на ${worst[0]} приходится ${worst[1]} записей при ожидаемых ${lam.toFixed(1)}`;
     const jan=c['1-1']||0;
     return jan<=3||`на 1 января ${jan} записей, похоже на дату из Wikidata с точностью до года`;
   });
-  t('у каждой записи с рейтингом AA есть время и ссылка на источник',()=>{
-    const bad=LIB.filter(e=>e.rr==='AA'&&(e.t==null||!e.src)).map(e=>e.id);
-    if(bad.length) return 'без времени или источника: '+bad.join(', ');
-    const n=LIB.filter(e=>e.rr==='AA').length;
-    return n>=28||`записей с документальным временем всего ${n}`;
-  });
-  /* Библиотека коммерческого приложения - витрина, а не выборка для статистики.
-     Отбор по объёму написанного пропускал автора стоковой библиотечной музыки
-     с 1286 работами и десятки студийных ремесленников, чьи имена никому ничего
-     не говорят. Вторая мерка - число языковых разделов Wikipedia. */
-  t('в библиотеке нет имён без международной известности',()=>{
-    const known=['Bach','Mozart','Beethoven','Chopin','Wagner','Tchaikovsky','Debussy',
-      'Handel','Vivaldi','Schubert','Verdi','Haydn','Mahler','Brahms','Liszt','Ravel',
-      'Morricone','Zimmer','Williams','Boulez','Messiaen','Satie','Berlioz',
-      'Rembrandt','Goya','Monet','Gogh','Picasso','Dalí','Matisse','Renoir','Cézanne',
-      'Klimt','Munch','Kandinsky','Malevich','Repin','Vrubel','Turner','Delacroix',
-      'Manet','Degas','Gauguin','Magritte','Kahlo','Warhol','Pollock','Chagall','Klee','Ingres'];
-    const miss=known.filter(k=>!LIB.some(e=>e.name.en.includes(k)));
-    return !miss.length||'потеряны при отборе: '+miss.join(', ');
-  });
-  /* Выборка нужна ради статистики, а её потолок задают не карты, а независимые
-     даты: у ровесников медленные планеты стоят одинаково не по своей воле. */
-  t('в пятистах картах не меньше 170 разных лет рождения',()=>{
-    const y=new Set(LIB.map(e=>e.y)).size;
-    return y>=170||`разных лет всего ${y}`;
+  t('поправки проверки 15 октября: Моцарт, Сен-Санс, Пьерне',()=>{
+    const f=id=>LIB.find(e=>e.id===id)||{};
+    const m=f('mozart'), s=f('camillesaintsae'), p=f('gabrielpierne'), bad=[];
+    if(Math.abs(m.tzo-13.0433/15)>1e-4) bad.push('Моцарт без среднего времени Зальцбурга');
+    if(Math.abs(s.lon-2.3404)>1e-3) bad.push('Сен-Санс не на улице Жарден');
+    if(p.t!==21||Math.abs(p.t-p.tzo-20.587778)>1e-3) bad.push('Пьерне: часы не 21:00 или сдвинулся момент');
+    return !bad.length||bad.join('; ');
   });
   t('после 1900 года у каждой записи есть часовой пояс',()=>{
     const bad=LIB.filter(e=>e.y>=1900&&!e.z).map(e=>e.id);
@@ -2146,7 +2140,7 @@ function run(){
   t('карты библиотеки совпадают с JPL Horizons до 1,5″',()=>{
     const bad=[];
     Object.entries(LIBREF).forEach(([id,ref])=>{
-      const e=LIB.find(x=>x.id===id);
+      const e=SAMPLE.find(x=>x.id===id);
       if(!e){ bad.push(id+': записи нет'); return; }
       W.__e=e; const hh=e.t==null?12:e.t;
       const ch=ev(`computeChart(${e.y},${e.mo},${e.d},${hh},libTz(window.__e),${e.lat},${e.lon})`);
@@ -2327,8 +2321,8 @@ function run(){
        рамка каждой подписи против рамки колеса, на выборке карт, в обоих
        режимах: только натал и с внешним кольцом. */
     const bad=ev(`(()=>{const out=[], keep=RING_MODE, S=380;
-      for(let i=0;i<CHART_LIBRARY.length;i+=97){
-        const e=CHART_LIBRARY[i], hh=e.t==null?12:e.t;
+      for(let i=0;i<SAMPLE_CHARTS.length;i+=97){
+        const e=SAMPLE_CHARTS[i], hh=e.t==null?12:e.t;
         const c=computeChart(e.y,e.mo,e.d,hh,libTz(e),e.lat,e.lon,false);
         for(const tr of [null, c]){
           drawWheel(c,tr,null);
@@ -3518,7 +3512,7 @@ function run(){
        включёнными минорными ближайшим часто оказывался квиконс, текста для
        него нет, и портрет возвращался с пустым телом. Без исключения, молча. */
     const r=ev(`(()=>{const keep=JSON.parse(JSON.stringify(ORBS));
-      const ent=CHART_LIBRARY.find(x=>x.id==='leodelibes')||CHART_LIBRARY[0];
+      const ent=SAMPLE_CHARTS.find(x=>x.id==='leodelibes');
       const ch=computeChart(ent.y,ent.mo,ent.d,ent.t==null?12:ent.t,libTz(ent),ent.lat,ent.lon);
       ASPECT_DEFS.forEach(a=>ORBS[a.name].on=true); rebuildAspects();
       const withMinors=composePortrait(ch);
@@ -3986,8 +3980,8 @@ function run(){
     /* Прямая проверка того, что было сломано: глиф стоял на кольце, а аспектов
        у него не было ни на колесе, ни в панели, ни в таблице, ни в фигурах. */
     const r=ev(`(()=>{let charts=0, withPoint=0;
-      for(let i=0;i<CHART_LIBRARY.length;i+=17){
-        const e=CHART_LIBRARY[i], hh=e.t==null?12:e.t;
+      for(let i=0;i<SAMPLE_CHARTS.length;i+=17){
+        const e=SAMPLE_CHARTS[i], hh=e.t==null?12:e.t;
         const c=computeChart(e.y,e.mo,e.d,hh,libTz(e),e.lat,e.lon,false);
         charts++;
         const P=['NNode','SNode','Lilith','Selena'];
@@ -4002,8 +3996,8 @@ function run(){
        аспекта до 27,5, худшая с 25 до 39. На трёх градусах 21,4 и 32. */
     const r=ev(`(()=>{const keep=POINT_ORB;
       const count=()=>{let n=0;
-        for(let i=0;i<CHART_LIBRARY.length;i+=17){
-          const e=CHART_LIBRARY[i], hh=e.t==null?12:e.t;
+        for(let i=0;i<SAMPLE_CHARTS.length;i+=17){
+          const e=SAMPLE_CHARTS[i], hh=e.t==null?12:e.t;
           n+=findAspects(computeChart(e.y,e.mo,e.d,hh,libTz(e),e.lat,e.lon,false).pos).length;
         } return n;};
       POINT_ORB=1; const tight=count();
@@ -4016,7 +4010,7 @@ function run(){
     /* Внешняя проверка здравого смысла: тау-квадрат частый, большой крест
        редкий. Если детектор сломается в одну из сторон, это будет видно. */
     const r=ev(`(()=>{const c={}; let n=0;
-      for(const e of CHART_LIBRARY.slice(0,200)){
+      for(const e of SAMPLE_CHARTS.slice(0,200)){
         const ch=computeChart(e.y,e.mo,e.d,e.t==null?12:e.t,libTz(e),e.lat,e.lon,false);
         n++; findConfigurations(ch.pos).forEach(f=>c[f.kind]=(c[f.kind]||0)+1);
       }
@@ -4033,7 +4027,7 @@ function run(){
          loaded for the measurement and put back afterwards. */
       let ch=CURRENT, found=findConfigurations(ch.pos);
       if(!found.length){
-        for(const e of CHART_LIBRARY){
+        for(const e of SAMPLE_CHARTS){
           const c=computeChart(e.y,e.mo,e.d,e.t==null?12:e.t,libTz(e),e.lat,e.lon,false);
           const f=findConfigurations(c.pos);
           if(f.length){ ch=c; found=f; break; }
@@ -5256,7 +5250,7 @@ function run(){
   t('#23 синастрия в обе стороны, и без углов у партнёра без времени',()=>{
     const r=ev(`(()=>{const k={m:RING_MODE,p:PARTNER,s:RING_SWAP};
       try{
-        const withT=CHART_LIBRARY.find(e=>e.t!=null), noT=CHART_LIBRARY.find(e=>e.t==null);
+        const withT=CHART_LIBRARY.find(e=>e.t!=null), noT={...withT,id:'__notime',t:null}; CHART_LIBRARY.push(noT);
         RING_MODE='synastry'; RING_SWAP=false;
         PARTNER={src:'lib',id:withT.id}; renderTransits(CURRENT);
         const revAng=TR_HITS.filter(h=>h.rev&&(h.np==='ASC'||h.np==='MC')).length;
@@ -5266,7 +5260,7 @@ function run(){
         RING_SWAP=true; renderTransits(CURRENT);
         const swappedAng=TR_HITS.filter(h=>!h.rev&&(h.np==='ASC'||h.np==='MC')).length;
         return {revAng,anyRev,noTimeAng,swappedAng, unknown:!!TR_CHART.timeUnknown};
-      }finally{ RING_MODE=k.m; PARTNER=k.p; RING_SWAP=k.s; renderTransits(CURRENT); }})()`);
+      }finally{ CHART_LIBRARY.splice(CHART_LIBRARY.findIndex(e=>e.id==='__notime'),1);  RING_MODE=k.m; PARTNER=k.p; RING_SWAP=k.s; renderTransits(CURRENT); }})()`);
     const bad=[];
     if(!r.anyRev) bad.push('нет ни одного контакта к углам и точкам партнёра');
     if(r.noTimeAng) bad.push(`к углам партнёра без времени ${r.noTimeAng} аспектов`);
@@ -5302,15 +5296,6 @@ function run(){
         const b=document.getElementById('exportText').textContent; return a!==b;
       }finally{ const o=JSON.parse(keep); Object.keys(o).forEach(n=>ORBS[n]=o[n]); saveOrbs(); rebuildAspects(); redrawAspects(); card.open=was; }})()`);
     return r||'текст экспорта не изменился после включения квинконса';
-  });
-  t('#10 даты библиотеки по новому стилю: Брюллов, Глинка, Шевченко, Шишкин, Кюи, Телеман',()=>{
-    const want={karlbryullov:'1799-12-23',michaelglinka:'1804-6-1',tarasshevchenko:'1814-3-9',ivanshishkin:'1832-1-25',
-      cesarcui:'1835-1-18',georgphilipptel:'1681-3-24',boriskustodiev:'1878-3-7',louiskahn:'1901-3-5'};
-    const bad=Object.entries(want).map(([id,d])=>{
-      const e=ev(`(()=>{const e=CHART_LIBRARY.find(x=>x.id===${JSON.stringify(id)}); return e&&[e.y,e.mo,e.d].join('-');})()`);
-      const w=d.split('-').map(Number).join('-');
-      return e===w?null:`${id}: ${e} вместо ${w}`;}).filter(Boolean);
-    return !bad.length||bad.join('; ');
   });
   t('#52 #42 #53 ключ из целой ссылки, старая ссылка не перебивает новый ключ, неделя кончается без перезагрузки',()=>{
     const r=ACCESS_CHECK; if(!r||r.error) return 'проверка ключей не запустилась: '+(r&&r.error);
@@ -5448,16 +5433,6 @@ function run(){
     const bad=ref.map(([y,m,d,h,v])=>{const c=ev(`(()=>{const k=LILMODE; LILMODE='mean'; try{return computeChart(${y},${m},${d},${h},0,0,0,false).pos.Lilith.lon;}finally{LILMODE=k;}})()`);
       const e=arcsec(c,v); return e<=3?null:`${y}: ${e.toFixed(1)}″`;}).filter(Boolean);
     return !bad.length||bad.join('; ');
-  });
-  t('спорные даты библиотеки: по григорианскому, Левитан в Кибартае, библиотека по порядку дат',()=>{
-    const want={henrypurcell:'1659-9-20',williamhogarth:'1697-11-20',joshuareynolds:'1723-7-27',georgestubbs:'1724-9-5',
-      thomasgainsboro:'1727-5-25',josephwrightofd:'1734-9-14',isaaclevitan:'1860-8-30',sergeiprokofiev:'1891-4-27',
-      tamaradelempick:'1894-6-28',godfreykneller:'1646-8-18',mariasibyllamer:'1647-4-12',ulrikaeleonorao:'1656-9-21'};
-    const r=ev(`JSON.stringify(CHART_LIBRARY.map(e=>[e.id,e.y+'-'+e.mo+'-'+e.d,e.city.en,e.y*400+e.mo*32+e.d]))`), L=JSON.parse(r);
-    const bad=Object.entries(want).filter(([id,v])=>{const e=L.find(x=>x[0]===id); return !e||e[1]!==v;}).map(([id])=>id);
-    if(L.find(x=>x[0]==='isaaclevitan')[2]!=='Kybartai') bad.push('Levitan city');
-    for(let i=1;i<L.length;i++) if(L[i][3]<L[i-1][3]){ bad.push('order at '+L[i][0]); break; }
-    return !bad.length||bad.join(', ');
   });
   /* REVIEW-2026-10-15-END */
 

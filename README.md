@@ -124,8 +124,8 @@ Saturn and Jupiter shown as co-rulers there. **Traditional**: the seven visible 
 as Astro Gold uses for its house dispositors and almutens. **Both**: each of those three
 signs has two full rulers, so a chain of dispositors branches and the card shows it as a
 graph, one row per body, rather than as a list of walks (one Sun in the library has 32 of
-them). On the 1019 library charts the single final dispositor differs between modern and
-traditional in 167. Sect, solar phase, angularity and the exaltations of the seven are the
+them). On the library as it stood in September 2026 the single final dispositor differed
+between modern and traditional in about one chart in six. Sect, solar phase, angularity and the exaltations of the seven are the
 same in every mode; the outer planets get no exaltation in any, because the sources
 disagree. The export block and the print sheet name the mode, so a reading cannot mistake
 a setting for a fact about the chart.
@@ -347,8 +347,8 @@ bi-wheel means, and the aspects run from the outer chart's planets to the inner
 chart's bodies - including its Ascendant, Midheaven, node and Lilith, so "his
 Sun on her Ascendant" is found rather than missed.
 
-The partner is chosen by searching, not from a list: the library holds a
-thousand charts and a select with a thousand options is not a control. The
+The partner is chosen by searching, not from a list: the library is long,
+and a select with hundreds of options is not a control. The
 search box behaves exactly like the city field, which is the pattern the user
 has already used once by the time they reach this.
 
@@ -653,12 +653,18 @@ so there is nothing that can carry a person out of it.
 
 ### The chart library
 
-1019 charts - composers, musicians and painters - each with a Rodden rating and a
-citable source, plus your own charts saved to this device. Times without a document
-are labelled as such and cast for noon, since the Ascendant, the houses and the Moon's
-degree mean nothing without a time. Historical entries use local mean time rather than
-a zone offset where no zone existed, and pre-1918 Russian and pre-1700 German dates are
-stored in the Gregorian calendar.
+Charts of well-known people, plus your own charts saved to this device. Since
+15 Oct 2026 the library holds only charts whose date, time and place come from a birth
+record (Rodden AA) and are confirmed by a second independent source, with no other
+version anywhere. A chart without a time is not kept: without the Ascendant and the
+houses it is not a chart an astrologer can use, and a library that is right in every
+entry is worth more than a long one. Each entry names its record in the source line.
+Historical entries carry their offset: local mean time of the birthplace where no zone
+existed, Paris Mean Time in France from 1891 to 1911.
+
+The tests no longer sample the library, which is now too small to be a sample. The
+dates and places of the earlier library, 1019 real people across five centuries, stay
+in `test-sample.json` as test data only.
 
 Your own charts export to plain **CSV** with a header row and import back from it, so
 the database opens in a spreadsheet, survives editing by hand, and can be diffed. The
