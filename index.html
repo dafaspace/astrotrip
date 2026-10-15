@@ -1476,7 +1476,7 @@ const STR = {
   lasttime:{ru:'В прошлый раз',en:'Last time'}, noaspects:{ru:'Крупных аспектов в орбисе нет.',en:'No major aspects within orb.'},
   notransits:{ru:'Сейчас транзитов в орбисе нет.',en:'No transits within orb right now.'},
   learnempty:{ru:'Оцените несколько транзитов выше. Движок строит приватную модель того, как циклы реально проживаются именно вами, ранжирование и тон подстраиваются целиком на этом устройстве.',en:'Rate a few transits above. The engine builds a private model of how cycles actually land for you, ranking and tone adapt entirely on this device.'},
-  foot:{ru:'Положения сверены с JPL Horizons на всех картах библиотеки: расхождение меньше четырёх секунд дуги, для XX века меньше половины. Атлас городов - GeoNames, CC BY 4.0. После первой загрузки ничто здесь не выходит в сеть.',en:'Positions are checked against JPL Horizons on every chart in the library, agreeing to within four arcseconds and to half of one for the twentieth century. City atlas from GeoNames, CC BY 4.0. After the first load nothing here contacts the network.'},
+  foot:{ru:'Положения сверены с JPL Horizons на 1550-2250 годах: расхождение не больше 0,25 секунды дуги. Атлас городов - GeoNames, CC BY 4.0. После первой загрузки ничто здесь не выходит в сеть.',en:'Positions are checked against JPL Horizons over 1550-2250, agreeing to within 0.25 arcseconds. City atlas from GeoNames, CC BY 4.0. After the first load nothing here contacts the network.'},
   /* The layout of 3.16: a header with two buttons, the library and the settings
      as panels, the name in the birth-data card. The other six languages are
      added to their packs after I18N, in the same release. */
@@ -1626,7 +1626,7 @@ const I18N={
     importBad:"No se pudo leer ese archivo como CSV.", orb:"orbe", house:"casa",
     noaspects:"No hay aspectos mayores dentro del orbe.",
     notransits:"Ahora mismo no hay nada dentro del orbe.",
-    foot:"Las posiciones están cotejadas con JPL Horizons en todas las cartas de la biblioteca: la diferencia es menor de cuatro segundos de arco, y menor de medio en el siglo XX. Atlas de ciudades de GeoNames, CC BY 4.0. Tras la primera carga nada de aquí sale a la red.",
+    foot:"Las posiciones están cotejadas con JPL Horizons en 1550-2250: la diferencia no supera 0,25 segundos de arco. Atlas de ciudades de GeoNames, CC BY 4.0. Tras la primera carga nada de aquí sale a la red.",
   },
   fr:{
     synaSwap:"Échanger les anneaux", synaInner:"intérieur",
@@ -1678,7 +1678,7 @@ const I18N={
     exportCsv:"Exporter en CSV", importCsv:"Importer un CSV", importDone:"Cartes importées : ",
     importBad:"Impossible de lire ce fichier comme un CSV.", orb:"orbe", house:"maison",
     noaspects:"Aucun aspect majeur dans l’orbe.", notransits:"Rien dans l’orbe pour le moment.",
-    foot:"Les positions sont vérifiées avec JPL Horizons sur toutes les cartes de la bibliothèque : l’écart est inférieur à quatre secondes d’arc, et à une demi-seconde pour le vingtième siècle. Atlas des villes : GeoNames, CC BY 4.0. Après le premier chargement, rien ici ne contacte le réseau.",
+    foot:"Les positions sont vérifiées avec JPL Horizons sur 1550-2250 : l’écart ne dépasse pas 0,25 seconde d’arc. Atlas des villes : GeoNames, CC BY 4.0. Après le premier chargement, rien ici ne contacte le réseau.",
   },
   de:{
     synaSwap:"Ringe tauschen", synaInner:"innen",
@@ -1729,7 +1729,7 @@ const I18N={
     exportCsv:"CSV exportieren", importCsv:"CSV importieren", importDone:"Importierte Charts: ",
     importBad:"Diese Datei ließ sich nicht als CSV lesen.", orb:"Orbis", house:"Haus",
     noaspects:"Keine Hauptaspekte im Orbis.", notransits:"Im Moment nichts im Orbis.",
-    foot:"Die Positionen sind bei jedem Chart der Bibliothek gegen JPL Horizons geprüft: die Abweichung bleibt unter vier Bogensekunden, im zwanzigsten Jahrhundert unter einer halben. Städte-Atlas von GeoNames, CC BY 4.0. Nach dem ersten Laden geht von hier nichts mehr ins Netz.",
+    foot:"Die Positionen sind über 1550-2250 gegen JPL Horizons geprüft: die Abweichung bleibt unter 0,25 Bogensekunden. Städte-Atlas von GeoNames, CC BY 4.0. Nach dem ersten Laden geht von hier nichts mehr ins Netz.",
   },
   it:{
     synaSwap:"Scambia gli anelli", synaInner:"interno",
@@ -1780,7 +1780,7 @@ const I18N={
     exportCsv:"Esporta CSV", importCsv:"Importa CSV", importDone:"Carte importate: ",
     importBad:"Non sono riuscito a leggere quel file come CSV.", orb:"orbe", house:"casa",
     noaspects:"Nessun aspetto maggiore entro l’orbe.", notransits:"Al momento non c’è nulla entro l’orbe.",
-    foot:"Le posizioni sono confrontate con JPL Horizons su ogni carta della biblioteca: lo scarto resta sotto i quattro secondi d’arco, e sotto il mezzo secondo per il Novecento. Atlante delle città da GeoNames, CC BY 4.0. Dopo il primo caricamento nulla di qui va in rete.",
+    foot:"Le posizioni sono confrontate con JPL Horizons sul 1550-2250: lo scarto non supera 0,25 secondi d’arco. Atlante delle città da GeoNames, CC BY 4.0. Dopo il primo caricamento nulla di qui va in rete.",
   },
   uk:{
     synaSwap:"Поміняти кільця місцями", synaInner:"всередині",
@@ -1830,7 +1830,7 @@ const I18N={
     exportCsv:"Вивантажити CSV", importCsv:"Завантажити CSV", importDone:"Завантажено карт: ",
     importBad:"Не вдалося прочитати файл як CSV.", orb:"орбіс", house:"дім",
     noaspects:"Великих аспектів в орбісі немає.", notransits:"Зараз нічого в орбісі немає.",
-    foot:"Положення звірені з JPL Horizons на всіх картах бібліотеки: розбіжність менша за чотири секунди дуги, для XX століття менша за половину. Атлас міст - GeoNames, CC BY 4.0. Після першого завантаження ніщо звідси не виходить у мережу.",
+    foot:"Положення звірені з JPL Horizons на 1550-2250 роках: розбіжність не більша за 0,25 секунди дуги. Атлас міст - GeoNames, CC BY 4.0. Після першого завантаження ніщо звідси не виходить у мережу.",
   },
   ka:{
     synaSwap:"რგოლების გაცვლა", synaInner:"შიგნით",
@@ -1880,7 +1880,7 @@ const I18N={
     exportCsv:"CSV-ის გატანა", importCsv:"CSV-ის შემოტანა", importDone:"შემოტანილი რუკები: ",
     importBad:"ფაილის CSV-ად წაკითხვა ვერ მოხერხდა.", orb:"ორბისი", house:"სახლი",
     noaspects:"ორბისში მთავარი ასპექტები არ არის.", notransits:"ამჟამად ორბისში არაფერია.",
-    foot:"პოზიციები შედარებულია JPL Horizons-თან ბიბლიოთეკის ყველა რუკაზე: სხვაობა ოთხ რკალის წამზე ნაკლებია, მეოცე საუკუნისთვის კი ნახევარზე ნაკლები. ქალაქების ატლასი - GeoNames, CC BY 4.0. პირველი ჩატვირთვის შემდეგ აქედან ქსელში არაფერი გადის.",
+    foot:"პოზიციები შედარებულია JPL Horizons-თან 1550-2250 წლებზე: სხვაობა არ აღემატება რკალის 0,25 წამს. ქალაქების ატლასი - GeoNames, CC BY 4.0. პირველი ჩატვირთვის შემდეგ აქედან ქსელში არაფერი გადის.",
   },
 };
 /* Added to the packs after they were written: the 3.16 layout (header, panels,
