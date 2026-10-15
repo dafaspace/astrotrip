@@ -6087,14 +6087,17 @@ function drawWheel(ch,tr,t3=TR3_CHART){
   function exactTick(lon,colour,base,len){
     const [ax,ay]=polar(lon,base);
     const [bx,by]=polar(lon,base+len);
-    return `<line x1="${ax.toFixed(1)}" y1="${ay.toFixed(1)}" x2="${bx.toFixed(1)}" y2="${by.toFixed(1)}" stroke="${colour}" stroke-width="1.7" stroke-linecap="round"/>`;
+    return `<line class="xt" x1="${ax.toFixed(1)}" y1="${ay.toFixed(1)}" x2="${bx.toFixed(1)}" y2="${by.toFixed(1)}" stroke="${colour}" stroke-width="1.1" stroke-linecap="butt"/>`;
   }
   /* The same list the glyphs are drawn from. It was BODIES plus POINTS, so the
      asteroids had a glyph and no tick - drawn where they were fanned to, with
      nothing saying where they actually stand. */
   WHEEL_BODIES.concat(FACT_POINTS).filter(p=>ch.pos[p]).forEach(n=>{
     const dimT=CONF_IN?!CONF_IN.includes(n):(ISO_IN&&ISO_IN!==n);
-    s+=`<g opacity="${dimT?0.2:1}">${exactTick(ch.pos[n].lon,'var(--ink)',rNatScale,-8)}</g>`;
+    /* Thin and square-ended, from the scale's own edge: a round cap 1.7 wide
+       stood half a unit past the degree it marks and read as approximate. As
+       long as the scale's five-degree ticks, so the mark is read against them. */
+    s+=`<g opacity="${dimT?0.2:1}">${exactTick(ch.pos[n].lon,'var(--ink)',rNatScale,rich?-9:-8)}</g>`;
   });
   /* The middle ring's ticks hang from its own scale, inward, the way the natal
      ones do; only the outermost ring stands up into the sign band. */

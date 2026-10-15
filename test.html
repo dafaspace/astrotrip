@@ -4246,7 +4246,7 @@ function run(){
     const r=ev(`(()=>{const sv=document.querySelector('#wheel svg'), C=190, asc=CURRENT.asc;
       const lonOf=(x,y)=>{const a=Math.atan2(y-C,x-C)*180/Math.PI;return ((asc+180-a)%360+360)%360;};
       const pick=col=>[...sv.querySelectorAll('line')]
-        .filter(l=>l.getAttribute('stroke')==='var('+col+')'&&l.getAttribute('stroke-width')==='1.7')
+        .filter(l=>l.getAttribute('stroke')==='var('+col+')'&&l.classList.contains('xt'))
         .map(l=>lonOf(+l.getAttribute('x1'),+l.getAttribute('y1'))).sort((a,b)=>a-b);
       const truth=(pos,keys)=>keys.filter(k=>pos[k]).map(k=>rev(pos[k].lon)).sort((a,b)=>a-b);
       const ni=pick('--ink'), nb=truth(CURRENT.pos,BODIES.concat(POINTS));
@@ -4265,7 +4265,7 @@ function run(){
     const r=ev(`(()=>{const sv=document.querySelector('#wheel svg'), C=190;
       const rad=(l,i)=>Math.hypot(+l.getAttribute('x'+i)-C,+l.getAttribute('y'+i)-C);
       const dir=col=>[...sv.querySelectorAll('line')]
-        .filter(l=>l.getAttribute('stroke')==='var('+col+')'&&l.getAttribute('stroke-width')==='1.7')
+        .filter(l=>l.getAttribute('stroke')==='var('+col+')'&&l.classList.contains('xt'))
         .map(l=>rad(l,2)-rad(l,1));
       return {natal:dir('--ink'), transit:dir('--accent')};})()`);
     const allIn=r.natal.every(d=>d<0), allOut=r.transit.every(d=>d>0);
