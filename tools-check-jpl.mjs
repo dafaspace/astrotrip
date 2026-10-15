@@ -44,7 +44,14 @@ function engine() {
 return function geo(name, jdTT){
   const Tc=(jdTT-2451545)/36525, tm=(jdTT-2451545)/365250;
   const [dpsi]=nutation(Tc), E=helioXYZ('ea',tm), V=earthVel(tm);
-  return name==='Moon'?moonApparent(Tc,dpsi):apparent(name,tm,dpsi,E,V);
+  const g=name==='Moon'?moonApparent(Tc,dpsi):apparent(name,tm,dpsi,E,V);
+  if(!g) return g;
+  /* Back into Horizons' own frame (IAU 1976 equinox of date) so that this
+     measures the ephemeris and not the convention: the app's positions are
+     on the IAU 2006 equinox, up to 1.2" away at 1550. */
+  const l=(g.lon*D2R)-dpsi, b=g.lat*D2R;
+  to2006([1,0,0],Tc); const w=mxv(mT(FRAME_M),[Math.cos(b)*Math.cos(l),Math.cos(b)*Math.sin(l),Math.sin(b)]);
+  return {lon:rev(Math.atan2(w[1],w[0])*R2D+dpsi*R2D), lat:Math.asin(w[2])*R2D};
 };`;
   return new Function('localStorage', 'document', 'window', 'APP_VERSION', src)({ getItem: () => null, setItem: () => {} }, {}, {}, '');
 }

@@ -3020,6 +3020,7 @@ function apparent(name,t,dpsi,E,V){
   }
   const d=Math.hypot(v[0],v[1],v[2]), s=d/C_AUD;
   v=[v[0]+V[0]*s, v[1]+V[1]*s, v[2]+V[2]*s];    // annual aberration
+  v=to2006(v,t*10);
   const dn=Math.hypot(v[0],v[1],v[2]);
   return { lon:rev(Math.atan2(v[1],v[0])*R2D+dpsi*R2D),
            lat:Math.asin(v[2]/dn)*R2D, dist:d };
@@ -3102,6 +3103,47 @@ function precessEcl(lon,lat,T){
   const C=Math.cos(eta)*sb+Math.sin(eta)*cb*sP;
   return [p+P0-Math.atan2(A,B), Math.asin(C)];
 }
+/* ---------- the equinox of date: IAU 2006, not IAU 1976 ----------
+   Every series here arrives on the ecliptic and equinox of date as IAU 1976
+   precession defines them: VSOP87D speaks that frame, the fits to JPL were made
+   in it, the Moon is precessed into it, and JPL Horizons still reports it
+   ("IAU76/80 ecliptic of date") for compatibility. But IAU 1976 precession is
+   known to be off by about 0.3" a century, which is why IAU 2006 replaced it,
+   and the Ascendant, the Midheaven and the houses here were already IAU 2006
+   (the Earth Rotation Angle and the 2006 obliquity). So a 1550 chart had its
+   planets and its angles in two frames 1.2" apart. The positions are now turned
+   into the IAU 2006 frame at the end, by one small rotation:
+     IAU 1976 of date -> J2000 ecliptic (the inverse of precessEcl)
+       -> ICRF (Horizons' J2000 ecliptic: obliquity 84381.448")
+       -> IAU 2006 ecliptic of date (Fukushima-Williams angles, SOFA
+          eraPfw06/eraEcm06, frame bias included).
+   This is the frame Swiss Ephemeris and SOFA use, and so astro.com, ZET and
+   Astro Gold. It costs nothing visible: 0.03" in 1980, 1.2" in 1550. */
+const mxm=(a,b)=>a.map(r=>[0,1,2].map(j=>r[0]*b[0][j]+r[1]*b[1][j]+r[2]*b[2][j]));
+const mxv=(a,v)=>a.map(r=>r[0]*v[0]+r[1]*v[1]+r[2]*v[2]);
+const mT=a=>[0,1,2].map(i=>[0,1,2].map(j=>a[j][i]));
+const rotX=t=>{const c=Math.cos(t),s=Math.sin(t);return [[1,0,0],[0,c,s],[0,-s,c]];};
+const rotZ=t=>{const c=Math.cos(t),s=Math.sin(t);return [[c,s,0],[-s,c,0],[0,0,1]];};
+function frame2006(T){
+  const g=(-0.052928+(10.556378+(0.4932044+(-0.00031238+(-0.000002788+0.0000000260*T)*T)*T)*T)*T)*ASR;
+  const f=(84381.412819+(-46.811016+(0.0511268+(0.00053289+(-0.000000440-0.0000000176*T)*T)*T)*T)*T)*ASR;
+  const p=(-0.041775+(5038.481484+(1.5584175+(-0.00018522+(-0.000026452-0.0000000148*T)*T)*T)*T)*T)*ASR;
+  return mxm(rotZ(-p),mxm(rotX(f),rotZ(g)));          // GCRS -> mean ecliptic of date
+}
+function frame1976(T){
+  /* precessEcl as a matrix: J2000 ecliptic -> ecliptic of date, IAU 1976 */
+  const col=v=>{ const r=Math.hypot(...v), [l,b]=precessEcl(Math.atan2(v[1],v[0]),Math.asin(v[2]/r),T);
+    return [Math.cos(b)*Math.cos(l),Math.cos(b)*Math.sin(l),Math.sin(b)]; };
+  const P=mT([col([1,0,0]),col([0,1,0]),col([0,0,1])]);
+  return mxm(P,rotX(84381.448*ASR));                   // GCRS -> IAU 1976 ecliptic of date
+}
+let FRAME_T=NaN, FRAME_M=null;
+function to2006(v,T){
+  if(T!==FRAME_T){ FRAME_M=mxm(frame2006(T),mT(frame1976(T))); FRAME_T=T; }
+  return mxv(FRAME_M,v);
+}
+/* For a point given only by its longitude on the ecliptic of date. */
+function lon2006(lonDeg,T){ const l=lonDeg*D2R, v=to2006([Math.cos(l),Math.sin(l),0],T); return rev(Math.atan2(v[1],v[0])*R2D); }
 /* Apparent geocentric Moon. Annual aberration is absent on purpose: the Moon
    carries Earth's orbital velocity with us, so it cancels, and what remains
    is the Moon's own 1.3-second light-time, worth 0.7". */
@@ -3135,9 +3177,13 @@ function moonApparent(T,dpsi){
   const tau=Math.hypot(r[0],r[1],r[2])/C_KMD/36525;
   r=moonXYZ(T-tau);
   const d=Math.hypot(r[0],r[1],r[2]);
-  const [l2,b2]=precessEcl(Math.atan2(r[1],r[0]),Math.asin(r[2]/d),T);
+  const [l0,b0]=precessEcl(Math.atan2(r[1],r[0]),Math.asin(r[2]/d),T);
   const [fl,fb]=moonFix(T);
-  return {lon:rev((l2+dpsi)*R2D-fl/3600), lat:b2*R2D-fb/3600, dist:d};
+  /* MOON_FIX was fitted to Horizons, in the IAU 1976 frame, so it is applied
+     there and the result turned into IAU 2006 like every other body. */
+  const l1=l0-fl/3600*D2R, b1=b0-fb/3600*D2R;
+  const w=to2006([Math.cos(b1)*Math.cos(l1),Math.cos(b1)*Math.sin(l1),Math.sin(b1)],T);
+  return {lon:rev(Math.atan2(w[1],w[0])*R2D+dpsi*R2D), lat:Math.asin(w[2])*R2D, dist:d};
 }
 /* Mean lunar node (Meeus 47.7). The mean node, not the true one - the same
    point the app has always shown, now on a formula that does not drift. */
@@ -3282,7 +3328,8 @@ function lilithTrue(T,dpsi){
   const em=Math.hypot(ex,ey,ez);
   if(!(em>1e-6)) return null;            // a circular osculating orbit has no apsis
   const [l2,b2]=precessEcl(Math.atan2(-ey,-ex),Math.asin(-ez/em),T);
-  return {lon:rev((l2+dpsi)*R2D), lat:b2*R2D};
+  const w=to2006([Math.cos(b2)*Math.cos(l2),Math.cos(b2)*Math.sin(l2),Math.sin(b2)],T);
+  return {lon:rev(Math.atan2(w[1],w[0])*R2D+dpsi*R2D), lat:Math.asin(w[2])*R2D};
 }
 /* White Moon Selena: fictitious point (Avestan school), h56 in Swiss Ephemeris.
    seorbel.txt: lon = 242.2205555 + 5143.5418158*T (T = centuries from J2000),
@@ -3964,6 +4011,12 @@ function computeChart(y,mo,day,localH,tzOff,lat,lng,withSpeed){
      the same, and without it the mean node and the mean Black Moon stood up
      to 17 arcseconds from it while the Moon beside them agreed. */
   const NUT=dpsi*R2D, dTT=d+(jdTT-jdUT);
+  /* The node and the mean Black Moon are mean elements, and a mean element is
+     counted from its own theory's mean equinox: that is how Swiss Ephemeris
+     gives them, within 0.12" of these, while turning them into the IAU 2006
+     frame like the bodies put them 0.4" from it by 1800. So they are left in
+     their theory's frame on purpose; the true Black Moon, a real direction in
+     space, is turned like the Moon. */
   const nd=rev(meanNode(Tc)+NUT);
   pos.NNode={lon:nd}; pos.SNode={lon:rev(nd+180)};
   const lilMean=()=>({lon:rev(lilithLon(dTT)+NUT)});

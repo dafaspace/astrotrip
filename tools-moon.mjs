@@ -55,7 +55,14 @@ function engine(off) {
   if (off) html = html.replace(/const MOON_FIX=\{[\s\S]*?\};/, 'const MOON_FIX={lon:[0],lat:[0]};');
   const a = html.indexOf('const D2R=Math.PI/180'), b = html.indexOf('/* ---------- symbols (embedded OFL font');
   const src = fs.readFileSync('ephemeris.js', 'utf8') + '\n' + fs.readFileSync('planets.js', 'utf8') + '\n'
-    + html.slice(a, b) + '\nreturn {moonApparent,nutation};';
+    + html.slice(a, b) + `
+/* The app gives the Moon on the IAU 2006 equinox; Horizons, which this fits
+   to, on the IAU 1976 one. Turned back before comparing, so the fit is of the
+   lunar theory and not of the change of frame. */
+function moonH(T,dpsi){ const g=moonApparent(T,dpsi); const l=g.lon*D2R-dpsi, b=g.lat*D2R;
+  to2006([1,0,0],T); const w=mxv(mT(FRAME_M),[Math.cos(b)*Math.cos(l),Math.cos(b)*Math.sin(l),Math.sin(b)]);
+  return {lon:rev(Math.atan2(w[1],w[0])*R2D+dpsi*R2D), lat:Math.asin(w[2])*R2D}; }
+return {moonApparent:moonH,nutation};`;
   const localStorage = { getItem: () => null, setItem: () => {} };
   return new Function('localStorage', 'document', 'window', 'APP_VERSION', src)(localStorage, {}, {}, '');
 }
