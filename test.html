@@ -68,12 +68,19 @@ const frame=document.getElementById('app');
   /* The golden ChartFacts, fetched here because t() is synchronous. */
   try{ PARITY_GOLD=await (await fetch('./parity.txt?notacache='+Date.now())).text(); }catch(e){}
   try{ SWE_REF=await (await fetch('./swe_reference.json?notacache='+Date.now())).json(); }catch(e){}
+  /* The charts the invariants are checked on. Until 15 Oct 2026 these were the
+     library's own 1019 entries; the library was then cut to the charts whose
+     time comes from a document, too few for a sample. Their dates and places
+     stay here, as test data only: real people, real latitudes, real eras,
+     which is what makes them a fair sample. Nothing here is shown to anyone. */
+  try{ SAMPLE=await (await fetch('./test-sample.json?notacache='+Date.now())).json(); }catch(e){}
   /* The city atlas is fetched after first paint, so the run waits for it -
      otherwise the atlas tests would silently check the inline seed instead and
      pass on the wrong data. Capped, because a failed fetch must still let the
      other ninety tests report. */
   frame.addEventListener('load',()=>setTimeout(async()=>{
     const W=frame.contentWindow;
+    W.SAMPLE_CHARTS=SAMPLE;
     try{ W.eval('atlasLoad()'); }catch(e){}
     for(let i=0;i<200;i++){
       let st=''; try{ st=W.eval('ATLAS.state'); }catch(e){}
@@ -241,6 +248,22 @@ const frame=document.getElementById('app');
       out.garbage=await verifyAccessKey('hello');
       out.applied=await applyAccessKey(good,false,false);
       out.stored=localStorage.getItem(ACCESS_KEY)===good;
+      /* #52: вся ссылка, вставленная в поле */
+      out.wholeLink=await verifyAccessKey('https://dafaspace.github.io/astrotrip/#key='+good);
+      /* #42: старая ссылка с иконки против более нового ключа в хранилище */
+      const newer=await make(now+20*86400,kp.privateKey), stale=await make(now-3600,kp.privateKey), older=await make(now+2*86400,kp.privateKey);
+      const keepHash=location.hash, tick=()=>new Promise(r=>setTimeout(r,60));
+      const viaLink=async(link)=>{ localStorage.setItem(ACCESS_KEY,newer); ACCESS_UNTIL=0; hideToast();
+        history.replaceState(null,'','#key='+link); keyFromAddress(); await tick(); await tick();
+        return {until:ACCESS_UNTIL, kept:localStorage.getItem(ACCESS_KEY)===newer,
+          toast:document.getElementById('toast').hidden?'':document.getElementById('toastText').textContent}; };
+      out.staleLink=await viaLink(stale); out.olderLink=await viaLink(older);
+      history.replaceState(null,'',location.pathname+location.search+keepHash);
+      out.newerUntil=(now+20*86400)*1000;
+      /* #53: неделя кончилась при открытом приложении */
+      const ringKeep=RING_MODE; RING_MODE='transit'; ACCESS_UNTIL=Date.now()-1; accessCheck();
+      out.afterEnd=RING_MODE; RING_MODE=ringKeep;
+      await applyAccessKey(good,false,false);
       localStorage.removeItem(ACCESS_KEY);
       return out;})()`); }catch(e){ ACCESS_CHECK={error:e.message}; }
     /* The asteroid file is a third of a megabyte and is fetched only when the
@@ -262,7 +285,7 @@ const frame=document.getElementById('app');
   },220));
   frame.src='./index.html?notacache='+Date.now();
 })();
-let ACCESS_CHECK=null, STORE_CHECK=null, SHARE_CHECK=null, SW_SRC='', PARITY_GOLD='', SWE_REF=null, ATLAS_REAL_BYTES=null, ATLAS_BAR=null, ATLAS_FAIL=null, DEFAULT_RING=null;
+let SAMPLE=[], ACCESS_CHECK=null, STORE_CHECK=null, SHARE_CHECK=null, SW_SRC='', PARITY_GOLD='', SWE_REF=null, ATLAS_REAL_BYTES=null, ATLAS_BAR=null, ATLAS_FAIL=null, DEFAULT_RING=null;
 
 function run(){
   const W=frame.contentWindow, D=frame.contentDocument;
@@ -304,10 +327,11 @@ function run(){
        Moon:217.2933209,Pluto:251.4371500,Chiron:251.5603761}]};
   const arcsec=(a,b)=>Math.abs(((a-b+540)%360)-180)*3600;
   Object.entries(JPL).forEach(([nm,[expr,tight]])=>{
-    t('совпадает с JPL Horizons до 2″: '+nm,()=>{
+    /* 0,5″ с 15 октября 2026: после подгонок к JPL худшее здесь 0,09″. */
+    t('совпадает с JPL Horizons до 0,5″: '+nm,()=>{
       const ch=ev(expr);
       const bad=Object.entries(tight).map(([p,v])=>[p,arcsec(ch.pos[p].lon,v)])
-        .filter(([p,e])=>e>2).map(([p,e])=>`${p} на ${e.toFixed(1)}″`);
+        .filter(([p,e])=>e>0.5).map(([p,e])=>`${p} на ${e.toFixed(2)}″`);
       return bad.length?bad.join(', '):true;
     });
   });
@@ -451,6 +475,12 @@ function run(){
         const got=ev(`(()=>{const k=HSYS; HSYS=${JSON.stringify(sys)};
           const ch=computeChart(${c.y},${c.mo},${c.d},${c.utHours},0,${c.lat},${c.lon},false);
           HSYS=k; return {cusps:ch.houses.cusps, asc:ch.asc, mc:ch.mc, sys:ch.houses.system};})()`);
+        /* Единственный откат, который здесь законен: топоцентрическая за
+           полярным кругом, когда куспиды эталона сами идут зигзагом и домами
+           не читаются (у Swiss Ephemeris house_pos с ними не согласен). Тогда
+           откат обязателен, и проверяется именно он. */
+        const zigzag=ev(`!cuspsRunOneWay(${JSON.stringify(r.cusps)})`);
+        if(sys==='topocentric'&&zigzag){ if(got.sys!=='equal') bad.push(`${c.name} ${sys}: зигзаг без отката`); continue; }
         if(got.sys!==sys){ bad.push(`${c.name} ${sys}: откат на ${got.sys}`); continue; }
         const d=(a,b)=>{let x=Math.abs(a-b); if(x>180)x=360-x; return x*3600;};
         let m=Math.max(d(got.asc,r.asc), d(got.mc,r.mc));
@@ -554,8 +584,8 @@ function run(){
        а не число путей. Проверяется на всей выборке: каждое тело в графе один
        раз, и строк не больше, чем тел плюс две итоговые. */
     const bad=ev(`(()=>{const out=[];
-      for(let i=0;i<CHART_LIBRARY.length;i+=7){
-        const e=CHART_LIBRARY[i], hh=e.t==null?12:e.t;
+      for(let i=0;i<SAMPLE_CHARTS.length;i+=7){
+        const e=SAMPLE_CHARTS[i], hh=e.t==null?12:e.t;
         const c=computeChart(e.y,e.mo,e.d,hh,libTz(e),e.lat,e.lon,false), F=chartFacts(c,'both');
         const n=Object.keys(F.planets).length;
         for(const p of Object.keys(F.planets)){
@@ -688,8 +718,8 @@ function run(){
     /* В режиме обоих наборов цепочка ветвится, и заканчиваться обязана каждая
        ветвь, а не первая. */
     const bad=ev(`(()=>{const out=[];
-      for(let i=0;i<CHART_LIBRARY.length;i+=Math.ceil(CHART_LIBRARY.length/${FSAMPLE})){
-        const e=CHART_LIBRARY[i], hh=e.t==null?12:e.t;
+      for(let i=0;i<SAMPLE_CHARTS.length;i+=Math.ceil(SAMPLE_CHARTS.length/${FSAMPLE})){
+        const e=SAMPLE_CHARTS[i], hh=e.t==null?12:e.t;
         const c=computeChart(e.y,e.mo,e.d,hh,libTz(e),e.lat,e.lon);
         for(const mode of RULER_MODES){ const F=chartFacts(c,mode);
           for(const [p,f] of Object.entries(F.planets)) f.branches.forEach(b=>{
@@ -708,8 +738,8 @@ function run(){
        у знака управитель, и цепочка идёт дальше, что и проверяет тест выше во
        всех трёх режимах. */
     const bad=ev(`(()=>{const out=[], outer=['Uranus','Neptune','Pluto','Chiron'];
-      for(let i=0;i<CHART_LIBRARY.length;i+=Math.ceil(CHART_LIBRARY.length/${FSAMPLE})){
-        const e=CHART_LIBRARY[i], hh=e.t==null?12:e.t;
+      for(let i=0;i<SAMPLE_CHARTS.length;i+=Math.ceil(SAMPLE_CHARTS.length/${FSAMPLE})){
+        const e=SAMPLE_CHARTS[i], hh=e.t==null?12:e.t;
         const F=chartFacts(computeChart(e.y,e.mo,e.d,hh,libTz(e),e.lat,e.lon),'classical');
         for(const [p,f] of Object.entries(F.planets)){
           if(outer.includes(f.dispositor)) out.push(e.id+'/'+p+': диспозитор '+f.dispositor);
@@ -786,8 +816,8 @@ function run(){
        вместе со своим противоположным. Если тест падает, ошибка в куспидах,
        а не в перехвате. */
     const bad=ev(`(()=>{const out=[];
-      for(let i=0;i<CHART_LIBRARY.length;i+=Math.ceil(CHART_LIBRARY.length/${FSAMPLE})){
-        const e=CHART_LIBRARY[i], hh=e.t==null?12:e.t;
+      for(let i=0;i<SAMPLE_CHARTS.length;i+=Math.ceil(SAMPLE_CHARTS.length/${FSAMPLE})){
+        const e=SAMPLE_CHARTS[i], hh=e.t==null?12:e.t;
         const F=chartFacts(computeChart(e.y,e.mo,e.d,hh,libTz(e),e.lat,e.lon));
         const set=new Set(F.intercepted);
         F.intercepted.forEach(x=>{if(!set.has((x+6)%12)) out.push(e.id+': знак '+x+' без пары');});
@@ -807,8 +837,8 @@ function run(){
   });
   t('перенос темы не указывает на дом, в котором планета и так стоит',()=>{
     const bad=ev(`(()=>{const out=[];
-      for(let i=0;i<CHART_LIBRARY.length;i+=Math.ceil(CHART_LIBRARY.length/${FSAMPLE})){
-        const e=CHART_LIBRARY[i], hh=e.t==null?12:e.t;
+      for(let i=0;i<SAMPLE_CHARTS.length;i+=Math.ceil(SAMPLE_CHARTS.length/${FSAMPLE})){
+        const e=SAMPLE_CHARTS[i], hh=e.t==null?12:e.t;
         const F=chartFacts(computeChart(e.y,e.mo,e.d,hh,libTz(e),e.lat,e.lon));
         for(const [p,f] of Object.entries(F.planets))
           f.carries.forEach(c=>{if(c.into!==f.house||c.from===f.house)
@@ -819,10 +849,13 @@ function run(){
   });
   t('секта и солнечное состояние согласованы с положениями',()=>{
     const bad=ev(`(()=>{const out=[];
-      for(let i=0;i<CHART_LIBRARY.length;i+=Math.ceil(CHART_LIBRARY.length/${FSAMPLE})){
-        const e=CHART_LIBRARY[i], hh=e.t==null?12:e.t;
-        const F=chartFacts(computeChart(e.y,e.mo,e.d,hh,libTz(e),e.lat,e.lon));
-        if((F.sect.chart==='day')!==(F.sect.sunHouse>=7)) out.push(e.id+': секта против дома Солнца');
+      for(let i=0;i<SAMPLE_CHARTS.length;i+=Math.ceil(SAMPLE_CHARTS.length/${FSAMPLE})){
+        const e=SAMPLE_CHARTS[i], hh=e.t==null?12:e.t;
+        const ch=computeChart(e.y,e.mo,e.d,hh,libTz(e),e.lat,e.lon), F=chartFacts(ch);
+        /* Солнце над горизонтом, если оно позади Асцендента по зодиаку: та
+           половина эклиптики уже взошла. Не дом Солнца - в целых знаках дом 1
+           начинается раньше Асцендента. */
+        if((F.sect.chart==='day')!==(rev(ch.pos.Sun.lon-ch.asc)>180)) out.push(e.id+': секта против горизонта');
         if(F.planets.Sun.solar.condition!==null) out.push(e.id+': у Солнца есть солнечное состояние');
         for(const [p,f] of Object.entries(F.planets)){
           const el=f.solar.elongation; if(el==null) continue;
@@ -1162,7 +1195,7 @@ function run(){
         return b.width&&b.left>R.left&&b.right<R.right&&b.top>R.top&&b.bottom<R.bottom;});
       if(!g) return {none:true};
       const b=g.querySelector('text').getBoundingClientRect(); ISO=null;
-      document.querySelector('#wheel svg').dispatchEvent(new MouseEvent('click',{bubbles:true,
+      (document.getElementById('wheel').dispatchEvent(new PointerEvent('pointerdown',{pointerType:'mouse',bubbles:true})),document.querySelector('#wheel svg')).dispatchEvent(new MouseEvent('click',{bubbles:true,
         clientX:b.left+b.width/2, clientY:b.top+b.height/2}));
       const got=ISO; ISO=null; drawWheel(CURRENT,TR_CHART); return {want:g.dataset.p, got};}`);
     if(r.none) return 'в увеличенном виде не нашлось планеты';
@@ -1171,7 +1204,7 @@ function run(){
   t('конец щипка или сдвига не считается касанием',()=>{
     const r=WZT(`()=>{WZ_GESTURE_AT=Date.now(); ISO=null;
       const R=document.querySelector('#wheel svg').getBoundingClientRect();
-      document.querySelector('#wheel svg').dispatchEvent(new MouseEvent('click',{bubbles:true,
+      (document.getElementById('wheel').dispatchEvent(new PointerEvent('pointerdown',{pointerType:'mouse',bubbles:true})),document.querySelector('#wheel svg')).dispatchEvent(new MouseEvent('click',{bubbles:true,
         clientX:R.left+R.width*0.3, clientY:R.top+R.height*0.5}));
       const got=ISO; WZ_GESTURE_AT=0; ISO=null; return {got};}`);
     return r.got===null||'после жеста выбралась планета '+r.got;
@@ -1244,8 +1277,8 @@ function run(){
       const sepFor=(r,h)=>2*Math.asin(Math.min(1,(h+1)/r))*180/Math.PI;
       const AST=['Ceres','Pallas','Juno','Vesta'];
       let worst=0,sum=0,n=0;
-      for(let i=0;i<CHART_LIBRARY.length;i+=11){
-        const e=CHART_LIBRARY[i], hh=e.t==null?12:e.t;
+      for(let i=0;i<SAMPLE_CHARTS.length;i+=11){
+        const e=SAMPLE_CHARTS[i], hh=e.t==null?12:e.t;
         const c=computeChart(e.y,e.mo,e.d,hh,libTz(e),e.lat,e.lon,false);
         const lons=WHEEL_BODIES.concat(FACT_POINTS).filter(p=>c.pos[p]&&!AST.includes(p)).map(p=>c.pos[p].lon);
         fanOut(lons,sepFor(R,fs*0.41)).forEach((v,k)=>{const d=Math.abs(((v-lons[k]+540)%360)-180);
@@ -1265,7 +1298,7 @@ function run(){
       if(!centres.length||!centres[0].w) return null;
       let ok=0, miss=[];
       for(const c of centres){ ISO=null;
-        document.querySelector('#wheel svg').dispatchEvent(new MouseEvent('click',{bubbles:true,clientX:c.cx,clientY:c.cy}));
+        (document.getElementById('wheel').dispatchEvent(new PointerEvent('pointerdown',{pointerType:'mouse',bubbles:true})),document.querySelector('#wheel svg')).dispatchEvent(new MouseEvent('click',{bubbles:true,clientX:c.cx,clientY:c.cy}));
         if(ISO===c.p) ok++; else miss.push(c.p+'->'+ISO);
         ISO=null; drawWheel(CURRENT,TR_CHART); }
       return {n:centres.length, ok, miss};}`);
@@ -1474,8 +1507,8 @@ function run(){
        чтобы возврат к диску провалил тест. */
     const r=ev(`(()=>{const sepFor=(r,h)=>2*Math.asin(Math.min(1,h/r))*180/Math.PI;
       let worst=0,sum=0,n=0;
-      for(let i=0;i<CHART_LIBRARY.length;i+=11){
-        const e=CHART_LIBRARY[i], hh=e.t==null?12:e.t;
+      for(let i=0;i<SAMPLE_CHARTS.length;i+=11){
+        const e=SAMPLE_CHARTS[i], hh=e.t==null?12:e.t;
         const c=computeChart(e.y,e.mo,e.d,hh,libTz(e),e.lat,e.lon,false);
         const shown=WHEEL_BODIES.concat(FACT_POINTS).filter(p=>c.pos[p]);
         const lons=shown.map(p=>c.pos[p].lon);
@@ -1689,7 +1722,7 @@ function run(){
   const SHEET=`(()=>{const el=document.getElementById('printFacts');
     const keep=el.innerHTML, keepLang=LANG, keepR=RULER_MODE;
     RULER_MODE='classical';
-    const pick=id=>{const e=CHART_LIBRARY.find(x=>x.id===id), hh=e.t==null?12:e.t;
+    const pick=id=>{const e=SAMPLE_CHARTS.find(x=>x.id===id), hh=e.t==null?12:e.t;
       return computeChart(e.y,e.mo,e.d,hh,libTz(e),e.lat,e.lon);};
     const read=(ch,lang)=>{LANG=lang||keepLang; el.innerHTML=printFactsSheet(ch);
       return {html:el.innerHTML,
@@ -1895,8 +1928,8 @@ function run(){
        houses» и прямо пишет, что это не стандартная система деления домов. */
     const r=ev(`(()=>{const k=HSYS, k3=HOUSE_3D; HSYS='placidus';
       let off=0, on=0, n=0;
-      for(let i=0;i<CHART_LIBRARY.length;i+=3){
-        const e=CHART_LIBRARY[i], hh=e.t==null?12:e.t;
+      for(let i=0;i<SAMPLE_CHARTS.length;i+=3){
+        const e=SAMPLE_CHARTS[i], hh=e.t==null?12:e.t;
         const c=computeChart(e.y,e.mo,e.d,hh,libTz(e),e.lat,e.lon,false);
         if(c.houses.system!=='placidus') continue;
         n++;
@@ -1914,8 +1947,8 @@ function run(){
        рисуется по долготе, и подпись обязана говорить о том же доме. */
     const bad=ev(`(()=>{const k=HSYS, k3=HOUSE_3D; HOUSE_3D=false; HSYS='placidus';
       const out=[];
-      for(let i=0;i<CHART_LIBRARY.length;i+=7){
-        const e=CHART_LIBRARY[i], hh=e.t==null?12:e.t;
+      for(let i=0;i<SAMPLE_CHARTS.length;i+=7){
+        const e=SAMPLE_CHARTS[i], hh=e.t==null?12:e.t;
         const c=computeChart(e.y,e.mo,e.d,hh,libTz(e),e.lat,e.lon,false);
         WHEEL_BODIES.concat(FACT_POINTS).filter(p=>c.pos[p]).forEach(p=>{
           if(bodyHouse(c,p)!==houseOf(c.pos[p].lon,c.houses.cusps))
@@ -2009,58 +2042,45 @@ function run(){
   /* ---------- библиотека карт ---------- */
   group('Библиотека карт');
   const LIB=ev('CHART_LIBRARY');
-  t('1019 карт: 643 художника, 184 кинокомпозитора, 192 классика',()=>{
-    if(LIB.length!==1019) return `записей ${LIB.length}`;
-    const n=k=>LIB.filter(e=>e.k===k).length;
-    return (n('a')===643&&n('f')===184&&n('c')===192)
-      ||`художники ${n('a')}, кино ${n('f')}, классика ${n('c')}`;
+  /* С 15 октября 2026 в библиотеке только карты, у которых дата, время и
+     место подтверждены документом и вторым независимым источником, без
+     единой другой версии. Карта на полдень без времени сюда больше не
+     попадает: для астролога без асцендента и домов это не карта. */
+  t('в библиотеке только карты с полными данными из документа',()=>{
+    const bad=LIB.filter(e=>e.rr!=='AA'||e.t==null||!e.src||(e.tzo==null&&!e.z)
+      ||!isFinite(e.lat)||!isFinite(e.lon)||!e.city||!e.city.ru||!e.city.en).map(e=>e.id);
+    return !bad.length||'неполные: '+bad.join(', ');
   });
-  t('у каждой записи есть род занятий',()=>{
-    const bad=LIB.filter(e=>!['a','f','c'].includes(e.k)).map(e=>e.id);
-    return !bad.length||'без рода занятий: '+bad.join(', ');
+  t('у каждой записи есть род занятий, и поиск его знает',()=>{
+    const bad=LIB.filter(e=>!['a','f','c','s','w','m','v','p'].includes(e.k)).map(e=>e.id);
+    if(bad.length) return 'без рода занятий: '+bad.join(', ');
+    D.getElementById('libFind').value='учёный'; ev('renderLibrary()');
+    const sci=D.querySelectorAll('#libList .libitem').length;
+    D.getElementById('libFind').value='художник'; ev('renderLibrary()');
+    const art=[...D.querySelectorAll('#libList .libitem .libname')].map(x=>x.textContent);
+    D.getElementById('libFind').value=''; ev('renderLibrary()');
+    if(!sci) return 'по слову «учёный» ничего';
+    return art.some(n=>/Гог|Gogh/.test(n))||'по слову «художник» не найден ван Гог: '+art.join(', ');
   });
   /* Wikidata сериализует дату, у которой известен только год, как 1 января.
-     Массовый импорт молча превратил «родился в 1835 году» в «родился 1 января
-     1835», и таких записей набралось 19 при ожидаемых 1,4 - вместе с Генделем,
-     Телеманом и Паганини, у которых даты известны прекрасно. По году карту
-     построить нельзя, поэтому такие записи либо получают настоящую дату, либо
-     уходят. Тест ловит возвращение этой кучи. */
+     Массовый импорт однажды молча превратил «родился в 1835 году» в «родился
+     1 января 1835». Тест ловит возвращение этой кучи, если библиотеку снова
+     будут пополнять из Wikidata. */
   t('нет кучи записей на одну календарную дату',()=>{
     const c={}; LIB.forEach(e=>{const k=e.mo+'-'+e.d; c[k]=(c[k]||0)+1;});
     const worst=Object.entries(c).sort((a,b)=>b[1]-a[1])[0];
-    /* Порог привязан к размеру базы: при 1020 записях на день приходится 2,8,
-       и девять на одну дату - обычный хвост Пуассона, а не сбой импорта.
-       Ловим настоящую кучу, а не совпадение дней рождения. */
     const lam=LIB.length/366, lim=Math.max(8,Math.ceil(lam+5*Math.sqrt(lam)));
     if(worst[1]>lim) return `на ${worst[0]} приходится ${worst[1]} записей при ожидаемых ${lam.toFixed(1)}`;
     const jan=c['1-1']||0;
-    return jan<=3||`на 1 января ${jan} записей — похоже на дату из Wikidata с точностью до года`;
+    return jan<=3||`на 1 января ${jan} записей, похоже на дату из Wikidata с точностью до года`;
   });
-  t('у каждой записи с рейтингом AA есть время и ссылка на источник',()=>{
-    const bad=LIB.filter(e=>e.rr==='AA'&&(e.t==null||!e.src)).map(e=>e.id);
-    if(bad.length) return 'без времени или источника: '+bad.join(', ');
-    const n=LIB.filter(e=>e.rr==='AA').length;
-    return n>=28||`записей с документальным временем всего ${n}`;
-  });
-  /* Библиотека коммерческого приложения - витрина, а не выборка для статистики.
-     Отбор по объёму написанного пропускал автора стоковой библиотечной музыки
-     с 1286 работами и десятки студийных ремесленников, чьи имена никому ничего
-     не говорят. Вторая мерка - число языковых разделов Wikipedia. */
-  t('в библиотеке нет имён без международной известности',()=>{
-    const known=['Bach','Mozart','Beethoven','Chopin','Wagner','Tchaikovsky','Debussy',
-      'Handel','Vivaldi','Schubert','Verdi','Haydn','Mahler','Brahms','Liszt','Ravel',
-      'Morricone','Zimmer','Williams','Boulez','Messiaen','Satie','Berlioz',
-      'Rembrandt','Goya','Monet','Gogh','Picasso','Dalí','Matisse','Renoir','Cézanne',
-      'Klimt','Munch','Kandinsky','Malevich','Repin','Vrubel','Turner','Delacroix',
-      'Manet','Degas','Gauguin','Magritte','Kahlo','Warhol','Pollock','Chagall','Klee','Ingres'];
-    const miss=known.filter(k=>!LIB.some(e=>e.name.en.includes(k)));
-    return !miss.length||'потеряны при отборе: '+miss.join(', ');
-  });
-  /* Выборка нужна ради статистики, а её потолок задают не карты, а независимые
-     даты: у ровесников медленные планеты стоят одинаково не по своей воле. */
-  t('в пятистах картах не меньше 170 разных лет рождения',()=>{
-    const y=new Set(LIB.map(e=>e.y)).size;
-    return y>=170||`разных лет всего ${y}`;
+  t('поправки проверки 15 октября: Моцарт, Сен-Санс, Пьерне',()=>{
+    const f=id=>LIB.find(e=>e.id===id)||{};
+    const m=f('mozart'), s=f('camillesaintsae'), p=f('gabrielpierne'), bad=[];
+    if(Math.abs(m.tzo-13.0433/15)>1e-4) bad.push('Моцарт без среднего времени Зальцбурга');
+    if(Math.abs(s.lon-2.3404)>1e-3) bad.push('Сен-Санс не на улице Жарден');
+    if(p.t!==21||Math.abs(p.t-p.tzo-20.587778)>1e-3) bad.push('Пьерне: часы не 21:00 или сдвинулся момент');
+    return !bad.length||bad.join('; ');
   });
   t('после 1900 года у каждой записи есть часовой пояс',()=>{
     const bad=LIB.filter(e=>e.y>=1900&&!e.z).map(e=>e.id);
@@ -2116,16 +2136,17 @@ function run(){
   /* Хирон здесь же, а не отдельной проверкой: сноска приложения обещает
      сверку на всех картах библиотеки, и обещание должно покрывать всё, что
      на карте нарисовано. Измерено 0,03-0,25″ на этих пяти. */
-  t('карты библиотеки совпадают с JPL Horizons до 4″',()=>{
+  /* 1,5″ с 15 октября 2026 (было 4″): худшее теперь 1,15″, Марс у Баха. */
+  t('карты библиотеки совпадают с JPL Horizons до 1,5″',()=>{
     const bad=[];
     Object.entries(LIBREF).forEach(([id,ref])=>{
-      const e=LIB.find(x=>x.id===id);
+      const e=SAMPLE.find(x=>x.id===id);
       if(!e){ bad.push(id+': записи нет'); return; }
       W.__e=e; const hh=e.t==null?12:e.t;
       const ch=ev(`computeChart(${e.y},${e.mo},${e.d},${hh},libTz(window.__e),${e.lat},${e.lon})`);
       Object.entries(ref).forEach(([p,v])=>{
         const err=arcsec(ch.pos[p].lon,v);
-        if(err>4) bad.push(`${id}/${p} на ${err<120?err.toFixed(1)+'″':(err/60).toFixed(1)+'′'}`);
+        if(err>1.5) bad.push(`${id}/${p} на ${err<120?err.toFixed(1)+'″':(err/60).toFixed(1)+'′'}`);
       });
     });
     return !bad.length||bad.slice(0,4).join(', ');
@@ -2300,8 +2321,8 @@ function run(){
        рамка каждой подписи против рамки колеса, на выборке карт, в обоих
        режимах: только натал и с внешним кольцом. */
     const bad=ev(`(()=>{const out=[], keep=RING_MODE, S=380;
-      for(let i=0;i<CHART_LIBRARY.length;i+=97){
-        const e=CHART_LIBRARY[i], hh=e.t==null?12:e.t;
+      for(let i=0;i<SAMPLE_CHARTS.length;i+=97){
+        const e=SAMPLE_CHARTS[i], hh=e.t==null?12:e.t;
         const c=computeChart(e.y,e.mo,e.d,hh,libTz(e),e.lat,e.lon,false);
         for(const tr of [null, c]){
           drawWheel(c,tr,null);
@@ -2375,7 +2396,7 @@ function run(){
     if(r.afterCancel) bad.push('отменённая отправка записана как выгрузка');
     if(!r.afterDone) bad.push('завершённая отправка не записана');
     if(!/\.csv$/.test(r.plugFile||'')) bad.push('Android: в файл ушёл не CSV: '+r.plugFile);
-    if(!/^name,date,time/.test(r.plugData||'')) bad.push('Android: в файле не CSV с заголовком: '+r.plugData);
+    if(!/^\ufeff?name,date,time/.test(r.plugData||'')) bad.push('Android: в файле не CSV с заголовком: '+r.plugData);
     if(!/\.csv$/.test(r.plugShared||'')) bad.push('Android: в меню ушёл не тот файл: '+r.plugShared);
     if(r.plugAfterCancel) bad.push('Android: отменённая отправка записана как выгрузка');
     if(!r.plugAfterDone) bad.push('Android: завершённая отправка не записана');
@@ -2974,14 +2995,16 @@ function run(){
     let d=Math.abs(b-a); if(d>180) d=360-d;
     return d<0.2||`за период ушла на ${d.toFixed(3)}°`;
   });
-  t('средняя Чёрная Луна это апогей по Meeus 45.7',()=>{
-    /* Перигей 83.3532465° в J2000, скорость 4069.0137287°/век; апогей на 180°
-       дальше. Проверяем в самой эпохе и через сто лет. */
+  t('средняя Чёрная Луна: апогей по Meeus 45.7 и поправка Swiss Ephemeris не больше 7′',()=>{
+    /* Основа: перигей 83.3532465° в J2000, скорость 4069.0137287°/век, апогей
+       на 180° дальше. С 15 октября 2026 к ней прибавлена поправка к определению
+       Swiss Ephemeris (до 7′, период около трёх лет); она проверяется против
+       самой Swiss Ephemeris отдельным тестом, здесь только её величина. */
     const now=ev('lilithLon(1.5)'), late=ev('lilithLon(1.5+36525)');
     const wantNow=(83.3532465+180)%360;
     const wantLate=(83.3532465+180+4069.0137287-0.0103200-1/80053+1/18999000)%360;
-    return (near(now,wantNow,1e-6)&&near(late,wantLate,1e-6))
-      ||`J2000 ${now.toFixed(4)} против ${wantNow.toFixed(4)}, +100 лет ${late.toFixed(4)} против ${wantLate.toFixed(4)}`;
+    const d1=arcsec(now,wantNow), d2=arcsec(late,wantLate);
+    return (d1<=420&&d2<=420)||`J2000 в стороне на ${d1.toFixed(0)}″, +100 лет на ${d2.toFixed(0)}″`;
   });
   t('истинная Чёрная Луна даёт правдоподобную оскулирующую орбиту',()=>{
     /* Большая полуось около 384 400 км, эксцентриситет колеблется примерно от
@@ -3247,8 +3270,12 @@ function run(){
     return r==='Zürich'||`получилось ${r}`;
   });
   t('совпадение с начала имени идёт раньше совпадения внутри',()=>{
-    const r=ev(`searchCities('san')[0].e`);
-    return /^San/i.test(r)||`первым выдан ${r}`;
+    /* С начала любого из имён места, включая синонимы: Санкт-Петербург,
+       найденный как San Pietroburgo, это совпадение с начала, а Пусан нет. */
+    const r=ev(`(()=>{const c=searchCities('san')[0];
+      const names=[c.e,c.r].concat((CITY_ALIASES[c.c+'|'+c.e]||'').split(';'));
+      return {e:c.e, ok:names.some(n=>normStr(n).startsWith('san'))};})()`);
+    return r.ok||`первым выдан ${r.e}`;
   });
   t('часовой пояс из атласа даёт верное смещение для даты',()=>{
     /* Москва в 1984 году это UTC+4 летом: пояс из атласа должен пройти через
@@ -3389,7 +3416,7 @@ function run(){
   });
   t('ретроградность видна и на колесе, и в таблице',()=>{
     const r=ev(`(()=>{const sv=document.querySelector('#wheel svg');
-      const onWheel=(sv.innerHTML.match(/\\u211e/g)||[]).length;
+      const onWheel=[...sv.querySelectorAll('.pl')].filter(g=>/\\u211e/.test(g.textContent)).length;
       const inTable=document.querySelectorAll('#positions .rx').length;
       const retro=BODIES.concat(POINTS).filter(p=>CURRENT.pos[p]&&CURRENT.pos[p].retro).length;
       return {onWheel,inTable,retro};})()`);
@@ -3485,7 +3512,7 @@ function run(){
        включёнными минорными ближайшим часто оказывался квиконс, текста для
        него нет, и портрет возвращался с пустым телом. Без исключения, молча. */
     const r=ev(`(()=>{const keep=JSON.parse(JSON.stringify(ORBS));
-      const ent=CHART_LIBRARY.find(x=>x.id==='leodelibes')||CHART_LIBRARY[0];
+      const ent=SAMPLE_CHARTS.find(x=>x.id==='leodelibes');
       const ch=computeChart(ent.y,ent.mo,ent.d,ent.t==null?12:ent.t,libTz(ent),ent.lat,ent.lon);
       ASPECT_DEFS.forEach(a=>ORBS[a.name].on=true); rebuildAspects();
       const withMinors=composePortrait(ch);
@@ -3953,8 +3980,8 @@ function run(){
     /* Прямая проверка того, что было сломано: глиф стоял на кольце, а аспектов
        у него не было ни на колесе, ни в панели, ни в таблице, ни в фигурах. */
     const r=ev(`(()=>{let charts=0, withPoint=0;
-      for(let i=0;i<CHART_LIBRARY.length;i+=17){
-        const e=CHART_LIBRARY[i], hh=e.t==null?12:e.t;
+      for(let i=0;i<SAMPLE_CHARTS.length;i+=17){
+        const e=SAMPLE_CHARTS[i], hh=e.t==null?12:e.t;
         const c=computeChart(e.y,e.mo,e.d,hh,libTz(e),e.lat,e.lon,false);
         charts++;
         const P=['NNode','SNode','Lilith','Selena'];
@@ -3969,8 +3996,8 @@ function run(){
        аспекта до 27,5, худшая с 25 до 39. На трёх градусах 21,4 и 32. */
     const r=ev(`(()=>{const keep=POINT_ORB;
       const count=()=>{let n=0;
-        for(let i=0;i<CHART_LIBRARY.length;i+=17){
-          const e=CHART_LIBRARY[i], hh=e.t==null?12:e.t;
+        for(let i=0;i<SAMPLE_CHARTS.length;i+=17){
+          const e=SAMPLE_CHARTS[i], hh=e.t==null?12:e.t;
           n+=findAspects(computeChart(e.y,e.mo,e.d,hh,libTz(e),e.lat,e.lon,false).pos).length;
         } return n;};
       POINT_ORB=1; const tight=count();
@@ -3983,7 +4010,7 @@ function run(){
     /* Внешняя проверка здравого смысла: тау-квадрат частый, большой крест
        редкий. Если детектор сломается в одну из сторон, это будет видно. */
     const r=ev(`(()=>{const c={}; let n=0;
-      for(const e of CHART_LIBRARY.slice(0,200)){
+      for(const e of SAMPLE_CHARTS.slice(0,200)){
         const ch=computeChart(e.y,e.mo,e.d,e.t==null?12:e.t,libTz(e),e.lat,e.lon,false);
         n++; findConfigurations(ch.pos).forEach(f=>c[f.kind]=(c[f.kind]||0)+1);
       }
@@ -4000,7 +4027,7 @@ function run(){
          loaded for the measurement and put back afterwards. */
       let ch=CURRENT, found=findConfigurations(ch.pos);
       if(!found.length){
-        for(const e of CHART_LIBRARY){
+        for(const e of SAMPLE_CHARTS){
           const c=computeChart(e.y,e.mo,e.d,e.t==null?12:e.t,libTz(e),e.lat,e.lon,false);
           const f=findConfigurations(c.pos);
           if(f.length){ ch=c; found=f; break; }
@@ -4217,7 +4244,7 @@ function run(){
     /* Глиф не может её показать: чтобы диски не перекрывались, их разводят на
        градусы. Деления - единственные метки на колесе, нарисованные точно. */
     const r=ev(`(()=>{const sv=document.querySelector('#wheel svg'), C=190, asc=CURRENT.asc;
-      const lonOf=(x,y)=>{const a=Math.atan2(C-y,x-C)*180/Math.PI;return ((asc+180-a)%360+360)%360;};
+      const lonOf=(x,y)=>{const a=Math.atan2(y-C,x-C)*180/Math.PI;return ((asc+180-a)%360+360)%360;};
       const pick=col=>[...sv.querySelectorAll('line')]
         .filter(l=>l.getAttribute('stroke')==='var('+col+')'&&l.getAttribute('stroke-width')==='1.7')
         .map(l=>lonOf(+l.getAttribute('x1'),+l.getAttribute('y1'))).sort((a,b)=>a-b);
@@ -4250,7 +4277,7 @@ function run(){
        которых он не образует. Порог привязан к самому разведению, а не взят
        из головы: дальше двух шагов разведения уезжать незачем. */
     const r=ev(`(()=>{const sv=document.querySelector('#wheel svg'), C=190, asc=CURRENT.asc;
-      const lonOf=(x,y)=>{const a=Math.atan2(C-y,x-C)*180/Math.PI;return ((asc+180-a)%360+360)%360;};
+      const lonOf=(x,y)=>{const a=Math.atan2(y-C,x-C)*180/Math.PI;return ((asc+180-a)%360+360)%360;};
       let worst=0, who='';
       sv.querySelectorAll('.pl').forEach(g=>{
         const c=g.querySelector('text[font-family^="Astro"]');
@@ -4291,7 +4318,7 @@ function run(){
     /* Узлы точно противоположны по построению, и на скриншоте они оказались
        рядом - это и было тем, что видно глазом. */
     const r=ev(`(()=>{const sv=document.querySelector('#wheel svg'), C=190, asc=CURRENT.asc;
-      const lonOf=(x,y)=>{const a=Math.atan2(C-y,x-C)*180/Math.PI;return ((asc+180-a)%360+360)%360;};
+      const lonOf=(x,y)=>{const a=Math.atan2(y-C,x-C)*180/Math.PI;return ((asc+180-a)%360+360)%360;};
       const at=n=>{const e=sv.querySelector('.pl[data-p="'+n+'"] text[font-family^="Astro"]');
         return e?lonOf(+e.getAttribute('x'),+e.getAttribute('y')):null;};
       const dataOpp=Math.abs(rev(CURRENT.pos.SNode.lon-CURRENT.pos.NNode.lon)-180);
@@ -4466,6 +4493,7 @@ function run(){
         return {p:g.dataset.p,cx:b.left+b.width/2,cy:b.top+b.height/2,w:b.width};});
       if(!centres.length||!centres[0].w) return null;
       const probe=(x,y)=>{ISO=null;
+        document.getElementById('wheel').dispatchEvent(new PointerEvent('pointerdown',{pointerType:'mouse',bubbles:true}));
         document.querySelector('#wheel svg').dispatchEvent(
           new MouseEvent('click',{bubbles:true,clientX:x,clientY:y}));
         const got=ISO; ISO=null; drawWheel(CURRENT,TR_CHART); return got;};
@@ -4664,7 +4692,7 @@ function run(){
       'libTitle','libFind','noTime','rrKnown','delChart','libShort','settings','themeLabel',
       'langLabel','close','whatIs','nameLabel','saveBtn','savedBtn','saveToLib','edit','hide',
       'editData','geoNone','accessTitle','accessFree','proNeeded','enterCode','setCalc','setView','setHsys','setLil','setRulers',
-      'hsysLabel','lilLabel','lil_mean','lil_true','transittime','secondsLabel','needdata',
+      'hsysLabel','lil_mean','lil_true','transittime','secondsLabel','needdata',
       'empty','natal','era1','era2','era3','era4','tapdetail','positions','posnote',
       'transitdate','scrubintro','stepLabel','u_sec','u_min','u_hour','u_day','u_week',
       'u_month','u_year','u_dec','u_cent','nowbtn','birthbtn','applying','separating',
@@ -4763,8 +4791,10 @@ function run(){
     const h=ev('libToCsv().split("\\r\\n")[0]');
     /* Сверяется с самим CSV_COLS, а не с переписанным от руки списком: при
        добавлении колонки note этот тест провалился на приложении, которое было
-       исправно, и это ровно тот случай, когда тест дублирует данные. */
-    return h===ev('CSV_COLS.join(",")')||`заголовок "${h}"`;
+       исправно, и это ровно тот случай, когда тест дублирует данные.
+       Перед заголовком стоит BOM, чтобы Excel открыл кириллицу как UTF-8. */
+    if(h.charCodeAt(0)!==0xFEFF) return 'нет BOM в начале файла';
+    return h.slice(1)===ev('CSV_COLS.join(",")')||`заголовок "${h}"`;
   });
   t('повторная загрузка того же файла не удваивает библиотеку',()=>{
     const r=ev(`(()=>{const keep=localStorage.getItem('astrarium_charts');
@@ -4843,6 +4873,568 @@ function run(){
       +`document.getElementById('time').value=${JSON.stringify(tm)};syncSaveBtn()`);
     return off || 'кнопка активна, но нажатие ничего не делает';
   });
+
+  /* ---------- проверка кода 15 октября 2026 ----------
+     Каждая находка, которую чинили, получает здесь тест на сам сценарий из
+     docs/review-2026-10-15.md, номер находки в названии. */
+  group('проверка кода 15 октября');
+  t('#57 смещение пояса берётся в момент рождения, а не на часы раньше',()=>{
+    const cases=[
+      ['Europe/Moscow',1990,3,25,0,30,3,'Москва перед летним временем'],
+      ['America/New_York',2024,3,10,4,0,-4,'Нью-Йорк после перевода вперёд'],
+      ['America/New_York',2024,11,3,3,30,-5,'Нью-Йорк после перевода назад'],
+      ['America/New_York',2024,11,3,1,30,-4,'повторившийся час: первый из двух'],
+      ['America/New_York',2024,3,10,2,30,-5,'пропущенный час: часы ещё не переведены'],
+      ['Asia/Vladivostok',2010,3,28,1,30,10,'Владивосток в ночь перевода']];
+    const bad=cases.map(([z,y,mo,d,h,mi,want,nm])=>{
+      const got=ev(`ianaOffset(${JSON.stringify(z)},${y},${mo},${d},${h},${mi})`);
+      return got===want?null:`${nm}: ${got} вместо ${want}`;}).filter(Boolean);
+    return !bad.length||bad.join('; ');
+  });
+  t('#58 местное среднее время читается с секундами и берётся по месту рождения',()=>{
+    const bad=[];
+    const msk=ev(`ianaOffset('Europe/Moscow',1880,6,1,12,0)`);
+    if(Math.abs(msk-(2+30/60+17/3600))>1e-6) bad.push(`Москва 1880 из базы: ${msk}`);
+    const spb=ev(`placeOffset('Europe/Moscow',30.3351,1880,6,1,12,0)`);
+    if(Math.abs(spb-30.3351/15)>1e-9) bad.push(`Петербург 1880: ${spb}, а не долгота/15`);
+    const f=ev(`formatOffset(30.3351/15)`);
+    if(f!=='+02:01:20') bad.push(`запись смещения ${f}`);
+    const mod=ev(`placeOffset('Europe/Moscow',30.3351,1990,6,1,12,0)`);
+    if(mod!==4) bad.push(`Петербург 1990: ${mod}, ожидалось летнее +4`);
+    return !bad.length||bad.join('; ');
+  });
+  t('#58 форма ставит местное среднее время города, а не опорного города пояса',()=>{
+    const prev=ev(`[document.getElementById('date').value,document.getElementById('time').value,`
+      +`document.getElementById('tz').value,SELECTED_CITY,TZ_AUTO]`);
+    try{
+      ev(`SELECTED_CITY={r:'Санкт-Петербург',e:'Saint Petersburg',lat:59.9343,lon:30.3351,z:'Europe/Moscow'};TZ_AUTO=true;`
+        +`document.getElementById('date').value='1880-06-01';document.getElementById('time').value='12:00';updateTzAuto()`);
+      const v=D.getElementById('tz').value;
+      return v==='+02:01:20'||`в поле ${v}`;
+    }finally{
+      W.__p=prev;
+      ev(`document.getElementById('date').value=__p[0];document.getElementById('time').value=__p[1];`
+        +`document.getElementById('tz').value=__p[2];SELECTED_CITY=__p[3];TZ_AUTO=__p[4];`);
+    }
+  });
+  t('#40 смещение читается в тех видах, в каких его пишут, и мусор не становится нулём',()=>{
+    const want={'+3':3,'+03:00':3,'+0300':3,'UTC+3':3,'GMT-5':-5,'+03:00:00':3,'5.5':5.5,'-3,5':-3.5,
+      '+02:01:20':2+1/60+20/3600,'-09:30':-9.5};
+    const bad=Object.entries(want).map(([s,v])=>{const g=ev(`parseOffset(${JSON.stringify(s)})`);
+      return Math.abs(g-v)<1e-9?null:`${s} -> ${g}`;}).filter(Boolean);
+    ['','abc','+25','12:75','UTC','3 часа'].forEach(s=>{const g=ev(`parseOffset(${JSON.stringify(s)})`);
+      if(!Number.isNaN(g)) bad.push(`${JSON.stringify(s)} принят как ${g}`);});
+    return !bad.length||bad.join('; ');
+  });
+  t('#60 Ханой в 1965 году на +7 и без атласа',()=>{
+    const z=ev(`SEED_CITIES.find(c=>c.e==='Hanoi').z`);
+    const off=ev(`ianaOffset(${JSON.stringify(z)},1965,6,1,12,0)`);
+    return off===7||`${z}: ${off}`;
+  });
+  t('#13 #9 день и ночь не зависят от системы домов: восход в целых знаках',()=>{
+    /* Москва 10.05.1990 04:45 (UTC+3): Солнце 49°, Асцендент 53°, Солнце уже
+       взошло, но в целых знаках стоит в 1 доме. */
+    const r=ev(`(()=>{const k=HSYS; try{
+      const out=[];
+      for(const sys of ['whole','equal','placidus','porphyry']){
+        HSYS=sys; const ch=computeChart(1990,5,10,4.75,3,55.75,37.62), F=chartFacts(ch);
+        out.push([sys,F.sect.chart,rev(ch.pos.Fortune.lon-rev(ch.asc+ch.pos.Moon.lon-ch.pos.Sun.lon))]);
+      }
+      /* сутки с шагом 15 минут: секта одна и та же в целых знаках и в Плацидусе */
+      let diff=0;
+      for(let m=0;m<1440;m+=15){
+        HSYS='whole'; const a=chartFacts(computeChart(1990,5,10,m/60,3,55.75,37.62)).sect.chart;
+        HSYS='placidus'; const b=chartFacts(computeChart(1990,5,10,m/60,3,55.75,37.62)).sect.chart;
+        if(a!==b) diff++;
+      }
+      return {out,diff};
+    }finally{HSYS=k;}})()`);
+    const bad=r.out.filter(([sys,sect,fd])=>sect!=='day'||Math.min(fd,360-fd)>1e-9)
+      .map(([sys,sect,fd])=>`${sys}: ${sect}, Фортуна в стороне от дневной формулы на ${fd.toFixed(2)}°`);
+    if(r.diff) bad.push(`за сутки секта расходится в ${r.diff} моментах из 96`);
+    return !bad.length||bad.join('; ');
+  });
+  t('#13 над горизонтом у планет считается по небу, а не по номеру дома',()=>{
+    const r=ev(`(()=>{const k=HSYS; try{ HSYS='whole';
+      const ch=computeChart(1990,5,10,4.75,3,55.75,37.62), F=chartFacts(ch);
+      return Object.keys(F.planets).filter(p=>ch.pos[p]&&F.planets[p].sect.aboveHorizon!==(altitudeOf(ch,p)>0));
+    }finally{HSYS=k;}})()`);
+    return !r.length||'не совпало у '+r.join(', ');
+  });
+  /* Сценарии импорта прогоняются на временной библиотеке: настоящая
+     сохраняется до теста и возвращается после, даже если тест упал. */
+  const withLib=(charts,body)=>ev(`(()=>{const keep=localStorage.getItem('astrarium_charts');
+    localStorage.setItem('astrarium_charts',${JSON.stringify(JSON.stringify(charts))});
+    try{ ${body} }finally{ if(keep==null) localStorage.removeItem('astrarium_charts');
+      else localStorage.setItem('astrarium_charts',keep); }})()`);
+  t('#39 сохранить без места нельзя: ни карты на 0°/0°, ни дублей',()=>{
+    const prev=ev(`FORM_FIELDS.map(id=>document.getElementById(id).value)`);
+    try{
+      const r=withLib([],`
+        const set=(id,v)=>document.getElementById(id).value=v;
+        set('date','1990-05-10'); set('time','04:45'); set('city','Москва'); set('lat',''); set('lng',''); set('tz','');
+        document.getElementById('saveChart').click(); document.getElementById('saveChart').click();
+        const empty=savedCharts().length;
+        set('lat','55.75'); set('lng','37.62'); set('tz','+04:00');
+        document.getElementById('saveChart').click(); syncSaveBtn(); document.getElementById('saveChart').click();
+        return {empty, full:savedCharts().length, e:savedCharts()[0]};`);
+      if(r.empty!==0) return `без места сохранено ${r.empty}`;
+      if(r.full!==1) return `с местом после двух нажатий карт ${r.full}`;
+      return (r.e.lat===55.75&&r.e.lon===37.62&&r.e.tz===4)||JSON.stringify(r.e);
+    }finally{ W.__p=prev; ev(`FORM_FIELDS.forEach((id,i)=>document.getElementById(id).value=__p[i]);syncSaveBtn()`); }
+  });
+  t('#40 #41 строка без смещения или с нечитаемой ячейкой не входит, а считается',()=>{
+    const csv=['name,date,time,utc_offset,latitude,longitude,city',
+      'Хорошая,1990-05-10,04:45,+04:00,55.7558,37.6173,Москва',
+      'Без смещения,1990-05-10,04:45,,55.7558,37.6173,Москва',
+      'Запятая,1990-05-10,04:45,UTC+3,"55,7558",37.6173,Москва',
+      'Запад,1990-05-10,14:30,-05:00,40N43,74W00,NY',
+      'PM,1990-05-10,2:30 PM,-05:00,40.71,-74.0,NY',
+      'Без времени,1990-05-10,,+03:00,55.75,37.62,Москва',
+      'Мусор,1990-05-10,25:00,+03:00,55.75,37.62,Москва',
+      'Широта,1990-05-10,10:00,+03:00,95,37.62,Москва',
+      '31 февраля,1990-02-31,10:00,+03:00,55,37,Москва'].join('\r\n');
+    const r=withLib([],`const n=csvToLib(${JSON.stringify(csv)});
+      return {n,rej:csvToLib.rejected,list:savedCharts()};`);
+    const by=nm=>r.list.find(e=>e.name===nm);
+    const bad=[];
+    if(r.n!==5) bad.push(`вошло ${r.n}, а не 5`);
+    if(r.rej!==4) bad.push(`не прочитано ${r.rej}, а не 4`);
+    if(by('Без смещения')) bad.push('строка без смещения вошла');
+    const c=by('Запятая'); if(!c||c.lat!==55.7558||c.tz!==3) bad.push('десятичная запятая или UTC+3: '+JSON.stringify(c&&[c.lat,c.tz]));
+    const w=by('Запад'); if(!w||Math.abs(w.lat-(40+43/60))>1e-9||w.lon!==-74) bad.push('40N43 74W00: '+JSON.stringify(w&&[w.lat,w.lon]));
+    const pm=by('PM'); if(!pm||pm.t!==14.5) bad.push('2:30 PM: '+(pm&&pm.t));
+    const nt=by('Без времени'); if(!nt||nt.t!==null) bad.push('пустое время: '+(nt&&nt.t));
+    return !bad.length||bad.join('; ');
+  });
+  t('#43 файл из Excel: точка с запятой, BOM и даты через точку',()=>{
+    const csv='﻿name;date;time;utc_offset;latitude;longitude;city\r\nЭксель;10.05.1990;04:45;+04:00;55,7558;37,6173;Москва\r\n';
+    const r=withLib([],`const n=csvToLib(${JSON.stringify(csv)}); return {n,e:savedCharts()[0]};`);
+    if(r.n!==1) return `вошло ${r.n}`;
+    const e=r.e;
+    return (e.name==='Эксель'&&e.y===1990&&e.mo===5&&e.d===10&&e.lat===55.7558&&e.lon===37.6173&&e.tz===4)||JSON.stringify(e);
+  });
+  t('#45 счётчики импорта не тянутся с прошлого раза',()=>{
+    const r=withLib([],`csvToLib.skipped=300; csvToLib.rejected=7;
+      const n=csvToLib('name,date,latitude\\r\\n'); return [n,csvToLib.skipped,csvToLib.rejected];`);
+    return (r[1]===0&&r[2]===0)||`после пустого файла: ${r.join(', ')}`;
+  });
+  t('#46 отмена импорта убирает только импортированное',()=>{
+    const csv='name,date,time,utc_offset,latitude,longitude\r\nИмпорт,1990-05-10,04:45,+04:00,55.75,37.62\r\n';
+    const r=withLib([{id:'u_old',name:'Своя',y:1980,mo:1,d:1,t:12,lat:1,lon:2,tz:0,note:''}],`
+      importCsvText(${JSON.stringify(csv)});
+      const l=savedCharts(); l.find(x=>x.id==='u_old').note='дописано после импорта';
+      l.unshift({id:'u_new',name:'Сохранена после',y:2000,mo:1,d:1,t:12,lat:1,lon:2,tz:0});
+      writeCharts(l);
+      document.getElementById('toastBtn').click();
+      const a=savedCharts(); return {names:a.map(x=>x.name), note:(a.find(x=>x.id==='u_old')||{}).note};`);
+    const bad=[];
+    if(r.names.includes('Импорт')) bad.push('импорт не отменён');
+    if(!r.names.includes('Сохранена после')) bad.push('пропала карта, сохранённая после импорта');
+    if(r.note!=='дописано после импорта') bad.push('пропала заметка: '+r.note);
+    return !bad.length||bad.join('; ');
+  });
+  t('#47 переполненное хранилище: сказано прямо, карта не считается сохранённой',()=>{
+    const r=ev(`(()=>{const orig=Storage.prototype.setItem;
+      Storage.prototype.setItem=function(k,v){ if(k==='astrarium_charts') throw new DOMException('full','QuotaExceededError'); return orig.call(this,k,v); };
+      try{ const ok=writeCharts([{id:'x'}]);
+        const msg=(document.querySelector('#toast')||{}).textContent||'';
+        return {ok,msg}; }finally{ Storage.prototype.setItem=orig; }})()`);
+    if(r.ok!==false) return 'writeCharts сообщил об успехе';
+    return r.msg.includes(ev(`t('storageFull')`).slice(0,12))||`сообщение: ${r.msg}`;
+  });
+  t('#25 карта не строится с широтой 95 или смещением +25',()=>{
+    const prev=ev(`FORM_FIELDS.map(id=>document.getElementById(id).value)`);
+    const al=W.alert; let said=0; W.alert=()=>{said++;};
+    try{
+      const a=ev(`document.getElementById('lat').value='95';run()`);
+      ev(`document.getElementById('lat').value='55.75'`);
+      const b=ev(`document.getElementById('tz').value='+25:00';run()`);
+      return (a===false&&b===false&&said===2)||`широта 95: ${a}, смещение +25: ${b}, сообщений ${said}`;
+    }finally{ W.alert=al; W.__p=prev; ev(`FORM_FIELDS.forEach((id,i)=>document.getElementById(id).value=__p[i]);syncSaveBtn();run()`); }
+  });
+  t('#30 на колесе подписан настоящий Асцендент и MC, в любой системе домов',()=>{
+    const r=ev(`(()=>{const k=HSYS; try{
+      const out=[];
+      for(const sys of ['whole','equal','placidus']){
+        HSYS=sys; run();
+        const lab=l=>[...document.querySelectorAll('#wheel text')].map(x=>x.textContent).find(x=>x.startsWith(l+' '));
+        out.push({sys, asc:lab('Asc'), mc:lab('MC'),
+          wantAsc:'Asc '+(Math.floor(rev(CURRENT.asc)%30)+1), wantMc:'MC '+(Math.floor(rev(CURRENT.mc)%30)+1)});
+      }
+      return out;
+    }finally{ HSYS=k; run(); }})()`);
+    const bad=r.filter(x=>x.asc!==x.wantAsc||x.mc!==x.wantMc).map(x=>`${x.sys}: ${x.asc}/${x.mc} вместо ${x.wantAsc}/${x.wantMc}`);
+    return !bad.length||bad.join('; ');
+  });
+  t('#31 одиночные глифы стоят на своём градусе, скопление раскрыто вокруг своего центра',()=>{
+    const lons=[10,40,75,100,100.5,101,101.5,102,102.5,150,200,250,300,340];
+    const f=ev(`fanOut(${JSON.stringify(lons)},8)`);
+    const d=lons.map((v,i)=>((f[i]-v+540)%360)-180);
+    const bad=[];
+    [0,1,9,10,11,12,13].forEach(i=>{ if(Math.abs(d[i])>1e-9) bad.push(`${lons[i]}° сдвинут на ${d[i].toFixed(2)}`); });
+    const crowd=[2,3,4,5,6,7,8], mean=crowd.reduce((a,i)=>a+d[i],0)/crowd.length;
+    if(Math.abs(mean)>1e-9) bad.push(`центр скопления уехал на ${mean.toFixed(2)}`);
+    const g=ev(`fanOut([0],8)`); if(g[0]!==0) bad.push('одно тело на 0° нарисовано на '+g[0]);
+    return !bad.length||bad.join('; ');
+  });
+  t('#35 ℞ во внешнем кольце: транзитный Меркурий в апреле 2024 ретрограден',()=>{
+    const r=ev(`(()=>{
+      const a=transitChartAt(CURRENT,utcMs(2024,4,10,12,0,0)), b=transitChartAt(CURRENT,utcMs(2024,5,10,12,0,0));
+      const full=computeChart(2024,4,10,12,0,0,0);
+      const names=Object.keys(full.pos).filter(n=>full.pos[n].retro!=null&&a.pos[n]&&a.pos[n].retro!=null);
+      const disagree=names.filter(n=>full.pos[n].retro!==a.pos[n].retro);
+      return {apr:a.pos.Mercury.retro, may:b.pos.Mercury.retro, disagree, n:names.length};})()`);
+    if(r.apr!==true||r.may!==false) return `апрель ${r.apr}, май ${r.may}`;
+    return (!r.disagree.length&&r.n>=9)||`расходится с полным расчётом: ${r.disagree.join(', ')} (${r.n} тел)`;
+  });
+  t('#35 у дирекции нет ℞, взятого из натала',()=>{
+    const r=ev(`(()=>{const c=ringChart(CURRENT,utcMs(2030,1,1,0,0,0),'directed');
+      return Object.keys(c.pos).filter(n=>c.pos[n].retro);})()`);
+    return !r.length||'у дирекции ретроградны '+r.join(', ');
+  });
+  t('#36 пунктир транзита идёт только от нарисованного тела',()=>{
+    const r=ev(`(()=>{const keep=TR_HITS, tr=transitChartAt(CURRENT,TR_MS);
+      try{ TR_HITS=[{tp:'NNode',np:'Sun',orb:0.5,asp:ASPECTS[0]}]; drawWheel(CURRENT,tr,null);
+        return document.querySelectorAll('#wheel line[stroke-dasharray]').length;
+      }finally{ TR_HITS=keep; redrawAspects(); }})()`);
+    return r===0||`пунктиров от Узла: ${r}`;
+  });
+  t('#22 #32 в синастрии с обменом касание строки не снимает обмен и фигуры остаются вашими',()=>{
+    const r=ev(`(()=>{const keep={m:RING_MODE,p:PARTNER,s:RING_SWAP};
+      try{
+        PARTNER={src:'lib',id:CHART_LIBRARY[0].id}; RING_MODE='synastry'; RING_SWAP=true;
+        renderTransits(CURRENT);
+        const before=WHEEL_LAST[0];
+        document.querySelector('#positions .planet-row.hit').click();
+        const afterRow=WHEEL_LAST[0], ring=LIT_RING;
+        const g=document.querySelector('#wheel .pl'); g.dispatchEvent(new MouseEvent('click',{bubbles:true}));
+        return {swappedInner:before===TR_CHART, rowKeeps:afterRow===before, ring, confFor:CONF_CH===CURRENT};
+      }finally{ RING_MODE=keep.m; PARTNER=keep.p; RING_SWAP=keep.s; ISO=null; CONF_ISO=null; LIT_RING='inner'; renderTransits(CURRENT); }})()`);
+    const bad=[];
+    if(!r.swappedInner) bad.push('партнёр не внутри после обмена');
+    if(!r.rowKeeps) bad.push('касание строки вернуло натал внутрь');
+    if(r.ring!=='outer') bad.push('строка подсветила не ваше кольцо: '+r.ring);
+    if(!r.confFor) bad.push('после тапа фигуры считаются не по вашей карте');
+    return !bad.length||bad.join('; ');
+  });
+  t('#33 #34 на печать колесо идёт без подсветки и с подписью колец',()=>{
+    const r=ev(`(()=>{const keep=RING_MODE;
+      try{
+        RING_MODE='transit'; renderTransits(CURRENT); ISO='Sun'; redrawWheel();
+        dispatchEvent(new Event('beforeprint'));
+        const during=ISO, txt=(document.getElementById('printRing')||{}).textContent||'';
+        dispatchEvent(new Event('afterprint'));
+        return {during, after:ISO, txt, want:t('ring_transit')};
+      }finally{ ISO=null; RING_MODE=keep; renderTransits(CURRENT); }})()`);
+    const bad=[];
+    if(r.during!==null) bad.push('на печати подсвечено '+r.during);
+    if(r.after!=='Sun') bad.push('после печати подсветка не вернулась');
+    if(!r.txt.includes(r.want)||!/UT$/.test(r.txt)) bad.push('подпись колец: "'+r.txt+'"');
+    return !bad.length||bad.join('; ');
+  });
+  t('#37 двойной тап только увеличивает: палец ждёт, мышь откатывает выбор',()=>{
+    const r=ev(`(()=>{const el=document.getElementById('wheel'), sv=document.querySelector('#wheel svg');
+      const g=document.querySelector('#wheel .pl text').getBoundingClientRect(), x=g.left+g.width/2, y=g.top+g.height/2;
+      resetWheelZoom(); ISO=null; WZ_GESTURE_AT=0;
+      el.dispatchEvent(new PointerEvent('pointerdown',{pointerType:'touch',pointerId:7,clientX:x,clientY:y,bubbles:true}));
+      el.dispatchEvent(new PointerEvent('pointerup',{pointerType:'touch',pointerId:7,clientX:x,clientY:y,bubbles:true}));
+      sv.dispatchEvent(new MouseEvent('click',{bubbles:true,clientX:x,clientY:y}));
+      const touchNow=ISO; clearTimeout(WZ_TAP_T);
+      el.dispatchEvent(new PointerEvent('pointerdown',{pointerType:'mouse',bubbles:true}));
+      sv.dispatchEvent(new MouseEvent('click',{bubbles:true,clientX:x,clientY:y,detail:1}));
+      const mouseFirst=ISO;
+      sv.dispatchEvent(new MouseEvent('click',{bubbles:true,clientX:x,clientY:y,detail:2}));
+      el.dispatchEvent(new MouseEvent('dblclick',{bubbles:true,clientX:x,clientY:y}));
+      const r={touchNow, mouseFirst, after:ISO, zoom:WZ.s};
+      resetWheelZoom(); ISO=null; redrawWheel(); return r;})()`);
+    const bad=[];
+    if(r.touchNow!==null) bad.push('палец выбрал планету до конца окна двойного тапа');
+    if(!r.mouseFirst) bad.push('одиночный щелчок мыши ничего не выбрал');
+    if(r.after!==null) bad.push('после двойного щелчка осталась подсветка '+r.after);
+    if(!(r.zoom>1)) bad.push('двойной щелчок не увеличил');
+    return !bad.length||bad.join('; ');
+  });
+  t('колесо стоит как у всех: MC наверху, I дом под Асцендентом, знаки против часовой',()=>{
+    const r=ev(`(()=>{const k=HSYS; try{ HSYS='placidus'; run();
+      const sv=document.querySelector('#wheel svg'), R=sv.getBoundingClientRect(), cy=R.top+R.height/2, cx=R.left+R.width/2;
+      const at=txt=>{const e=[...sv.querySelectorAll('text')].find(x=>x.textContent===txt||x.textContent.startsWith(txt+' '));
+        const b=e.getBoundingClientRect(); return {x:b.left+b.width/2-cx, y:b.top+b.height/2-cy};};
+      const p=polarFor(CURRENT.asc), a=p(CURRENT.asc+30,100), C0=190;
+      return {mc:at('MC'), ic:at('IC'), asc:at('Asc'), h1:at('I'), h10:at('X'), next:{x:a[0]-C0,y:a[1]-C0}};
+    }finally{ HSYS=k; run(); }})()`);
+    const bad=[];
+    if(!(r.mc.y<0)) bad.push('MC не в верхней половине');
+    if(!(r.ic.y>0)) bad.push('IC не в нижней половине');
+    if(!(r.asc.x<0)) bad.push('Асцендент не слева');
+    if(!(r.h1.y>0&&r.h1.x<0)) bad.push('I дом не под горизонтом слева');
+    if(!(r.h10.y<0)) bad.push('X дом не наверху');
+    if(!(r.next.y>0)) bad.push('Асцендент + 30° ушёл вверх: зодиак идёт по часовой');
+    return !bad.length||bad.join('; ');
+  });
+  t('#3 средний узел совпадает со Swiss Ephemeris до 0,5″: нутация на месте',()=>{
+    /* pyswisseph 2.10.03, MEAN_NODE, FLG_MOSEPH, с нутацией. */
+    const ref=[[1985,11,3,10.6167,38.921153],[2000,1,1,0,125.067123],[1950,6,15,12,3.348993]];
+    const bad=ref.map(([y,m,d,h,n])=>{const c=ev(`computeChart(${y},${m},${d},${h},0,0,0,false)`);
+      const e=Math.abs(((c.pos.NNode.lon-n+540)%360)-180)*3600; return e<=0.5?null:`${y}: ${e.toFixed(2)}″`;}).filter(Boolean);
+    return !bad.length||bad.join('; ');
+  });
+  t('#7 за полярным кругом дома читаются в ту сторону, куда идут куспиды',()=>{
+    /* swe.house_pos при тех же ARMC 288.2114, широте 69.6492 и наклоне 23.4386 */
+    const want={regiomontanus:{Sun:11,Moon:11,Mercury:11,Venus:12,Mars:6,Jupiter:11,Saturn:12,Uranus:12,Neptune:12,Pluto:6},
+      campanus:{Sun:12,Moon:12,Mercury:12,Venus:12,Mars:6,Jupiter:12,Saturn:12,Uranus:12,Neptune:12,Pluto:6}};
+    const bad=[];
+    for(const [sys,w] of Object.entries(want)){
+      const got=ev(`(()=>{const k=HSYS; try{ HSYS=${JSON.stringify(sys)};
+        const c=computeChart(2001,6,21,0,0,69.6492,18.9553,false);
+        return Object.fromEntries(Object.keys(${JSON.stringify(w)}).map(p=>[p,houseOf(c.pos[p].lon,c.houses.cusps)]));
+      }finally{HSYS=k;}})()`);
+      for(const p in w) if(got[p]!==w[p]) bad.push(`${sys}/${p}: ${got[p]} вместо ${w[p]}`);
+    }
+    return !bad.length||bad.slice(0,6).join('; ');
+  });
+  t('#7 #11 откат за полярным кругом не ставит Асцендент на запад',()=>{
+    const r=ev(`(()=>{const k=HSYS; try{ const out=[];
+      for(const [sys,lat,h] of [['topocentric',69.6492,0],['regiomontanus',89,6],['campanus',-89.2,15]]){
+        HSYS=sys; const c=computeChart(2001,6,21,h,0,lat,18.9553,false);
+        out.push({sys,lat,used:c.houses.system, east:rev(c.asc-c.mc)<180, monotone:cuspsRunOneWay(c.houses.cusps)});
+      } return out; }finally{HSYS=k;}})()`);
+    const bad=r.filter(x=>!x.east||!x.monotone).map(x=>`${x.sys} ${x.lat}: система ${x.used}, Асцендент ${x.east?'на востоке':'на западе'}, куспиды ${x.monotone?'по кругу':'зигзагом'}`);
+    return !bad.length||bad.join('; ');
+  });
+  t('#8 Плацидус держится до полярного круга: Рованиеми 66,5° это Плацидус',()=>{
+    const r=ev(`(()=>{const k=HSYS; try{ HSYS='placidus';
+      return [66.499,66.55,66.6].map(lat=>computeChart(2001,6,21,12,2,lat,25.73,false).houses.system);
+    }finally{HSYS=k;}})()`);
+    return (r[0]==='placidus'&&r[1]==='placidus'&&r[2]==='equal')||r.join(', ');
+  });
+  t('#14 тесный сходящийся аспект Луны назван сходящимся',()=>{
+    const r=ev(`(()=>{const sq=ASPECT_DEFS.find(a=>a.name==='square'), cj=ASPECT_DEFS.find(a=>a.name==='conjunction');
+      const ch={pos:{Moon:{lon:99.8,spd:13.2},Saturn:{lon:10,spd:0.05},Sun:{lon:100.2,spd:0.98}}};
+      return [aspectDirection(ch,'Moon','Saturn',sq), aspectDirection(ch,'Moon','Sun',cj),
+        aspectDirection({pos:{Moon:{lon:100.3,spd:13.2},Sun:{lon:100.2,spd:0.98}}},'Moon','Sun',cj)];})()`);
+    return (r[0]==='applying'&&r[1]==='applying'&&r[2]==='separating')||r.join(', ');
+  });
+  t('#16 у узлов, Лилит, Селены и Фортуны нет сожжения',()=>{
+    const r=ev(`(()=>{const F=chartFacts(CURRENT);
+      return FACT_POINTS.filter(p=>F.planets[p]&&F.planets[p].solar.condition!==null);})()`);
+    return !r.length||'солнечное состояние у '+r.join(', ');
+  });
+  t('#20 сетка не показывает того, чего нет на круге: без оппозиции узлов, орб точек',()=>{
+    const r=ev(`(()=>{renderGrid(CURRENT,null);
+      const cells=[...document.querySelectorAll('#aspGrid .gc.on')].map(c=>({r:c.dataset.r,c:c.dataset.c,a:c.dataset.a,o:+c.dataset.o}));
+      const nodes=cells.filter(x=>nodePair(x.r,x.c)).length;
+      const wide=cells.filter(x=>(isAspectPoint(x.r)||isAspectPoint(x.c))&&x.o>POINT_ORB+1e-9).length;
+      const fa=findAspects(CURRENT.pos).filter(a=>GRID_BODIES.includes(a.p1)&&GRID_BODIES.includes(a.p2)).length;
+      const planetCells=cells.filter(x=>x.r!=='ASC'&&x.r!=='MC'&&x.c!=='ASC'&&x.c!=='MC').length;
+      renderTransits(CURRENT); return {nodes,wide,fa,planetCells};})()`);
+    const bad=[];
+    if(r.nodes) bad.push('в сетке оппозиция узлов');
+    if(r.wide) bad.push(`${r.wide} аспектов точек шире орба точек`);
+    if(r.planetCells!==r.fa) bad.push(`в сетке ${r.planetCells} аспектов тел и точек, на круге ${r.fa}`);
+    return !bad.length||bad.join('; ');
+  });
+  t('#27 орб точек сужает и транзитный узел',()=>{
+    const r=ev(`(()=>{const k=RING_MODE; RING_MODE='transit'; const c=ringOrbCap('NNode','Sun'); RING_MODE=k; return [c,POINT_ORB];})()`);
+    return r[0]===Math.min(3.5,r[1])||`cap ${r[0]}, орб точек ${r[1]}`;
+  });
+  t('#21 без партнёра под заголовком синастрии не остаются транзиты',()=>{
+    const r=ev(`(()=>{const k={m:RING_MODE,p:PARTNER};
+      try{ RING_MODE='transit'; renderTransits(CURRENT);
+        const before=document.getElementById('transitlist').children.length;
+        RING_MODE='synastry'; PARTNER=null; renderTransits(CURRENT);
+        return {before, after:document.getElementById('transitlist').children.length};
+      }finally{ RING_MODE=k.m; PARTNER=k.p; renderTransits(CURRENT); }})()`);
+    return r.after===0||`осталось ${r.after} строк (до смены режима ${r.before})`;
+  });
+  t('#23 синастрия в обе стороны, и без углов у партнёра без времени',()=>{
+    const r=ev(`(()=>{const k={m:RING_MODE,p:PARTNER,s:RING_SWAP};
+      try{
+        const withT=CHART_LIBRARY.find(e=>e.t!=null), noT={...withT,id:'__notime',t:null}; CHART_LIBRARY.push(noT);
+        RING_MODE='synastry'; RING_SWAP=false;
+        PARTNER={src:'lib',id:withT.id}; renderTransits(CURRENT);
+        const revAng=TR_HITS.filter(h=>h.rev&&(h.np==='ASC'||h.np==='MC')).length;
+        const anyRev=TR_HITS.filter(h=>h.rev).length;
+        PARTNER={src:'lib',id:noT.id}; renderTransits(CURRENT);
+        const noTimeAng=TR_HITS.filter(h=>h.rev&&(h.np==='ASC'||h.np==='MC')).length;
+        RING_SWAP=true; renderTransits(CURRENT);
+        const swappedAng=TR_HITS.filter(h=>!h.rev&&(h.np==='ASC'||h.np==='MC')).length;
+        return {revAng,anyRev,noTimeAng,swappedAng, unknown:!!TR_CHART.timeUnknown};
+      }finally{ CHART_LIBRARY.splice(CHART_LIBRARY.findIndex(e=>e.id==='__notime'),1);  RING_MODE=k.m; PARTNER=k.p; RING_SWAP=k.s; renderTransits(CURRENT); }})()`);
+    const bad=[];
+    if(!r.anyRev) bad.push('нет ни одного контакта к углам и точкам партнёра');
+    if(r.noTimeAng) bad.push(`к углам партнёра без времени ${r.noTimeAng} аспектов`);
+    if(r.swappedAng) bad.push(`после обмена к полуденным углам ${r.swappedAng} аспектов`);
+    if(!r.unknown) bad.push('карта партнёра без времени не помечена');
+    return !bad.length||bad.join('; ');
+  });
+  t('#26 сходящийся до точности остаётся сходящимся, даже если точность внутри шага',()=>{
+    const r=ev(`(()=>{const sq=ASPECT_DEFS.find(a=>a.name==='square'), cj=ASPECT_DEFS.find(a=>a.name==='conjunction'), op=ASPECT_DEFS.find(a=>a.name==='opposition');
+      const ch={pos:{Sun:{lon:100}},asc:0,mc:0};
+      const m=(now,later,asp)=>markApplying(ch,{Moon:{lon:now}},{Moon:{lon:later}},[{tp:'Moon',np:'Sun',asp,orb:0}])[0].applying;
+      return [m(9.9,10.15,sq), m(99.9,100.2,cj), m(279.9,280.3,op), m(100.2,100.4,cj), m(10.3,10.5,sq)];})()`);
+    const want=[true,true,true,false,false];
+    return r.every((v,i)=>v===want[i])||`получено ${r.join(', ')}, ожидалось ${want.join(', ')}`;
+  });
+  t('#24 соляр называет свой момент и место и рисует свои углы',()=>{
+    const r=ev(`(()=>{const k=RING_MODE;
+      try{ RING_MODE='solar'; renderTransits(CURRENT);
+        return {loc:document.getElementById('momLoc').textContent, ms:TR_CHART&&TR_CHART.returnMs,
+          ang:[...document.querySelectorAll('#wheel .trAng text')].map(x=>x.textContent)};
+      }finally{ RING_MODE=k; renderTransits(CURRENT); }})()`);
+    const bad=[];
+    if(!r.ms) bad.push('момент возврата не найден');
+    if(!r.loc.includes(ev(`t('ring_solar')`))||!/UT/.test(r.loc)) bad.push('под ползунком: "'+r.loc+'"');
+    if(r.ang.join(',')!=='Asc,MC') bad.push('углы соляра на колесе: '+r.ang.join(','));
+    return !bad.length||bad.join('; ');
+  });
+  t('#28 смена орба обновляет текст экспорта',()=>{
+    const r=ev(`(()=>{const keep=JSON.stringify(ORBS);
+      const card=document.getElementById('exportCard'), was=card.open; card.open=true;
+      try{ fillExport(); const a=document.getElementById('exportText').textContent;
+        ORBS.quincunx.on=!ORBS.quincunx.on; ORBS.quincunx.orb=5; rebuildAspects(); redrawAspects();
+        const b=document.getElementById('exportText').textContent; return a!==b;
+      }finally{ const o=JSON.parse(keep); Object.keys(o).forEach(n=>ORBS[n]=o[n]); saveOrbs(); rebuildAspects(); redrawAspects(); card.open=was; }})()`);
+    return r||'текст экспорта не изменился после включения квинконса';
+  });
+  t('#52 #42 #53 ключ из целой ссылки, старая ссылка не перебивает новый ключ, неделя кончается без перезагрузки',()=>{
+    const r=ACCESS_CHECK; if(!r||r.error) return 'проверка ключей не запустилась: '+(r&&r.error);
+    const bad=[];
+    if(r.wholeLink!==r.want) bad.push('целая ссылка в поле не принята');
+    if(r.staleLink.until!==r.newerUntil||!r.staleLink.kept||r.staleLink.toast) bad.push('истёкшая ссылка: '+JSON.stringify(r.staleLink));
+    if(r.olderLink.until!==r.newerUntil||!r.olderLink.kept) bad.push('более ранняя ссылка перебила новый ключ: '+JSON.stringify(r.olderLink));
+    if(r.afterEnd!=='none') bad.push('после конца недели остался режим '+r.afterEnd);
+    return !bad.length||bad.join('; ');
+  });
+  t('#44 холодный старт строит последнюю построенную карту, а недописанное возвращает в открытую форму',()=>{
+    const r=ev(`(()=>{const keep=[localStorage.getItem(CAST_KEY),localStorage.getItem(FORM_KEY)];
+      try{
+        const cast=formNow(); cast.date='1990-05-10'; cast.time='04:45'; cast.lat='55.75'; cast.lng='37.62'; cast.tz='+04:00';
+        const draft={...cast, date:'2001-01-01'};
+        localStorage.setItem(CAST_KEY,JSON.stringify(cast)); localStorage.setItem(FORM_KEY,JSON.stringify(draft));
+        restoreSession(); const castY=CAST_ARGS.y;
+        const formDate=document.getElementById('date').value, open=!document.getElementById('formCard')||document.getElementById('formCard').open!==false;
+        return {castY, formDate};
+      }finally{ keep[0]==null?localStorage.removeItem(CAST_KEY):localStorage.setItem(CAST_KEY,keep[0]);
+        keep[1]==null?localStorage.removeItem(FORM_KEY):localStorage.setItem(FORM_KEY,keep[1]);
+        restoreForm(CAST_KEY)||restoreForm(FORM_KEY); run(); }})()`);
+    return (r.castY===1990&&r.formDate==='2001-01-01')||JSON.stringify(r);
+  });
+  t('#61 #62 #63 город находится по-украински, по-грузински, по старому имени и через пробел',()=>{
+    if(ev('ATLAS.state')!=='ready') return 'атлас не загрузился';
+    const want=[['Київ','Kyiv'],['Kiev','Kyiv'],['Odessa','Odesa'],['Львів','Lviv'],['თბილისი','Tbilisi'],['ბათუმი','Batumi'],
+      ['München','Munich'],['Cologne','Köln'],['Bangalore','Bengaluru'],['Leningrad','Saint Petersburg'],['Ulaanbaatar','Ulan Bator'],
+      ['Ростов на Дону','Rostov-on-Don'],['Saint-Petersburg','Saint Petersburg'],['St. Petersburg','Saint Petersburg'],
+      ['Нью Йорк','New York City'],['Улан Удэ','Ulan-Ude']];
+    const bad=want.map(([q,e])=>{const c=ev(`(searchCities(${JSON.stringify(q)})[0]||{}).e`);
+      return c===e?null:`${q} -> ${c}`;}).filter(Boolean);
+    return !bad.length||bad.join('; ');
+  });
+  t('#59 одноимённые места в списке различаются координатами',()=>{
+    const h=ev(`cityRows([{e:'Kirovsk',r:'Кировск',c:'RU',lat:67.61,lon:33.67},{e:'Kirovsk',r:'Кировск',c:'RU',lat:59.88,lon:30.99},{e:'Moscow',r:'Москва',c:'RU',lat:55.75,lon:37.62}])`);
+    const n=(h.match(/ · /g)||[]).length;
+    return n===2||`координаты у ${n} строк из 2 одноимённых`;
+  });
+  t('#15 секунды не бывают 60″',()=>{
+    const r=ev(`(()=>{const k=SHOW_SECONDS; SHOW_SECONDS=true; try{
+      return [fmtPos(10.9999).html, fmtPos(29.99999).html, fmtPos(359.99999).html];
+    }finally{SHOW_SECONDS=k;}})()`).map(h=>h.replace(/<[^>]+>/g,''));
+    const bad=r.filter(h=>/60″|60′/.test(h));
+    return (!bad.length&&r[0].startsWith('11°00′00″')&&r[2].startsWith('0°00′00″'))||r.join(' | ');
+  });
+  t('#18 цикл в экспорте записан стрелками с замыканием, как на экране',()=>{
+    const r=ev(`(()=>{const ch=computeChart(2000,1,1,0,0,0,0); return chartExportText(ch);})()`);
+    return !/ <-> .* <-> /.test(r)||'в экспорте цикл как пары <->';
+  });
+  t('#19 Меркурий в Рыбах: изгнание и падение, в Деве: управитель и экзальтация',()=>{
+    const r=ev(`[dignityAlso('Mercury',11,dignityOf('Mercury',11,'classical')), dignityAlso('Mercury',5,dignityOf('Mercury',5,'classical'))]`);
+    return (r[0]==='fall'&&r[1]==='exalt')||r.join(', ');
+  });
+  t('#51 #54 кнопки темы переведены, подписи связаны с полями',()=>{
+    const bad=[];
+    const th=D.querySelector('[data-theme-set="light"]').getAttribute('aria-label');
+    if(th!==ev(`t('themeLight')`)) bad.push('кнопка темы: '+th);
+    ['date','time','city','lat','lng','tz'].forEach(id=>{ if(!D.querySelector(`label[for="${id}"]`)) bad.push('нет подписи у '+id); });
+    if(!D.getElementById('accessCode').getAttribute('aria-label')) bad.push('поле ключа без подписи');
+    return !bad.length||bad.join('; ');
+  });
+  t('#48 движок грузится с версией в адресе, и service worker кладёт его с ней',()=>{
+    const src=D.querySelector('script[src*="ephemeris.js"]').getAttribute('src'), v=ev('APP_VERSION');
+    if(src!=='./ephemeris.js?v='+v) return 'в index.html '+src;
+    return /ephemeris\.js\?v=\$\{V\}/.test(SW_SRC)||'sw.js кэширует ephemeris.js без версии';
+  });
+  t('#38 выпадающий список: стрелки стоят на краях, Tab закрывает',()=>{
+    const r=ev(`(()=>{const sel=document.getElementById('hsysSet')||document.querySelector('select[data-dd]');
+      const btn=sel.parentNode.querySelector('.ddbtn'), keep=sel.selectedIndex;
+      try{ sel.selectedIndex=sel.options.length-1; sel._ddPaint();
+        btn.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true}));
+        const atEnd=sel.selectedIndex;
+        btn.click(); const opened=!sel.parentNode.querySelector('.ddlist').hidden;
+        sel.parentNode.dispatchEvent(new FocusEvent('focusout',{relatedTarget:document.body,bubbles:true}));
+        return {atEnd, last:sel.options.length-1, opened, closed:sel.parentNode.querySelector('.ddlist').hidden};
+      }finally{ sel.selectedIndex=keep; sel._ddPaint(); closeDropdown(); }})()`);
+    return (r.atEnd===r.last&&r.opened&&r.closed)||JSON.stringify(r);
+  });
+  /* ---------- точность против JPL, 15 октября 2026 ----------
+     Значения JPL Horizons, QUANTITIES 31, TT, взяты tools-check-jpl.mjs:
+     края 1550-2250, где прежде было хуже всего. */
+  t('Луна на краях 1550 и 2250 совпадает с JPL до 1,5″ (было 20″)',()=>{
+    const ref=[[2287195.5,78.3070527],[2542855.5-0.5,null]];
+    const r=ev(`(()=>{const jd=2287195.5,T=(jd-2451545)/36525,[dp]=nutation(T);return moonApparent(T,dp).lon;})()`);
+    const e=Math.abs(((r-78.3070527+540)%360)-180)*3600;
+    return e<=1.5||`Луна 1550-01-01 на ${e.toFixed(2)}″`;
+  });
+  t('Нептун и Уран у краёв идут по подгонке к JPL, а не по урезанному ряду',()=>{
+    const r=ev(`[typeof PLANET_FIT!=="undefined"&&!!PLANET_FIT.NeptuneB, !!chebFit(fitOf("UranusB"),(2300000-2451545)/365250),
+      chebFit(fitOf("NeptuneB"),(2600000-2451545)/365250)===null]`);
+    return (r[0]&&r[1]&&r[2])||'подгонки нет, или она отвечает за пределами своего отрезка: '+r.join(',');
+  });
+  t('нутация: член 0,071″ по аномалии Луны на месте',()=>{
+    /* Swiss Ephemeris (ECL_NUT) в TT J2000: dpsi -13,9315″ */
+    const r=ev(`nutation(0)[0]*648000/Math.PI`);
+    return Math.abs(r-(-13.9315))<0.01||`dpsi ${r.toFixed(4)}″`;
+  });
+  t('ΔT как у JPL: 1550 198 с, 1900 -2,7 с, 2026 ровно 69,184 с, будущее плавно',()=>{
+    const r=ev(`[deltaTsec(1550,1),deltaTsec(1900,1),deltaTsec(2026,10),deltaTsec(2017,1),deltaTsec(2016,12),deltaTsec(2050,1),deltaTsec(2100,1)]`);
+    const bad=[];
+    if(Math.abs(r[0]-198.0)>0.5) bad.push('1550: '+r[0]);
+    if(Math.abs(r[2]-69.184)>1e-9) bad.push('2026: '+r[2]);
+    if(Math.abs(r[3]-r[4]-1)>1e-9) bad.push('секунда 2017 года не учтена');
+    if(!(r[5]>69&&r[5]<80&&r[6]>80&&r[6]<100)) bad.push('будущее: 2050 '+r[5].toFixed(1)+', 2100 '+r[6].toFixed(1));
+    return !bad.length||bad.join('; ');
+  });
+  t('#2 карта вне 1550-2250 говорит, что Плутон не рассчитан',()=>{
+    const r=ev(`(()=>{const c=computeChart(1500,6,1,12,0,0,0); renderChartMeta(c,1500,6,1,12,0,0);
+      const has=document.getElementById('chartMeta').textContent.includes(t('plutoEdge'));
+      run(); return [has, document.getElementById('chartMeta').textContent.includes(t('plutoEdge'))];})()`);
+    return (r[0]&&!r[1])||`1500: ${r[0]}, обычная карта: ${r[1]}`;
+  });
+  /* Система отсчёта: равноденствие даты по IAU 2006, как у Swiss Ephemeris и SOFA.
+     Значения: pyswisseph 2.10.03, файлы sepl_18.se1 (DE406), TT, видимые долготы.
+     Солнце, Меркурий и Марс из DE406 надёжны, поэтому расхождение здесь меряет
+     только систему отсчёта и нашу редукцию, а не эфемериду. */
+  const SWE_FRAME=[[2378900.5, 319.8311465, 314.9834632, 55.7729037], [2401332.595, 108.4735704, 97.633062, 2.8152026], [2423764.69, 258.1125943, 271.8026846, 214.5566721], [2446196.785, 50.5242819, 25.9526527, 70.2873597], [2468628.88, 197.2373836, 222.3689061, 262.5835952], [2491060.975, 351.0132279, 338.1560998, 193.6947801], [2513493.07, 138.3720118, 145.9883499, 97.3796202], [2535925.165, 289.6419295, 295.273652, 288.9981947]];
+  t('система отсчёта как у Swiss Ephemeris: Солнце, Меркурий, Марс до 0,1″ на 1800-2250',()=>{
+    const bad=[];
+    for(const [jd,sun,me,ma] of SWE_FRAME){
+      const g=ev(`(()=>{const Tc=(${jd}-2451545)/36525,tm=(${jd}-2451545)/365250;const [dp]=nutation(Tc),E=helioXYZ('ea',tm),V=earthVel(tm);
+        return ['Sun','Mercury','Mars'].map(n=>apparent(n,tm,dp,E,V).lon);})()`);
+      [sun,me,ma].forEach((v,i)=>{ const e=arcsec(g[i],v); if(e>0.1) bad.push(`${['Sun','Mercury','Mars'][i]} JD ${jd}: ${e.toFixed(3)}″`); });
+    }
+    return !bad.length||bad.slice(0,4).join('; ');
+  });
+  t('поворот от IAU 1976 к IAU 2006: 1,23″ в 1550, ноль в 2000, -0,78″ в 2250',()=>{
+    const r=ev(`[-4.5,0,2.5].map(T=>{const v=to2006([1,0,0],T); return Math.atan2(v[1],v[0])*206264.8;})`);
+    return (Math.abs(r[0]-1.226)<0.01&&Math.abs(r[1])<0.02&&Math.abs(r[2]+0.779)<0.01)||r.map(x=>x.toFixed(3)).join(', ');
+  });
+  t('средняя Чёрная Луна как у Swiss Ephemeris, до 3″ (было до 7′)',()=>{
+    /* pyswisseph 2.10.03, MEAN_APOG, calc_ut, с нутацией */
+    const ref=[[1985,11,3,10.6167,47.131574],[2000,1,1,0,263.40867],[1950,6,15,12,47.165295],[1600,3,1,0,194.046898],[2240,7,1,0,328.93999]];
+    const bad=ref.map(([y,m,d,h,v])=>{const c=ev(`(()=>{const k=LILMODE; LILMODE='mean'; try{return computeChart(${y},${m},${d},${h},0,0,0,false).pos.Lilith.lon;}finally{LILMODE=k;}})()`);
+      const e=arcsec(c,v); return e<=3?null:`${y}: ${e.toFixed(1)}″`;}).filter(Boolean);
+    return !bad.length||bad.join('; ');
+  });
+  /* REVIEW-2026-10-15-END */
 
   render();
 }

@@ -19,6 +19,9 @@ DEV="${1:-booted}"
 BUNDLE="space.dafa.astrotrip"
 
 ./sync-web.sh --probe | grep -E "FAIL|probe" || true
+# The probe never stays in the bundle: an archive made straight from Xcode
+# after this run would otherwise ship it. Restored on any exit, as on Android.
+trap './sync-web.sh >/dev/null' EXIT
 xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug \
   -sdk iphonesimulator -destination "generic/platform=iOS Simulator" \
   -derivedDataPath build-sim build > /tmp/astro-sim-build.log 2>&1 \

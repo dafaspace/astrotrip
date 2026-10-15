@@ -20,6 +20,8 @@ echo "sdk.dir=$ANDROID_HOME" > android/local.properties
 "$ADB" get-state >/dev/null 2>&1 || { echo "no device - start the emulator first"; exit 1; }
 
 ./sync-web.sh --probe | grep -E "FAIL|probe" || true
+# Back to the release bundle on any exit, not only when the run gets to the end.
+trap './sync-web.sh >/dev/null' EXIT
 ( cd android && ./gradlew --quiet assembleDebug ) > /tmp/astro-apk-debug.log 2>&1 \
   || { grep -E "error|What went wrong" -A3 /tmp/astro-apk-debug.log | head -20; exit 1; }
 echo "[android] built"

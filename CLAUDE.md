@@ -53,7 +53,7 @@ The rule a buyer can say back in one line: **one chart is free; a chart set agai
 against another person is paid.** **[decided 13 Oct]**
 - **Free forever, on the web and in the app:** a natal chart and everything about it -
   positions, aspects, dignities, dispositor chains, receptions, configurations, the aspect grid,
-  balance, relocation, the text block, printing - plus the library of 1019 charts, saving, and
+  balance, relocation, the text block, printing - plus the library of well-known charts, saving, and
   CSV export and import. Data is never behind the price (main instruction, section 3).
 - **Paid once, after the 7-day trial:** every chart with a second or third ring - transits,
   progressions, directions, solar and lunar returns, synastry, the tri-wheels - and the

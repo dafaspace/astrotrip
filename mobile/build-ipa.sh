@@ -65,7 +65,7 @@ echo "  name     $(pb CFBundleDisplayName)"
 USAGE=$(/usr/libexec/PlistBuddy -c Print "$P" | { grep -o 'NS[A-Za-z]*UsageDescription' || true; } | sort -u | tr '\n' ' ')
 [ -z "$USAGE" ] && echo "  ok   no permission prompts" || echo "  CHECK permission strings present: $USAGE"
 PUB="$APP/public"
-for f in index.html ephemeris.js asteroids.js cities.txt OFL.txt; do
+for f in index.html ephemeris.js planets.js moon.js asteroids.js cities.txt OFL.txt; do
   [ -f "$PUB/$f" ] || { echo "  FAIL $f missing from the built app"; exit 1; }
 done
 for f in probe.js parity.txt test.html sw.js; do
@@ -98,10 +98,14 @@ echo "  ok   ${OUT}/${NAME}.ipa ($(du -h "${OUT}/${NAME}.ipa" | cut -f1))"
 W=$(mktemp -d); unzip -q "${OUT}/${NAME}.ipa" -d "$W"
 IAPP=$(find "$W/Payload" -maxdepth 1 -name "*.app" | head -1)
 AUTH=$(codesign -dvvv "$IAPP" 2>&1 | grep '^Authority=' | head -1 | cut -d= -f2)
+# Every FAIL stops the script with an error. It used to print FAIL among a
+# dozen "ok" lines and still end with "Upload with Transporter" and exit 0.
 case "$AUTH" in "Apple Distribution"*) echo "  ok   signed by $AUTH";;
-  *) echo "  FAIL signed by $AUTH (expected Apple Distribution)";; esac
+  *) echo "  FAIL signed by $AUTH (expected Apple Distribution)"; rm -rf "$W"; exit 1;; esac
 codesign -d --entitlements :- "$IAPP" 2>/dev/null | tr -d '\n\t ' | grep -q "<key>get-task-allow</key><false/>" \
-  && echo "  ok   get-task-allow false" || echo "  FAIL get-task-allow is not false"
-codesign --verify --deep --strict "$IAPP" && echo "  ok   signature verifies"
+  || { echo "  FAIL get-task-allow is not false"; rm -rf "$W"; exit 1; }
+echo "  ok   get-task-allow false"
+codesign --verify --deep --strict "$IAPP" || { echo "  FAIL signature does not verify"; rm -rf "$W"; exit 1; }
+echo "  ok   signature verifies"
 rm -rf "$W"
 echo "Upload with Transporter, or Xcode > Organizer > Distribute App."

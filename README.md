@@ -14,16 +14,40 @@ face. Served, it installs to the home screen and runs with the network off.
 
 ### The ephemeris
 
-VSOP87D for the planets, ELP82B truncated to 607 terms for the Moon, and a piecewise
-Chebyshev fit to JPL DE441 for Pluto, because no compact analytic theory for Pluto
-holds outside 1885-2099. Chiron is fitted the same way, from JPL's own solution for
-small body 2060. Apparent geocentric positions: light-time, annual aberration,
-IAU2000B nutation, IAU 2006 mean obliquity, and Greenwich apparent sidereal time from
-the Earth Rotation Angle.
+Every body is fitted to JPL DE441 except where a theory is as good. Chebyshev fits
+(`tools-planets.mjs`, `planets.js`): Venus, the Earth-Moon barycentre and Mars about
+the Sun; Jupiter, Saturn, Uranus, Neptune, Pluto and Chiron about the solar-system
+barycentre, where their orbits are smooth, brought to the Sun through the Sun's own
+place about the barycentre, which follows from the planets' masses. The Earth is the
+barycentre less 1/82.3 of the Moon. Mercury is VSOP87D in full down to 1e-9 rad
+(`tools-vsop.mjs`): its 88-day orbit would need a fit two weeks to a segment. The
+Moon is ELP82B in 6,394 of its 37,862 terms (`tools-elp.mjs`, 0.023" from the full
+series) with a correction fitted to JPL (`tools-moon.mjs`, `moon.js`) for the older
+tidal acceleration the theory carries. All of it over 1550-2250; outside, VSOP87D
+and the theory as they are.
 
-Checked against JPL Horizons on **every chart in the library**: worst disagreement
-3.9″ over 1685-1984, under 0.5″ in the twentieth century. Pluto is reliable over
-1550-2250 and clamped, not extrapolated wildly, outside it.
+Apparent positions: light-time, the Sun's deflection of light, annual aberration,
+nutation (the leading IAU 2000B terms and the next twenty-five of IAU 1980, 0.01"
+from Swiss Ephemeris), and the **IAU 2006 equinox of date**, as Swiss Ephemeris and
+SOFA use: the series all arrive on the older IAU 1976 one and are turned at the end,
+which matters by 1.2" at 1550. The angles come from the Earth Rotation Angle and the
+IAU 2006 obliquity, so planets and houses are in one frame. Delta T is JPL's own
+table to 1972 and TT minus UTC with the leap seconds after (`tools-deltat.mjs`).
+
+Checked against JPL Horizons, body by body, at 64 moments over 1550-2250
+(`tools-check-jpl.mjs`, turned back into Horizons' IAU 1976 frame so that it measures
+the ephemeris): every body within 0.15" and the Moon within 0.25", measured 15 Oct
+2026. Of that, 0.06-0.13" is common to all bodies and is Horizons' own convention
+(it adds the observed celestial pole offsets from 1962 and holds the last ones after
+its table ends); taken out, Mars is within 0.005", Venus 0.008", Saturn to Chiron
+0.02-0.03", Jupiter 0.04", Mercury and Pluto 0.05", the Moon 0.18" at worst and
+0.01-0.04" typical over 127,827 moments. Against Swiss Ephemeris (pyswisseph 2.10,
+in the same frame): the Sun 0.014", Mercury and Venus 0.022", Mars 0.056" over
+1800-2250. Before that night the Moon was 20.9" out at 1550, Neptune 5.8", Uranus 3.7".
+
+What no program can do better: before about 1650 the models of Earth's rotation
+disagree by up to 20 seconds of time (JPL and Swiss Ephemeris among them), which is
+up to 10" of Moon. That is how well the past is known, not a defect of a program.
 
 Chiron differs from Pluto in two ways, and both are forced by the source rather than
 chosen. Its segments are 12.5 years instead of 25, because a 50-year period and an
@@ -100,8 +124,8 @@ Saturn and Jupiter shown as co-rulers there. **Traditional**: the seven visible 
 as Astro Gold uses for its house dispositors and almutens. **Both**: each of those three
 signs has two full rulers, so a chain of dispositors branches and the card shows it as a
 graph, one row per body, rather than as a list of walks (one Sun in the library has 32 of
-them). On the 1019 library charts the single final dispositor differs between modern and
-traditional in 167. Sect, solar phase, angularity and the exaltations of the seven are the
+them). On the library as it stood in September 2026 the single final dispositor differed
+between modern and traditional in about one chart in six. Sect, solar phase, angularity and the exaltations of the seven are the
 same in every mode; the outer planets get no exaltation in any, because the sources
 disagree. The export block and the print sheet name the mode, so a reading cannot mistake
 a setting for a fact about the chart.
@@ -238,11 +262,12 @@ Tapping one lights it on the wheel and dims everything else, which is the only
 way a grand cross reads as a shape rather than as four more chords among
 twenty.
 
-**Planets only, without the angles or the nodes.** The Ascendant and Midheaven
-sit near ninety degrees apart in a great many charts, so admitting them would
-manufacture a T-square out of the frame itself; the nodes are always exactly
-opposed, so every planet square either one would report another. A figure built
-on those is a property of the drawing, not of the chart.
+**Bodies and the karmic points, without the angles.** The Ascendant and
+Midheaven sit near ninety degrees apart in a great many charts, so admitting
+them would manufacture a T-square out of the frame itself. The nodes, the Black
+Moon, Selena and Fortune take part, as they do in the aspects (decided 22 Sep
+2026), but the two nodes' opposition is their definition and is never counted,
+so a planet square the nodal axis is not reported as a T-square.
 
 **Orbs are the configured ones.** Many astrologers tighten orbs for patterns.
 Doing that here would mean a chord drawn on the wheel and a figure denying it
@@ -322,8 +347,8 @@ bi-wheel means, and the aspects run from the outer chart's planets to the inner
 chart's bodies - including its Ascendant, Midheaven, node and Lilith, so "his
 Sun on her Ascendant" is found rather than missed.
 
-The partner is chosen by searching, not from a list: the library holds a
-thousand charts and a select with a thousand options is not a control. The
+The partner is chosen by searching, not from a list: the library is long,
+and a select with hundreds of options is not a control. The
 search box behaves exactly like the city field, which is the pattern the user
 has already used once by the time they reach this.
 
@@ -628,12 +653,18 @@ so there is nothing that can carry a person out of it.
 
 ### The chart library
 
-1019 charts - composers, musicians and painters - each with a Rodden rating and a
-citable source, plus your own charts saved to this device. Times without a document
-are labelled as such and cast for noon, since the Ascendant, the houses and the Moon's
-degree mean nothing without a time. Historical entries use local mean time rather than
-a zone offset where no zone existed, and pre-1918 Russian and pre-1700 German dates are
-stored in the Gregorian calendar.
+Charts of well-known people, plus your own charts saved to this device. Since
+15 Oct 2026 the library holds only charts whose date, time and place come from a birth
+record (Rodden AA) and are confirmed by a second independent source, with no other
+version anywhere. A chart without a time is not kept: without the Ascendant and the
+houses it is not a chart an astrologer can use, and a library that is right in every
+entry is worth more than a long one. Each entry names its record in the source line.
+Historical entries carry their offset: local mean time of the birthplace where no zone
+existed, Paris Mean Time in France from 1891 to 1911.
+
+The tests no longer sample the library, which is now too small to be a sample. The
+dates and places of the earlier library, 1019 real people across five centuries, stay
+in `test-sample.json` as test data only.
 
 Your own charts export to plain **CSV** with a header row and import back from it, so
 the database opens in a spreadsheet, survives editing by hand, and can be diffed. The
@@ -757,7 +788,13 @@ once moved in, under the zodiac band; the city list opened on its own at every l
 
 ## Known limitations
 
-- Pluto is a fit, valid 1550-2250 and clamped outside.
+- Pluto is a fit, valid 1550-2250 and held at the edge outside; such a chart says so.
+- Mercury rests on VSOP87D (0.05" from JPL), the Moon on ELP82B with a fitted
+  correction (0.18" at worst): the two bodies not fitted to JPL directly.
+- The mean Black Moon follows Swiss Ephemeris's definition (the ELP mean apogee of
+  Meeus 45.7 plus their correction of up to 7', argument 2(F - l)), fitted by
+  `tools-lilith.py` to within 1.45"; it is a definition, as Selena's is, not a
+  measurement.
 - Asteroids are Ceres, Pallas, Juno and Vesta only, off by default, 1600-2250.
 - Tri-wheels put transits outermost; other pairings are not offered.
 - On a phone the tri-wheel's natal degree numbers are about 6 px high and need
