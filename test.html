@@ -5279,6 +5279,15 @@ function run(){
       }finally{ const o=JSON.parse(keep); Object.keys(o).forEach(n=>ORBS[n]=o[n]); saveOrbs(); rebuildAspects(); redrawAspects(); card.open=was; }})()`);
     return r||'текст экспорта не изменился после включения квинконса';
   });
+  t('#10 даты библиотеки по новому стилю: Брюллов, Глинка, Шевченко, Шишкин, Кюи, Телеман',()=>{
+    const want={karlbryullov:'1799-12-23',michaelglinka:'1804-6-1',tarasshevchenko:'1814-3-9',ivanshishkin:'1832-1-25',
+      cesarcui:'1835-1-18',georgphilipptel:'1681-3-24',boriskustodiev:'1878-3-7',louiskahn:'1901-3-5'};
+    const bad=Object.entries(want).map(([id,d])=>{
+      const e=ev(`(()=>{const e=CHART_LIBRARY.find(x=>x.id===${JSON.stringify(id)}); return e&&[e.y,e.mo,e.d].join('-');})()`);
+      const w=d.split('-').map(Number).join('-');
+      return e===w?null:`${id}: ${e} вместо ${w}`;}).filter(Boolean);
+    return !bad.length||bad.join('; ');
+  });
   /* REVIEW-2026-10-15-END */
 
   render();
