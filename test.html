@@ -3001,14 +3001,16 @@ function run(){
     let d=Math.abs(b-a); if(d>180) d=360-d;
     return d<0.2||`за период ушла на ${d.toFixed(3)}°`;
   });
-  t('средняя Чёрная Луна это апогей по Meeus 45.7',()=>{
-    /* Перигей 83.3532465° в J2000, скорость 4069.0137287°/век; апогей на 180°
-       дальше. Проверяем в самой эпохе и через сто лет. */
+  t('средняя Чёрная Луна: апогей по Meeus 45.7 и поправка Swiss Ephemeris не больше 7′',()=>{
+    /* Основа: перигей 83.3532465° в J2000, скорость 4069.0137287°/век, апогей
+       на 180° дальше. С 15 октября 2026 к ней прибавлена поправка к определению
+       Swiss Ephemeris (до 7′, период около трёх лет); она проверяется против
+       самой Swiss Ephemeris отдельным тестом, здесь только её величина. */
     const now=ev('lilithLon(1.5)'), late=ev('lilithLon(1.5+36525)');
     const wantNow=(83.3532465+180)%360;
     const wantLate=(83.3532465+180+4069.0137287-0.0103200-1/80053+1/18999000)%360;
-    return (near(now,wantNow,1e-6)&&near(late,wantLate,1e-6))
-      ||`J2000 ${now.toFixed(4)} против ${wantNow.toFixed(4)}, +100 лет ${late.toFixed(4)} против ${wantLate.toFixed(4)}`;
+    const d1=arcsec(now,wantNow), d2=arcsec(late,wantLate);
+    return (d1<=420&&d2<=420)||`J2000 в стороне на ${d1.toFixed(0)}″, +100 лет на ${d2.toFixed(0)}″`;
   });
   t('истинная Чёрная Луна даёт правдоподобную оскулирующую орбиту',()=>{
     /* Большая полуось около 384 400 км, эксцентриситет колеблется примерно от
@@ -5439,6 +5441,13 @@ function run(){
   t('поворот от IAU 1976 к IAU 2006: 1,23″ в 1550, ноль в 2000, -0,78″ в 2250',()=>{
     const r=ev(`[-4.5,0,2.5].map(T=>{const v=to2006([1,0,0],T); return Math.atan2(v[1],v[0])*206264.8;})`);
     return (Math.abs(r[0]-1.226)<0.01&&Math.abs(r[1])<0.02&&Math.abs(r[2]+0.779)<0.01)||r.map(x=>x.toFixed(3)).join(', ');
+  });
+  t('средняя Чёрная Луна как у Swiss Ephemeris, до 3″ (было до 7′)',()=>{
+    /* pyswisseph 2.10.03, MEAN_APOG, calc_ut, с нутацией */
+    const ref=[[1985,11,3,10.6167,47.131574],[2000,1,1,0,263.40867],[1950,6,15,12,47.165295],[1600,3,1,0,194.046898],[2240,7,1,0,328.93999]];
+    const bad=ref.map(([y,m,d,h,v])=>{const c=ev(`(()=>{const k=LILMODE; LILMODE='mean'; try{return computeChart(${y},${m},${d},${h},0,0,0,false).pos.Lilith.lon;}finally{LILMODE=k;}})()`);
+      const e=arcsec(c,v); return e<=3?null:`${y}: ${e.toFixed(1)}″`;}).filter(Boolean);
+    return !bad.length||bad.join('; ');
   });
   /* REVIEW-2026-10-15-END */
 

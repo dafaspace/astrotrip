@@ -3343,9 +3343,25 @@ function chironXYZ(tm){
    4069.0137287, so a 1900 chart carried about an arc-minute and a half of
    drift and a 1600 chart five. The quadratic and higher terms are small
    (0.01 degrees at a century) but cost nothing once the polynomial is here. */
+/* The mean Black Moon as Swiss Ephemeris defines it, which is what astro.com,
+   ZET and Astro Gold show. Their mean apogee is not the plain ELP element
+   above: it carries a correction of up to 7' with the argument 2(F - l), a
+   three-year period, and a mean point is a definition rather than something
+   to measure, so the definition is taken from them - the way Selena already
+   is - fitted by tools-lilith.py to pyswisseph's own mean apogee over
+   1550-2250: 419" apart before, 1.45" at worst after. Arcseconds. */
+const LILITH_SE=[0.00309894,-0.523091,0.0146409,-416.428,0.555731,-0.000948028,-0.357118,0.42254,0.0118464,0.00426637,0.00128607,-0.00122891,-0.000201895,0.000529881,0.000819176,0.00312869,-0.00783827,-0.00235146,-0.00201408,-0.000970817,0.0014588,-0.000317422,-0.00066922,-0.0135237,0.0029447,-0.00653433,-0.0066382];
 function lilithLon(d){
   const T=(d-1.5)/36525;                 // d = 0 is J2000 minus 1.5 days
-  return rev(263.3532465+T*(4069.0137287+T*(-0.0103200+T*(-1/80053+T/18999000))));
+  const base=263.3532465+T*(4069.0137287+T*(-0.0103200+T*(-1/80053+T/18999000)));
+  const t=Math.max(-4.5,Math.min(2.5,T));
+  const F=1.627905233371468+8433.466158130539*t, l=2.3555558982657994+8328.691426955555*t;
+  const lp=-0.04312518020812495+628.301955168488*t, D=5.198466741027443+7771.377146811758*t, x=F-l;
+  const v=[1,t,t*t];
+  for(const k of [2,4,6,8]) v.push(Math.sin(k*x),Math.cos(k*x),t*Math.sin(k*x),t*Math.cos(k*x));
+  for(const y of [lp,2*D-2*l,2*x-lp,2*x+lp]) v.push(Math.sin(y),Math.cos(y));
+  let c=0; for(let i=0;i<v.length;i++) c+=v[i]*LILITH_SE[i];
+  return rev(base+c/3600);
 }
 /* True (osculating) Black Moon: the apogee of the ellipse the Moon is actually
    on at this instant, rather than the averaged one. The two disagree by up to
@@ -10554,8 +10570,14 @@ function openPanel(id,byPointer){
      or a mouse, focus goes to the panel itself, which has no ring and still
      keeps Escape and the tab order inside. From the keyboard it stays put. */
   if(byPointer){ const pin=d.querySelector('.panelin'); if(pin) pin.focus({preventScroll:true}); }
-  try{ history.pushState({panel:id},''); }catch(e){}
+  try{ history.pushState({panel:id},''); PANEL_PUSHED.add(id); }catch(e){}
 }
+/* The history entries this page itself added for its panels. A closing panel
+   steps back only over one of these: history.state outlives a reload, so an
+   entry marked with a panel by an earlier load made the next close step back
+   off the page - the test suite, reloading its frame, kept landing on the
+   previous page. */
+const PANEL_PUSHED=new Set();
 function closePanel(id){
   const d=document.getElementById(id); if(!d||!d.open) return;
   if(typeof d.close==='function') d.close(); else d.removeAttribute('open');
@@ -10565,14 +10587,14 @@ document.querySelectorAll('dialog.panel').forEach(d=>{
     closeDropdown();
     /* A way back offered inside the panel stays on screen after it closes. */
     const tst=document.getElementById('toast'); if(d.contains(tst)) document.body.appendChild(tst);
-    if(history.state&&history.state.panel===d.id) history.back();
+    if(PANEL_PUSHED.has(d.id)&&history.state&&history.state.panel===d.id){ PANEL_PUSHED.delete(d.id); history.back(); }
   });
   d.addEventListener('click',e=>{
     if(e.target===d||e.target.closest('[data-close]')) closePanel(d.id);
   });
 });
 addEventListener('popstate',()=>
-  document.querySelectorAll('dialog.panel[open]').forEach(d=>closePanel(d.id)));
+  document.querySelectorAll('dialog.panel[open]').forEach(d=>{ PANEL_PUSHED.delete(d.id); closePanel(d.id); }));
 /* Going back to close a panel must not also move the page. With the default
    'auto' the browser restores the scroll it saved when the panel opened, and it
    did, once: a jump to the planet card made while the settings were closing was

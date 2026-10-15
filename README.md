@@ -785,9 +785,10 @@ once moved in, under the zodiac band; the city list opened on its own at every l
 - Pluto is a fit, valid 1550-2250 and held at the edge outside; such a chart says so.
 - Mercury rests on VSOP87D (0.05" from JPL), the Moon on ELP82B with a fitted
   correction (0.18" at worst): the two bodies not fitted to JPL directly.
-- The mean Black Moon is the ELP mean apogee (Meeus 45.7). Swiss Ephemeris corrects
-  its mean apogee toward the average of the true one, so astro.com differs by up to
-  7' with a three-year period. Both are "mean"; which to follow is a choice.
+- The mean Black Moon follows Swiss Ephemeris's definition (the ELP mean apogee of
+  Meeus 45.7 plus their correction of up to 7', argument 2(F - l)), fitted by
+  `tools-lilith.py` to within 1.45"; it is a definition, as Selena's is, not a
+  measurement.
 - Asteroids are Ceres, Pallas, Juno and Vesta only, off by default, 1600-2250.
 - Tri-wheels put transits outermost; other pairings are not offered.
 - On a phone the tri-wheel's natal degree numbers are about 6 px high and need
