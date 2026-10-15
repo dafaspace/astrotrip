@@ -14,16 +14,30 @@ face. Served, it installs to the home screen and runs with the network off.
 
 ### The ephemeris
 
-VSOP87D for the planets, ELP82B truncated to 607 terms for the Moon, and a piecewise
-Chebyshev fit to JPL DE441 for Pluto, because no compact analytic theory for Pluto
-holds outside 1885-2099. Chiron is fitted the same way, from JPL's own solution for
-small body 2060. Apparent geocentric positions: light-time, annual aberration,
-IAU2000B nutation, IAU 2006 mean obliquity, and Greenwich apparent sidereal time from
-the Earth Rotation Angle.
+VSOP87D for the Sun and the inner planets, turned into the FK5 frame (Meeus 32.3).
+ELP82B truncated to 607 terms for the Moon, with a correction fitted to JPL DE441
+(`tools-moon.mjs`): the truncated theory carried an older tidal acceleration and
+was 20" off by 1550. Piecewise Chebyshev fits to JPL DE441 for Jupiter, Saturn,
+Uranus and Neptune (`tools-planets.mjs`, VSOP87D outside 1550-2250), for Pluto,
+because no compact analytic theory for Pluto holds outside 1885-2099, and for
+Chiron, from JPL's own solution for small body 2060. Apparent geocentric
+positions: light-time, the Sun's deflection of light, annual aberration, nutation
+(the leading IAU 2000B terms and the next twenty-five of IAU 1980, 0.01" from
+Swiss Ephemeris), IAU 2006 mean obliquity, and Greenwich apparent sidereal time
+from the Earth Rotation Angle. Delta T is JPL's own table to 1972 and TT minus UTC
+with the leap seconds after (`tools-deltat.mjs`).
 
-Checked against JPL Horizons on **every chart in the library**: worst disagreement
-3.9″ over 1685-1984, under 0.5″ in the twentieth century. Pluto is reliable over
-1550-2250 and clamped, not extrapolated wildly, outside it.
+Checked against JPL Horizons, body by body, at 64 moments over 1550-2250
+(`tools-check-jpl.mjs`, measured 15 Oct 2026): every body within 1.4", and within
+0.6" over 1700-2100. The two that remain at the top are Mars (1.4" at 1550, 1.2" at
+2250) and Venus (0.9" at 2250), still on the truncated VSOP87D; everything else is
+within 0.4" over the whole span. On the library's charts, which also test the date,
+the place and the time zone, the worst is 1.15" (Bach, 1685). Before that night's
+work the Moon was 20.9" out at 1550, Neptune 5.8", Uranus 3.7".
+
+What no program can do better: before about 1650 the models of Earth's rotation
+disagree by up to 20 seconds of time (JPL and Swiss Ephemeris among them), which is
+up to 10" of Moon. That is how well the past is known, not a defect of a program.
 
 Chiron differs from Pluto in two ways, and both are forced by the source rather than
 chosen. Its segments are 12.5 years instead of 25, because a 50-year period and an
@@ -758,7 +772,12 @@ once moved in, under the zodiac band; the city list opened on its own at every l
 
 ## Known limitations
 
-- Pluto is a fit, valid 1550-2250 and clamped outside.
+- Pluto is a fit, valid 1550-2250 and held at the edge outside; such a chart says so.
+- Mars and Venus stay on the truncated VSOP87D: up to 1.4" off JPL at the ends of
+  1550-2250. A Chebyshev fit would cost several hundred KB for them.
+- The mean Black Moon is the ELP mean apogee (Meeus 45.7). Swiss Ephemeris corrects
+  its mean apogee toward the average of the true one, so astro.com differs by up to
+  7' with a three-year period. Both are "mean"; which to follow is a choice.
 - Asteroids are Ceres, Pallas, Juno and Vesta only, off by default, 1600-2250.
 - Tri-wheels put transits outermost; other pairings are not offered.
 - On a phone the tri-wheel's natal degree numbers are about 6 px high and need

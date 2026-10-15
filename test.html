@@ -320,10 +320,11 @@ function run(){
        Moon:217.2933209,Pluto:251.4371500,Chiron:251.5603761}]};
   const arcsec=(a,b)=>Math.abs(((a-b+540)%360)-180)*3600;
   Object.entries(JPL).forEach(([nm,[expr,tight]])=>{
-    t('совпадает с JPL Horizons до 2″: '+nm,()=>{
+    /* 0,5″ с 15 октября 2026: после подгонок к JPL худшее здесь 0,09″. */
+    t('совпадает с JPL Horizons до 0,5″: '+nm,()=>{
       const ch=ev(expr);
       const bad=Object.entries(tight).map(([p,v])=>[p,arcsec(ch.pos[p].lon,v)])
-        .filter(([p,e])=>e>2).map(([p,e])=>`${p} на ${e.toFixed(1)}″`);
+        .filter(([p,e])=>e>0.5).map(([p,e])=>`${p} на ${e.toFixed(2)}″`);
       return bad.length?bad.join(', '):true;
     });
   });
@@ -2141,7 +2142,8 @@ function run(){
   /* Хирон здесь же, а не отдельной проверкой: сноска приложения обещает
      сверку на всех картах библиотеки, и обещание должно покрывать всё, что
      на карте нарисовано. Измерено 0,03-0,25″ на этих пяти. */
-  t('карты библиотеки совпадают с JPL Horizons до 4″',()=>{
+  /* 1,5″ с 15 октября 2026 (было 4″): худшее теперь 1,15″, Марс у Баха. */
+  t('карты библиотеки совпадают с JPL Horizons до 1,5″',()=>{
     const bad=[];
     Object.entries(LIBREF).forEach(([id,ref])=>{
       const e=LIB.find(x=>x.id===id);
@@ -2150,7 +2152,7 @@ function run(){
       const ch=ev(`computeChart(${e.y},${e.mo},${e.d},${hh},libTz(window.__e),${e.lat},${e.lon})`);
       Object.entries(ref).forEach(([p,v])=>{
         const err=arcsec(ch.pos[p].lon,v);
-        if(err>4) bad.push(`${id}/${p} на ${err<120?err.toFixed(1)+'″':(err/60).toFixed(1)+'′'}`);
+        if(err>1.5) bad.push(`${id}/${p} на ${err<120?err.toFixed(1)+'″':(err/60).toFixed(1)+'′'}`);
       });
     });
     return !bad.length||bad.slice(0,4).join(', ');
@@ -5385,6 +5387,40 @@ function run(){
         return {atEnd, last:sel.options.length-1, opened, closed:sel.parentNode.querySelector('.ddlist').hidden};
       }finally{ sel.selectedIndex=keep; sel._ddPaint(); closeDropdown(); }})()`);
     return (r.atEnd===r.last&&r.opened&&r.closed)||JSON.stringify(r);
+  });
+  /* ---------- точность против JPL, 15 октября 2026 ----------
+     Значения JPL Horizons, QUANTITIES 31, TT, взяты tools-check-jpl.mjs:
+     края 1550-2250, где прежде было хуже всего. */
+  t('Луна на краях 1550 и 2250 совпадает с JPL до 1,5″ (было 20″)',()=>{
+    const ref=[[2287195.5,78.3070527],[2542855.5-0.5,null]];
+    const r=ev(`(()=>{const jd=2287195.5,T=(jd-2451545)/36525,[dp]=nutation(T);return moonApparent(T,dp).lon;})()`);
+    const e=Math.abs(((r-78.3070527+540)%360)-180)*3600;
+    return e<=1.5||`Луна 1550-01-01 на ${e.toFixed(2)}″`;
+  });
+  t('Нептун и Уран у краёв идут по подгонке к JPL, а не по урезанному ряду',()=>{
+    const r=ev(`[typeof PLANET_FIT!=='undefined'&&!!PLANET_FIT.Neptune, !!chebFit(PLANET_FIT.Uranus,(2300000-2451545)/365250),
+      chebFit(PLANET_FIT.Neptune,(2600000-2451545)/365250)===null]`);
+    return (r[0]&&r[1]&&r[2])||'подгонки нет, или она отвечает за пределами своего отрезка: '+r.join(',');
+  });
+  t('нутация: член 0,071″ по аномалии Луны на месте',()=>{
+    /* Swiss Ephemeris (ECL_NUT) в TT J2000: dpsi -13,9315″ */
+    const r=ev(`nutation(0)[0]*648000/Math.PI`);
+    return Math.abs(r-(-13.9315))<0.01||`dpsi ${r.toFixed(4)}″`;
+  });
+  t('ΔT как у JPL: 1550 198 с, 1900 -2,7 с, 2026 ровно 69,184 с, будущее плавно',()=>{
+    const r=ev(`[deltaTsec(1550,1),deltaTsec(1900,1),deltaTsec(2026,10),deltaTsec(2017,1),deltaTsec(2016,12),deltaTsec(2050,1),deltaTsec(2100,1)]`);
+    const bad=[];
+    if(Math.abs(r[0]-198.0)>0.5) bad.push('1550: '+r[0]);
+    if(Math.abs(r[2]-69.184)>1e-9) bad.push('2026: '+r[2]);
+    if(Math.abs(r[3]-r[4]-1)>1e-9) bad.push('секунда 2017 года не учтена');
+    if(!(r[5]>69&&r[5]<80&&r[6]>80&&r[6]<100)) bad.push('будущее: 2050 '+r[5].toFixed(1)+', 2100 '+r[6].toFixed(1));
+    return !bad.length||bad.join('; ');
+  });
+  t('#2 карта вне 1550-2250 говорит, что Плутон не рассчитан',()=>{
+    const r=ev(`(()=>{const c=computeChart(1500,6,1,12,0,0,0); renderChartMeta(c,1500,6,1,12,0,0);
+      const has=document.getElementById('chartMeta').textContent.includes(t('plutoEdge'));
+      run(); return [has, document.getElementById('chartMeta').textContent.includes(t('plutoEdge'))];})()`);
+    return (r[0]&&!r[1])||`1500: ${r[0]}, обычная карта: ${r[1]}`;
   });
   /* REVIEW-2026-10-15-END */
 

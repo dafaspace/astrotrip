@@ -1129,6 +1129,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
 
 <script src="./ephemeris.js?v=3.18.3"></script>
+<script src="./planets.js?v=3.18.3"></script>
 <script>
 "use strict";
 /* ============================================================
@@ -1238,7 +1239,7 @@ const STR = {
   era4:{ru:'Рождённые с 1950',en:'Born from 1950'},
   tapdetail:{ru:'Коснитесь планеты, чтобы увидеть подробности.',en:'Tap a planet for its details.'},
   positions:{ru:'Позиции',en:'Positions'},
-  posnote:{ru:'Движок: VSOP87D, ELP82B и чебышёвская подгонка Плутона, целиком офлайн. Узлы средние. Чёрная Луна - средняя или истинная, на выбор; Селена считается по определению Swiss Ephemeris. Плутон надёжен на 1550-2250, дальше экстраполируется. Хирон - такая же подгонка, на 1600-2250: раньше решения JPL для него нет, и вне этого отрезка приложение его не показывает.',en:'Engine: VSOP87D, ELP82B and a Chebyshev fit for Pluto, fully offline. Nodes are mean. The Black Moon is mean or true, your choice; Selena follows the Swiss Ephemeris definition. Pluto is reliable over 1550-2250 and extrapolated beyond. Chiron is the same kind of fit, over 1600-2250: JPL has no solution for it earlier, and outside that span the app leaves it out.'},
+  posnote:{ru:'Движок: VSOP87D для Солнца и внутренних планет, ELP82B с поправкой к JPL для Луны, чебышёвские подгонки к JPL DE441 для Юпитера, Сатурна, Урана, Нептуна, Плутона и Хирона, целиком офлайн. Сверено с JPL Horizons: на 1550-2250 расхождение не больше 1,4″, на 1700-2100 не больше 0,6″. Узлы средние. Чёрная Луна средняя или истинная, на выбор; Селена считается по определению Swiss Ephemeris. Плутон рассчитан на 1550-2250, за этими годами он стоит на положении края и неверен. Хирон рассчитан на 1600-2250: раньше решения JPL для него нет, и вне этого отрезка приложение его не показывает.',en:'Engine: VSOP87D for the Sun and the inner planets, ELP82B corrected to JPL for the Moon, Chebyshev fits to JPL DE441 for Jupiter, Saturn, Uranus, Neptune, Pluto and Chiron, fully offline. Checked against JPL Horizons: within 1.4″ over 1550-2250 and 0.6″ over 1700-2100. Nodes are mean. The Black Moon is mean or true, your choice; Selena follows the Swiss Ephemeris definition. Pluto is computed for 1550-2250; beyond those years it is held at the edge and is not right. Chiron covers 1600-2250: JPL has no solution for it earlier, and outside that span the app leaves it out.'},
   reading:{ru:'Разбор карты',en:'Reading'},
   corpusnote:{ru:'Тексты - структурная заготовка: кратко + подробнее по касанию. Настоящий корпус интерпретаций подключается отдельно.',en:'Texts are a structural stub: short + detail on tap. The real interpretation corpus plugs in separately.'},
   ringLabel:{ru:'Тип карты',en:'Chart type'},
@@ -1564,7 +1565,7 @@ const I18N={
     empty:"Introduce los datos de nacimiento y levanta la carta.", natal:"Carta natal",
     era1:"Antes del cine", era2:"Nacidos 1880-1919 · la era de los estudios", era3:"Nacidos 1920-1949",
     era4:"Nacidos desde 1950", tapdetail:"Toca un planeta para ver el detalle.", positions:"Posiciones",
-    posnote:"Motor: VSOP87D, ELP82B y un ajuste de Chebyshev para Plutón, todo sin conexión. Los nodos son medios. La Luna Negra es media o verdadera, a tu elección; Selena sigue la definición de Swiss Ephemeris. Plutón es fiable entre 1550 y 2250 y se extrapola fuera de ese rango. Quirón es el mismo tipo de ajuste, de 1600 a 2250: JPL no tiene solución anterior, y fuera de ese rango la app no lo muestra.",
+    posnote:"Motor: VSOP87D para el Sol y los planetas interiores, ELP82B corregido con JPL para la Luna, ajustes de Chebyshev a JPL DE441 para Júpiter, Saturno, Urano, Neptuno, Plutón y Quirón, todo sin conexión. Contrastado con JPL Horizons: diferencia máxima de 1,4″ entre 1550 y 2250 y de 0,6″ entre 1700 y 2100. Los nodos son medios. La Luna Negra es media o verdadera, a tu elección; Selena sigue la definición de Swiss Ephemeris. Plutón se calcula para 1550-2250; fuera de esos años queda fijo en el borde y no es correcto. Quirón cubre 1600-2250: JPL no tiene solución anterior, y fuera de ese rango la app no lo muestra.",
     reading:"Interpretación", transitdate:"Fecha del tránsito",
     scrubintro:"Arrastra el control y el anillo exterior se redibuja al instante. El paso indica cuánto tiempo vale una muesca, desde un segundo hasta un siglo.",
     stepLabel:"PASO", u_sec:"segundo", u_min:"minuto", u_hour:"hora", u_day:"día", u_week:"semana",
@@ -1617,7 +1618,7 @@ const I18N={
     empty:"Saisissez les données de naissance et dressez la carte.", natal:"Carte natale",
     era1:"Avant le cinéma", era2:"Nés en 1880-1919 · l’ère des studios", era3:"Nés en 1920-1949",
     era4:"Nés à partir de 1950", tapdetail:"Touchez une planète pour le détail.", positions:"Positions",
-    posnote:"Moteur : VSOP87D, ELP82B et un ajustement de Tchebychev pour Pluton, entièrement hors ligne. Les nœuds sont moyens. La Lune Noire est moyenne ou vraie, au choix ; Séléné suit la définition de Swiss Ephemeris. Pluton est fiable de 1550 à 2250 et extrapolé au-delà. Chiron suit le même ajustement, de 1600 à 2250 : JPL n’a pas de solution avant, et hors de cette plage l’app ne l’affiche pas.",
+    posnote:"Moteur : VSOP87D pour le Soleil et les planètes intérieures, ELP82B corrigé sur JPL pour la Lune, ajustements de Tchebychev sur JPL DE441 pour Jupiter, Saturne, Uranus, Neptune, Pluton et Chiron, entièrement hors ligne. Vérifié avec JPL Horizons : écart maximal de 1,4″ sur 1550-2250 et de 0,6″ sur 1700-2100. Les nœuds sont moyens. La Lune Noire est moyenne ou vraie, au choix ; Séléné suit la définition de Swiss Ephemeris. Pluton est calculé pour 1550-2250 ; au-delà, il reste figé au bord et n’est pas juste. Chiron couvre 1600-2250 : JPL n’a pas de solution avant, et hors de cette plage l’app ne l’affiche pas.",
     reading:"Interprétation", transitdate:"Date du transit",
     scrubintro:"Faites glisser le curseur : l’anneau extérieur se redessine en direct. Le pas indique ce que vaut un cran, de la seconde au siècle.",
     stepLabel:"PAS", u_sec:"seconde", u_min:"minute", u_hour:"heure", u_day:"jour", u_week:"semaine",
@@ -1668,7 +1669,7 @@ const I18N={
     empty:"Geburtsdaten eingeben und das Chart berechnen.", natal:"Radix", era1:"Vor dem Kino",
     era2:"Geboren 1880-1919 · die Studio-Ära", era3:"Geboren 1920-1949", era4:"Geboren ab 1950",
     tapdetail:"Für Details einen Planeten antippen.", positions:"Positionen",
-    posnote:"Rechenkern: VSOP87D, ELP82B und eine Tschebyschow-Anpassung für Pluto, vollständig offline. Die Mondknoten sind mittlere. Der Schwarze Mond ist wahlweise mittlere oder wahre Apogäum; Selena folgt der Definition der Swiss Ephemeris. Pluto ist von 1550 bis 2250 verlässlich und wird darüber hinaus extrapoliert. Chiron folgt derselben Anpassung, von 1600 bis 2250: davor gibt es bei JPL keine Lösung, außerhalb zeigt die App ihn nicht.",
+    posnote:"Rechenkern: VSOP87D für Sonne und innere Planeten, ELP82B mit Korrektur nach JPL für den Mond, Tschebyschow-Anpassungen an JPL DE441 für Jupiter, Saturn, Uranus, Neptun, Pluto und Chiron, vollständig offline. Mit JPL Horizons geprüft: höchstens 1,4″ Abweichung über 1550-2250 und 0,6″ über 1700-2100. Die Mondknoten sind mittlere. Der Schwarze Mond ist wahlweise mittlere oder wahre Apogäum; Selena folgt der Definition der Swiss Ephemeris. Pluto wird für 1550-2250 berechnet; außerhalb bleibt er am Rand stehen und ist nicht richtig. Chiron reicht von 1600 bis 2250: davor gibt es bei JPL keine Lösung, außerhalb zeigt die App ihn nicht.",
     reading:"Deutung", transitdate:"Transitdatum",
     scrubintro:"Zieh den Regler, und der äußere Ring zeichnet sich live neu. Der Schritt sagt, wie viel Zeit eine Raste wert ist, von der Sekunde bis zum Jahrhundert.",
     stepLabel:"SCHRITT", u_sec:"Sekunde", u_min:"Minute", u_hour:"Stunde", u_day:"Tag", u_week:"Woche",
@@ -1719,7 +1720,7 @@ const I18N={
     empty:"Inserisci i dati di nascita e calcola la carta.", natal:"Carta natale", era1:"Prima del cinema",
     era2:"Nati nel 1880-1919 · l’era degli studios", era3:"Nati nel 1920-1949", era4:"Nati dal 1950",
     tapdetail:"Tocca un pianeta per il dettaglio.", positions:"Posizioni",
-    posnote:"Motore: VSOP87D, ELP82B e un adattamento di Chebyshev per Plutone, tutto offline. I nodi sono medi. La Luna Nera è media o vera, a scelta; Selena segue la definizione di Swiss Ephemeris. Plutone è affidabile fra il 1550 e il 2250 e oltre viene estrapolato. Chirone segue lo stesso adattamento, dal 1600 al 2250: prima JPL non ha una soluzione, e fuori da quell’intervallo l’app non lo mostra.",
+    posnote:"Motore: VSOP87D per il Sole e i pianeti interni, ELP82B corretto su JPL per la Luna, adattamenti di Chebyshev a JPL DE441 per Giove, Saturno, Urano, Nettuno, Plutone e Chirone, tutto offline. Verificato con JPL Horizons: scarto massimo di 1,4″ nel 1550-2250 e di 0,6″ nel 1700-2100. I nodi sono medi. La Luna Nera è media o vera, a scelta; Selena segue la definizione di Swiss Ephemeris. Plutone è calcolato per il 1550-2250; fuori da questi anni resta fermo al bordo e non è corretto. Chirone copre il 1600-2250: prima JPL non ha una soluzione, e fuori da quell’intervallo l’app non lo mostra.",
     reading:"Lettura", transitdate:"Data del transito",
     scrubintro:"Trascina il cursore e l’anello esterno si ridisegna in diretta. Il passo dice quanto tempo vale una tacca, dal secondo al secolo.",
     stepLabel:"PASSO", u_sec:"secondo", u_min:"minuto", u_hour:"ora", u_day:"giorno", u_week:"settimana",
@@ -1769,7 +1770,7 @@ const I18N={
     empty:"Введіть дані народження і побудуйте карту.", natal:"Натальна карта", era1:"До кінематографа",
     era2:"Народжені 1880-1919 · доба студій", era3:"Народжені 1920-1949", era4:"Народжені від 1950",
     tapdetail:"Торкніться планети, щоб побачити деталі.", positions:"Позиції",
-    posnote:"Рушій: VSOP87D, ELP82B і чебишовська підгонка Плутона, цілком офлайн. Вузли середні. Чорний Місяць - середній або істинний, на вибір; Селена рахується за визначенням Swiss Ephemeris. Плутон надійний на 1550-2250, далі екстраполюється. Хірон - така сама підгонка, на 1600-2250: раніше розв’язку JPL для нього немає, і поза цим відрізком застосунок його не показує.",
+    posnote:"Рушій: VSOP87D для Сонця й внутрішніх планет, ELP82B із поправкою до JPL для Місяця, чебишовські підгонки до JPL DE441 для Юпітера, Сатурна, Урана, Нептуна, Плутона й Хірона, цілком офлайн. Звірено з JPL Horizons: на 1550-2250 розбіжність не більша за 1,4″, на 1700-2100 не більша за 0,6″. Вузли середні. Чорний Місяць середній або істинний, на вибір; Селена рахується за визначенням Swiss Ephemeris. Плутон розраховано на 1550-2250, поза цими роками він стоїть на положенні краю й неправильний. Хірон розраховано на 1600-2250: раніше розв’язку JPL для нього немає, і поза цим відрізком застосунок його не показує.",
     reading:"Розбір карти", transitdate:"Дата транзиту",
     scrubintro:"Тягніть повзунок - зовнішнє кільце перемальовується на льоту. Крок задає, скільки часу в одній поділці: від секунди до століття.",
     stepLabel:"КРОК", u_sec:"секунда", u_min:"хвилина", u_hour:"година", u_day:"доба", u_week:"тиждень",
@@ -1819,7 +1820,7 @@ const I18N={
     empty:"შეიყვანე დაბადების მონაცემები და ააგე რუკა.", natal:"ნატალური რუკა", era1:"კინომდე",
     era2:"დაბადებულები 1880-1919 · სტუდიების ეპოქა", era3:"დაბადებულები 1920-1949",
     era4:"დაბადებულები 1950-იდან", tapdetail:"დეტალისთვის შეეხე პლანეტას.", positions:"პოზიციები",
-    posnote:"ძრავი: VSOP87D, ELP82B და პლუტონისთვის ჩებიშევის მიახლოება, სრულად ოფლაინში. კვანძები საშუალოა. შავი მთვარე საშუალოა ან ჭეშმარიტი, არჩევანით; სელენა Swiss Ephemeris-ის განსაზღვრებას მიჰყვება. პლუტონი საიმედოა 1550-2250 შუალედში, მის გარეთ ექსტრაპოლირდება. ქირონი იმავე მიახლოებით, 1600-2250 შუალედში: ამაზე ადრე JPL-ს მისთვის ამონახსნი არ აქვს, და ამ შუალედს გარეთ აპლიკაცია მას არ აჩვენებს.",
+    posnote:"ძრავი: VSOP87D მზისა და შიდა პლანეტებისთვის, ELP82B JPL-ით შესწორებული მთვარისთვის, ჩებიშევის მიახლოებები JPL DE441-ზე იუპიტერის, სატურნის, ურანის, ნეპტუნის, პლუტონისა და ქირონისთვის, სრულად ოფლაინში. შედარებულია JPL Horizons-თან: 1550-2250 შუალედში სხვაობა არაუმეტეს 1,4″-ისა, 1700-2100 შუალედში არაუმეტეს 0,6″-ისა. კვანძები საშუალოა. შავი მთვარე საშუალოა ან ჭეშმარიტი, არჩევანით; სელენა Swiss Ephemeris-ის განსაზღვრებას მიჰყვება. პლუტონი გამოთვლილია 1550-2250 შუალედისთვის; მის გარეთ ის კიდეზე ჩერდება და არასწორია. ქირონი 1600-2250 შუალედშია: ამაზე ადრე JPL-ს მისთვის ამონახსნი არ აქვს, და ამ შუალედს გარეთ აპლიკაცია მას არ აჩვენებს.",
     reading:"განმარტება", transitdate:"ტრანზიტის თარიღი",
     scrubintro:"გადაატარე სლაიდერი და გარე რგოლი მაშინვე გადაიხატება. ნაბიჯი განსაზღვრავს, რამდენ დროს უდრის ერთი დანაყოფი: წამიდან საუკუნემდე.",
     stepLabel:"ნაბიჯი", u_sec:"წამი", u_min:"წუთი", u_hour:"საათი", u_day:"დღე", u_week:"კვირა",
@@ -2748,6 +2749,13 @@ Object.assign(I18N.ka,{
   importRejected:"ვერ წაიკითხა: {n} (შეამოწმე თარიღი, დრო, კოორდინატები და UTC წანაცვლება)",
   storageFull:"არ შეინახა: აპის ადგილი ამ მოწყობილობაზე სავსეა. გაიტანე CSV, შემდეგ შეამოკლე შენიშვნები ან წაშალე რუკები."
 });
+Object.assign(STR,{plutoEdge:{ru:'Плутон за пределами 1550-2250 не рассчитывается: показано его положение на краю',en:'Pluto is not computed outside 1550-2250: it is shown where it stood at the edge'}});
+Object.assign(I18N.es,{plutoEdge:"Plutón no se calcula fuera de 1550-2250: se muestra donde estaba en el borde"});
+Object.assign(I18N.fr,{plutoEdge:"Pluton n’est pas calculé hors de 1550-2250 : il est montré là où il était au bord"});
+Object.assign(I18N.de,{plutoEdge:"Pluto wird außerhalb von 1550-2250 nicht berechnet: gezeigt ist seine Stellung am Rand"});
+Object.assign(I18N.it,{plutoEdge:"Plutone non è calcolato fuori dal 1550-2250: è mostrato dove si trovava al bordo"});
+Object.assign(I18N.uk,{plutoEdge:"Плутон поза 1550-2250 не розраховується: показано його положення на краю"});
+Object.assign(I18N.ka,{plutoEdge:"პლუტონი 1550-2250 შუალედს გარეთ არ გამოითვლება: ნაჩვენებია მისი მდებარეობა კიდეზე"});
 Object.assign(STR,{themeLight:{ru:'Светлая тема',en:'Light theme'},themeDark:{ru:'Тёмная тема',en:'Dark theme'}});
 Object.assign(I18N.es,{themeLight:"Tema claro",themeDark:"Tema oscuro"});
 Object.assign(I18N.fr,{themeLight:"Thème clair",themeDark:"Thème sombre"});
@@ -2797,39 +2805,39 @@ function dayNumber(y,m,day,utHours){
      nutation   - up to 17.2" in longitude
    Anything that stopped after the series would be precise and wrong. */
 
-/* TT - UT in seconds. 1960-2025 is measured, so it is tabulated at five-year
-   steps and interpolated. Outside that range the Espenak-Meeus piecewise fit
-   (NASA eclipse site) applies. Past 2025 it is a projection and nothing more:
-   Earth's rotation has been speeding up since 2020, against the long-term
-   trend the fit encodes, so the error there grows to a few seconds - a few
-   arcseconds of Moon, and well under one of everything else. */
-const DT_OBS=[33.15,35.73,40.18,45.48,50.54,54.34,56.86,60.78,63.83,64.69,66.07,67.64,69.36,69.18];
+/* TT - UT in seconds, the way JPL Horizons converts a time given as "UT",
+   so that anyone repeating our check there gets the same instant.
+     -500 to 1972: JPL's own values (Stephenson, Morrison and Hohenkerk's
+       reconstruction of Earth's rotation), every five years to 1550 and every
+       year after, fetched from Horizons by tools-deltat.mjs. Before 1650 the
+       models disagree by up to 20 seconds - Swiss Ephemeris has another - and
+       no program can do better: Earth's rotation then is not known closer.
+     1972 to the last announced leap second: TT minus UTC exactly, 32.184 s
+       plus the leap seconds. A birth time is clock time, the clock has kept
+       UTC since 1972, and the smoothed TT minus UT1 this used before was up
+       to a second off, half an arcsecond of Moon.
+     After 2027: a projection and nothing more. Earth's rotation has hardly
+       changed since 2020, so it starts flat and bends upward at the long-term
+       tidal rate of Stephenson et al. (32.5 s per century squared). The old
+       projection reached 93 s by 2050 and 221 s by 2100; this gives 71 and 87,
+       near Swiss Ephemeris's 75 and 93, where astro.com and its users are.
+   The month decides the leap second, which always falls at the end of June
+   or December. */
+const DT_A=[17003.3,16928.7,16853.7,16778.9,16704.3,16629.8,16555.5,16481.3,16407.3,16333.5,16259.8,16186.3,16113,16039.9,15966.9,15894.2,15821.5,15749.1,15676.9,15604.8,15532.9,15461.2,15389.7,15318.4,15247.2,15176.3,15105.5,15034.9,14964.6,14894.4,14824.4,14754.6,14685,14615.6,14546.4,14477.4,14408.6,14340.1,14271.7,14203.5,14135.6,14067.8,14000.3,13932.9,13865.8,13798.9,13732.2,13665.8,13599.5,13533.5,13467.7,13402.1,13336.7,13271.6,13206.7,13142,13077.5,13013.3,12949.3,12885.6,12822,12758.8,12695.7,12632.9,12570.3,12508,12445.9,12384,12322.4,12261.1,12200,12139.1,12078.5,12018.1,11958,11898.1,11838.5,11779.2,11720.1,11661.3,11602.7,11544.4,11486.3,11428.5,11371,11313.7,11256.6,11199.8,11143.3,11086.9,11030.8,10975,10919.3,10863.9,10808.7,10753.8,10699,10644.5,10590.1,10536,10482.1,10428.4,10374.8,10321.5,10268.4,10215.4,10162.7,10110.1,10057.7,10005.4,9953.4,9901.5,9849.8,9798.2,9746.9,9695.6,9644.6,9593.6,9542.9,9492.2,9441.8,9391.4,9341.2,9291.1,9241.2,9191.4,9141.7,9092.1,9042.7,8993.4,8944.2,8895.1,8846.1,8797.2,8748.4,8699.7,8651.1,8602.6,8554.2,8505.8,8457.6,8409.4,8361.3,8313.3,8265.4,8217.5,8169.7,8121.9,8074.2,8026.6,7979,7931.5,7884,7836.5,7789.1,7741.8,7694.4,7647.1,7599.9,7552.6,7505.4,7458.2,7411,7363.8,7316.7,7269.5,7222.3,7175.2,7128,7080.9,7033.7,6986.6,6939.4,6892.2,6844.9,6797.7,6750.4,6703.1,6655.8,6608.4,6561,6513.6,6466.1,6418.6,6371,6323.4,6275.8,6228.2,6180.6,6133,6085.3,6037.7,5990,5942.4,5894.7,5847.1,5799.5,5751.9,5704.4,5656.8,5609.3,5561.8,5514.4,5467,5419.7,5372.4,5325.1,5277.9,5230.8,5183.7,5136.7,5089.8,5043,4996.2,4949.5,4902.9,4856.4,4810,4763.7,4717.5,4671.4,4625.4,4579.5,4533.7,4488.1,4442.6,4397.2,4351.9,4306.8,4261.8,4217,4172.3,4127.8,4083.4,4039.2,3995.1,3951.2,3907.5,3863.9,3820.6,3777.4,3734.4,3691.5,3648.9,3606.5,3564.3,3522.2,3480.4,3438.8,3397.4,3356.2,3315.3,3274.6,3234.1,3193.8,3153.8,3114,3074.5,3035.2,2996.2,2957.4,2918.9,2880.6,2842.7,2805,2767.5,2730.4,2693.5,2656.9,2620.6,2584.6,2548.9,2513.5,2478.4,2443.6,2409.2,2375,2341.2,2307.7,2274.5,2241.6,2209.1,2177,2145.1,2113.6,2082.5,2051.7,2021.3,1991.3,1961.6,1932.3,1903.3,1874.7,1846.6,1818.7,1791.3,1764.3,1737.7,1711.5,1685.6,1660.2,1635.2,1610.6,1586.4,1562.6,1539.2,1516.2,1493.5,1471.2,1449.3,1427.7,1406.5,1385.7,1365.2,1345,1325.2,1305.6,1286.5,1267.6,1249,1230.7,1212.8,1195.1,1177.7,1160.6,1143.8,1127.2,1111,1094.9,1079.1,1063.6,1048.3,1033.3,1018.5,1003.9,989.5,975.3,961.4,947.6,934.1,920.7,907.6,894.6,881.8,869.1,856.7,844.4,832.2,820.2,808.3,796.6,785,773.6,762.2,751,739.9,728.9,717.9,707.1,696.4,685.8,675.2,664.7,654.3,643.9,633.7,623.4,613.3,603.2,593.2,583.2,573.2,563.3,553.5,543.7,533.9,524.2,514.5,504.9,495.2,485.6,476,466.5,456.9,447.4,437.9,428.4,418.8,409.3,399.8,390.3,380.8,371.3,361.8,352.3,342.7,333.1,323.5,313.9,304.3,294.6,284.9,275.2,265.4,255.7,246,236.3,226.7,217.1,207.5,198.1];
+const DT_B=[198.08,196.2,194.32,192.45,190.58,188.72,186.86,185,183.15,181.3,179.46,177.62,175.78,173.95,172.13,170.31,168.49,166.68,164.88,163.08,161.29,159.5,157.72,155.94,154.17,152.4,150.64,148.89,147.14,145.4,143.67,141.94,140.22,138.5,136.8,135.1,133.4,131.71,130.04,128.36,126.7,125.04,123.39,121.75,120.11,118.49,116.87,115.26,113.65,112.06,110.47,108.9,107.33,105.77,104.22,102.67,101.14,99.62,98.1,96.6,95.1,93.62,92.14,90.68,89.22,87.78,86.35,84.92,83.51,82.11,80.72,79.34,77.98,76.62,75.28,73.95,72.63,71.32,70.02,68.74,67.47,66.21,64.97,63.74,62.52,61.32,60.13,58.95,57.78,56.63,55.5,54.38,53.27,52.18,51.1,50.04,48.99,47.95,46.94,45.93,44.95,43.97,43.02,42.08,41.15,40.24,39.35,38.47,37.61,36.76,35.93,35.11,34.31,33.52,32.75,32,31.26,30.53,29.82,29.12,28.44,27.78,27.13,26.49,25.87,25.26,24.67,24.09,23.53,22.98,22.45,21.93,21.43,20.94,20.46,20,19.55,19.12,18.7,18.3,17.91,17.54,17.17,16.83,16.49,16.18,15.87,15.58,15.3,15.04,14.79,14.55,14.33,14.13,13.93,13.75,13.58,13.43,13.29,13.16,13.05,12.95,12.87,12.79,12.73,12.69,12.65,12.63,12.63,12.63,12.65,12.69,12.73,12.79,12.86,12.94,13.03,13.13,13.24,13.37,13.5,13.63,13.78,13.94,14.1,14.27,14.44,14.62,14.81,15,15.2,15.4,15.61,15.81,16.02,16.24,16.45,16.67,16.88,17.1,17.32,17.54,17.76,17.97,18.19,18.4,18.61,18.82,19.02,19.22,19.41,19.61,19.79,19.97,20.15,20.31,20.47,20.63,20.77,20.91,21.04,21.16,21.27,21.36,21.45,21.53,21.6,21.65,21.7,21.73,21.74,21.74,21.73,21.71,21.67,21.61,21.54,21.45,21.35,21.23,21.09,20.93,20.75,20.56,20.34,20.11,19.85,19.58,19.28,18.96,18.62,18.26,17.89,17.52,17.16,16.83,16.52,16.27,16.07,15.95,15.9,15.94,16.05,16.21,16.39,16.58,16.74,16.86,16.91,16.86,16.71,16.43,16.03,15.53,14.96,14.32,13.65,12.96,12.27,11.6,10.97,10.4,9.88,9.42,9.02,8.67,8.38,8.15,7.97,7.85,7.78,7.76,7.79,7.87,7.99,8.15,8.35,8.58,8.85,9.14,9.45,9.78,10.09,10.34,10.48,10.46,10.28,9.98,9.64,9.34,9.14,9.09,9.1,9.06,8.85,8.34,7.47,6.31,5,3.67,2.45,1.44,0.63,-0.02,-0.57,-1.06,-1.51,-1.95,-2.36,-2.76,-3.15,-3.52,-3.85,-4.11,-4.28,-4.34,-4.25,-4.1,-3.93,-3.82,-3.84,-4.03,-4.33,-4.65,-4.89,-4.98,-4.83,-4.44,-3.82,-2.99,-1.95,-0.72,0.65,2.09,3.54,4.95,6.27,7.51,8.72,9.93,11.16,12.46,13.77,15.08,16.33,17.5,18.54,19.46,20.27,20.99,21.63,22.2,22.7,23.13,23.5,23.8,24.03,24.21,24.33,24.4,24.42,24.42,24.38,24.32,24.25,24.17,24.09,24.04,24.06,24.18,24.43,24.83,25.35,25.93,26.51,27.05,27.51,27.89,28.24,28.58,28.93,29.32,29.7,30,30.2,30.41,30.76,31.34,32.03,32.65,33.07,33.36,33.62,34.44,34.95,35.64,36.51,37.44,38.39,39.24,40.18,41.13,42.1];
+const LEAP=[[1972,1,10],[1972,7,11],[1973,1,12],[1974,1,13],[1975,1,14],[1976,1,15],[1977,1,16],
+  [1978,1,17],[1979,1,18],[1980,1,19],[1981,7,20],[1982,7,21],[1983,7,22],[1985,7,23],[1988,1,24],
+  [1990,1,25],[1991,1,26],[1992,7,27],[1993,7,28],[1994,7,29],[1996,1,30],[1997,7,31],[1999,1,32],
+  [2006,1,33],[2009,1,34],[2012,7,35],[2015,7,36],[2017,1,37]];
+const DT_FUTURE=2027;
 function deltaTsec(y,mo){
   const t=y+(mo-0.5)/12;
-  if(t>=1960&&t<=2025){
-    const x=(t-1960)/5, i=Math.min(Math.floor(x),DT_OBS.length-2);
-    return DT_OBS[i]+(DT_OBS[i+1]-DT_OBS[i])*(x-i);
-  }
-  const p=(u,c)=>c.reduce((s,k,j)=>s+k*Math.pow(u,j),0);
-  let u;
-  if(t<-500){ u=(t-1820)/100; return -20+32*u*u; }
-  if(t<500)  return p(t/100,[10583.6,-1014.41,33.78311,-5.952053,-0.1798452,0.022174192,0.0090316521]);
-  if(t<1600) return p((t-1000)/100,[1574.2,-556.01,71.23472,0.319781,-0.8503463,-0.005050998,0.0083572073]);
-  if(t<1700){ u=t-1600; return 120-0.9808*u-0.01532*u*u+u*u*u/7129; }
-  if(t<1800) return p(t-1700,[8.83,0.1603,-0.0059285,0.00013336,-1/1174000]);
-  if(t<1860) return p(t-1800,[13.72,-0.332447,0.0068612,0.0041116,-0.00037436,0.0000121272,-0.0000001699,0.000000000875]);
-  if(t<1900){ u=t-1860; return 7.62+0.5737*u-0.251754*u*u+0.01680668*u*u*u-0.0004473624*Math.pow(u,4)+Math.pow(u,5)/233174; }
-  if(t<1920) return p(t-1900,[-2.79,1.494119,-0.0598939,0.0061966,-0.000197]);
-  if(t<1941) return p(t-1920,[21.20,0.84493,-0.076100,0.0020936]);
-  if(t<1961){ u=t-1950; return 29.07+0.407*u-u*u/233+u*u*u/2547; }
-  /* 1961-2025 is covered by the table above. */
-  /* 2025-2050 bridges the last measured value to the Espenak-Meeus curve.
-     That curve was fitted before Earth's rotation stopped slowing, and reads
-     about six seconds high for the present decade - a quarter arcsecond of
-     Sun, three of Moon, which is more than the series itself costs. */
-  if(t<2050) return 69.18+(93.0-69.18)*(t-2025)/25;
-  if(t<2150){ u=(t-1820)/100; return -20+32*u*u-0.5628*(2150-t); }
-  u=(t-1820)/100; return -20+32*u*u;
+  if(t<-500){ const u=(t-1820)/100, u0=(-500-1820)/100; return -20+32*u*u+(DT_A[0]-(-20+32*u0*u0)); }
+  const lin=(arr,x)=>{ const i=Math.min(Math.floor(x),arr.length-2); return arr[i]+(arr[i+1]-arr[i])*(x-i); };
+  if(t<1550) return lin(DT_A,(t+500)/5);
+  if(t<1972) return lin(DT_B,t-1550);
+  if(t<DT_FUTURE){ let ls=10; for(const [ly,lm,n] of LEAP) if(y>ly||(y===ly&&mo>=lm)) ls=n; return 32.184+ls; }
+  return 32.184+37+0.00325*(t-DT_FUTURE)*(t-DT_FUTURE);
 }
 
 /* VSOP87D series evaluation. VS/VF come from vsop87d.js. */
@@ -2847,15 +2855,56 @@ function vsCoord(k,c,t){                       // Horner over the powers of t
   for(let i=w.length-1;i>=0;i--) s=s*t+vsSum(w[i],t);
   return s;
 }
-function helioXYZ(k,t){
-  const L=vsCoord(k,0,t), B=vsCoord(k,1,t), R=vsCoord(k,2,t), cb=Math.cos(B);
+/* VSOP87 speaks its own dynamical frame; Meeus 32.3 turns it into FK5,
+   which is where JPL's ecliptic is. Measured: the Sun, Mercury and Venus sat
+   0.19" ahead of Horizons on average without it, 0.10" with it. */
+function vsopXYZ(k,t){
+  let L=vsCoord(k,0,t), B=vsCoord(k,1,t); const R=vsCoord(k,2,t);
+  const T=t*10, Lp=L-(1.397*T+0.00031*T*T)*D2R;
+  L+=(-0.09033+0.03916*(Math.cos(Lp)+Math.sin(Lp))*Math.tan(B))*ASR;
+  B+=0.03916*(Math.cos(Lp)-Math.sin(Lp))*ASR;
+  const cb=Math.cos(B);
   return [R*cb*Math.cos(L), R*cb*Math.sin(L), R*Math.sin(B)];
 }
+/* Jupiter to Neptune come from planets.js, Chebyshev fits to JPL DE441 over
+   1550-2250 (tools-planets.mjs), and from VSOP87D outside that span. The
+   truncated series the app carries drifted for these four: Neptune by 1.5"
+   a century, 5.8" at the edges; the fits hold to 0.3". */
+const FIT_OF={ju:'Jupiter',sa:'Saturn',ur:'Uranus',ne:'Neptune'};
+/* A fit is read a day past either end without clamping: light-time asks for
+   the planet hours before the moment, and at the very first day of the span
+   a clamp froze it there - 3" of Pluto on 1 January 1550. A Chebyshev series
+   is still exact that close to its edge. */
+function chebFit(F,tm){
+  const jd=2451545.0+tm*365250, end=F.jd0+F.seg*F.nseg;
+  if(jd<F.jd0-1||jd>end+1) return null;
+  const s=Math.max(0,Math.min(F.nseg-1,Math.floor((jd-F.jd0)/F.seg)));
+  const u=2*(jd-(F.jd0+s*F.seg))/F.seg-1;
+  return [chebEval(F.c[s][0],u),chebEval(F.c[s][1],u),chebEval(F.c[s][2],u)];
+}
+function helioXYZ(k,t){
+  const n=FIT_OF[k];
+  if(n&&typeof PLANET_FIT!=='undefined'&&PLANET_FIT[n]){ const p=chebFit(PLANET_FIT[n],t); if(p) return p; }
+  return vsopXYZ(k,t);
+}
 
-/* IAU 2000B nutation truncated to its six leading terms, which is everything
-   above 0.05". Kaplan, USNO Circular 179, eq. 5.17-5.19 and p. 88. */
+/* Nutation: the six leading IAU 2000B terms (Kaplan, USNO Circular 179, eq.
+   5.17-5.19), and after them the next twenty-five of the IAU 1980 series
+   (Meeus table 22.A), every term down to 0.0015". The comment here once said
+   six terms were "everything above 0.05"", and the 0.071" term in the Moon's
+   anomaly was missing; the six alone were 0.2" from Swiss Ephemeris at worst.
+   With the rest, 0.010" at worst over 1550-2250. Rows: D, M, M', F, Omega,
+   then longitude and obliquity in units of 0.0001" and their rates a century. */
+const NUT_MORE=[[0,0,1,0,0,712,0.1,-7,0],[0,0,0,2,1,-386,-0.4,200,0],[0,0,1,2,2,-301,0,129,-0.1],
+  [-2,-1,0,2,2,217,-0.5,-95,0.3],[-2,0,1,0,0,-158,0,0,0],[-2,0,0,2,1,129,0.1,-70,0],[0,0,-1,2,2,123,0,-53,0],
+  [2,0,0,0,0,63,0,0,0],[0,0,1,0,1,63,0.1,-33,0],[2,0,-1,2,2,-59,0,26,0],[0,0,-1,0,1,-58,-0.1,32,0],
+  [0,0,1,2,1,-51,0,27,0],[-2,0,2,0,0,48,0,0,0],[0,0,-2,2,1,46,0,-24,0],[2,0,0,2,2,-38,0,16,0],
+  [0,0,2,2,2,-31,0,13,0],[0,0,2,0,0,29,0,0,0],[-2,0,1,2,2,29,0,-12,0],[0,0,0,2,0,26,0,0,0],
+  [-2,0,0,2,0,-22,0,0,0],[0,0,-1,2,1,21,0,-10,0],[0,2,0,0,0,17,-0.1,0,0],[2,0,-1,0,1,16,0,-8,0],
+  [-2,2,0,2,2,-16,0.1,7,0],[0,1,0,0,1,-15,0,9,0]];
 function nutation(T){
   const AS=Math.PI/648000, T2=T*T, T3=T*T2, T4=T*T3;
+  const L =AS*(485868.249036+1717915923.2178*T+31.8792*T2+0.051635*T3-0.0002447*T4);
   const Lp=AS*(1287104.79305+129596581.0481*T-0.5532*T2+0.000136*T3-0.00001149*T4);
   const F =AS*(335779.526232+1739527262.8478*T-12.7512*T2-0.001037*T3+0.00000417*T4);
   const D =AS*(1072260.70369+1602961601.209*T-6.3706*T2+0.006593*T3-0.00003169*T4);
@@ -2871,6 +2920,10 @@ function nutation(T){
   a=2*(F-D+Om);
   dp+=(-13170906-1675*T)*Math.sin(a)-13696*Math.cos(a); de+=(5730336-3015*T)*Math.cos(a)-4587*Math.sin(a);
   dp+=(-172064161-174666*T)*Math.sin(Om)+33386*Math.cos(Om); de+=(92052331+9086*T)*Math.cos(Om)+15377*Math.sin(Om);
+  for(const [nd,nm,nl,nf,no,ps,pt,es,et] of NUT_MORE){
+    a=nd*D+nm*Lp+nl*L+nf*F+no*Om;
+    dp+=(ps+pt*T)*1000*Math.sin(a); de+=(es+et*T)*1000*Math.cos(a);   // 1e-4" to 1e-7"
+  }
   return [dp*AS/1e7, de*AS/1e7];               // radians
 }
 function meanObliq(T){                          // IAU 2006, radians
@@ -2908,6 +2961,17 @@ function apparent(name,t,dpsi,E,V){
       v=[P[0]-E[0],P[1]-E[1],P[2]-E[2]];
       tau=Math.hypot(v[0],v[1],v[2])/C_AUD;
     }
+    /* The Sun bends the light of everything seen past it (SOFA iauLd), which
+       Horizons applies and this did not: up to a few tenths of an arcsecond
+       for a planet near conjunction, 0.3" off Jupiter's latitude in the
+       check. Undefined for the Sun itself, which is why it is here. */
+    const P=[v[0]+E[0],v[1]+E[1],v[2]+E[2]], dv=Math.hypot(v[0],v[1],v[2]);
+    const dp=Math.hypot(P[0],P[1],P[2]), de=Math.hypot(E[0],E[1],E[2]);
+    const p=v.map(x=>x/dv), q=P.map(x=>x/dp), e=E.map(x=>x/de);
+    const qd=q[0]*(q[0]+e[0])+q[1]*(q[1]+e[1])+q[2]*(q[2]+e[2]);
+    const w=1.97412574336e-8/de/Math.max(qd,1e-9);
+    const eq=[e[1]*q[2]-e[2]*q[1],e[2]*q[0]-e[0]*q[2],e[0]*q[1]-e[1]*q[0]];
+    v=[(p[0]+w*(p[1]*eq[2]-p[2]*eq[1]))*dv,(p[1]+w*(p[2]*eq[0]-p[0]*eq[2]))*dv,(p[2]+w*(p[0]*eq[1]-p[1]*eq[0]))*dv];
   }
   const d=Math.hypot(v[0],v[1],v[2]), s=d/C_AUD;
   v=[v[0]+V[0]*s, v[1]+V[1]*s, v[2]+V[2]*s];    // annual aberration
@@ -2997,13 +3061,38 @@ function precessEcl(lon,lat,T){
    carries Earth's orbital velocity with us, so it cancels, and what remains
    is the Moon's own 1.3-second light-time, worth 0.7". */
 const C_KMD=299792.458*86400;
+/* The truncated ELP82B against JPL DE441, measured over 1550-2250 at 62,000
+   moments: 20" off by 1550 and 6.6" by 2250, growing as the square of the
+   time from 2000. That is the Moon's tidal acceleration, which ELP took from
+   older data than DE441 (0.97" per century squared of difference), plus
+   terms whose size grows with time and were cut with the rest. This is fitted
+   to JPL by tools-moon.mjs - the way Pluto, Chiron and the outer planets are -
+   as a quadratic and six arguments' worth of growing periodic terms in
+   longitude, four in latitude; held out half the data the worst left is about
+   1" anywhere in the span and 0.15" typical, which is the truncation itself.
+   Outside 1550-2250 the correction stops growing (T is held at the edge):
+   a polynomial asked to extrapolate is worse than none. Arcseconds. */
+const MOON_FIX={lon:[0.12288,0.427183,0.968508,-0.0020435,0.0538001,-0.000178768,0.10859,-0.000810761,0.0178369,-0.00000111045,0.0206152,-0.00204598,0.0078758,-0.00201618,0.0212565,-0.000543346,-0.00506483,-0.0000614977,0.00541421,0.0046573,0.00411534,0.00366529,0.0000284432,-0.000196847,-0.000700055,-0.000081735,-0.00386385],lat:[0.000381294,0.0000322156,0.00000664373,0.00115632,0.020947,0.000338846,0.0854628,-0.000218892,-0.0021621,-0.0000881659,0.00844778,0.0000473438,-0.00400875,-0.00000330147,-0.00121465,-0.00317581,0.00198895,-0.000222434,0.00262743]};
+const MOON_FIX_ARGS={lon:['l','2D-l','2D','2l',"l'",'2F'],lat:['F','l+F','l-F','2D-F']};
+function moonFix(T){
+  T=Math.max(-4.5,Math.min(2.5,T));
+  const D=5.198466741027443+7771.377146811758*T, Lp=-0.04312518020812495+628.301955168488*T,
+    L=2.3555558982657994+8328.691426955555*T, F=1.627905233371468+8433.466158130539*T;
+  const A={l:L,'2D-l':2*D-L,'2D':2*D,'2l':2*L,"l'":Lp,'2F':2*F,F,'l+F':L+F,'l-F':L-F,'2D-F':2*D-F};
+  const sum=(c,args)=>{ if(c.length<3) return 0;
+    let s=c[0]+c[1]*T+c[2]*T*T, i=3;
+    for(const k of args) for(const p of [1,2]){ const tp=T**p; s+=c[i++]*tp*Math.sin(A[k])+c[i++]*tp*Math.cos(A[k]); }
+    return s; };
+  return [sum(MOON_FIX.lon,MOON_FIX_ARGS.lon), sum(MOON_FIX.lat,MOON_FIX_ARGS.lat)];
+}
 function moonApparent(T,dpsi){
   let r=moonXYZ(T);
   const tau=Math.hypot(r[0],r[1],r[2])/C_KMD/36525;
   r=moonXYZ(T-tau);
   const d=Math.hypot(r[0],r[1],r[2]);
   const [l2,b2]=precessEcl(Math.atan2(r[1],r[0]),Math.asin(r[2]/d),T);
-  return {lon:rev((l2+dpsi)*R2D), lat:b2*R2D, dist:d};
+  const [fl,fb]=moonFix(T);
+  return {lon:rev((l2+dpsi)*R2D-fl/3600), lat:b2*R2D-fb/3600, dist:d};
 }
 /* Mean lunar node (Meeus 47.7). The mean node, not the true one - the same
    point the app has always shown, now on a formula that does not drift. */
@@ -3021,6 +3110,7 @@ function chebEval(c,u){
 }
 function plutoXYZ(tm){
   const jd=2451545.0+tm*365250;
+  const near=chebFit({jd0:PLJD0,seg:PLSEG,nseg:PLNSEG,c:PLC},tm); if(near) return near;
   let s=Math.floor((jd-PLJD0)/PLSEG);
   s=Math.max(0,Math.min(PLNSEG-1,s));
   /* The fit covers 1550-2250 and a degree-16 polynomial diverges the moment
@@ -3094,6 +3184,7 @@ function asteroidXYZ(name,tm){
    CHJD0 at parse time throws before the app has started. That is also why
    plutoXYZ reads PLJD0 from inside its body and not from a local above it. */
 function chironXYZ(tm){
+  const near=chebFit({jd0:CHJD0,seg:CHSEG,nseg:CHNSEG,c:CHC},tm); if(near) return near;
   const jd=2451545.0+tm*365250;
   if(jd<CHJD0||jd>CHJD0+CHSEG*CHNSEG) return null;
   let s=Math.floor((jd-CHJD0)/CHSEG);
@@ -9139,7 +9230,10 @@ function renderChartMeta(ch,y,mo,da,hh,mi,tz){
   }
   /* The third line is for paper. On screen the chips under it say the same
      thing and can be changed; printed, the chips are gone and this stays. */
-  el.innerHTML=[who, line1].filter(Boolean).map(x=>`<div>${x}</div>`).join('')
+  /* #2 of the review: outside its fit Pluto stands still, and a chart that
+     draws it like any other body says nothing wrong. Now it says so. */
+  const plutoOut=ch.d<dayNumber(1550,1,1,0)||ch.d>dayNumber(2250,1,1,0);
+  el.innerHTML=[who, line1, plutoOut?`<span class="libwarn">${t('plutoEdge')}</span>`:''].filter(Boolean).map(x=>`<div>${x}</div>`).join('')
     +`<div class="printonly">${line2}</div><div class="printonly" id="printRing"></div>`;
 }
 /* What the outer rings are, on paper. The ring chips and the slider are not
