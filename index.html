@@ -136,7 +136,13 @@ input:not([type=checkbox]):not([type=radio]):not([type=range]),select{min-height
 input[type=date],input[type=time]{-webkit-appearance:none;appearance:none;min-width:0;display:block}
 input[type=date]::-webkit-date-and-time-value,input[type=time]::-webkit-date-and-time-value{text-align:left}
 .grid>*,.grid3>*{min-width:0}
-button{font:inherit;cursor:pointer;border-radius:10px;border:1px solid var(--line);background:var(--paper3);color:var(--ink);padding:9px 14px}
+/* The house rule for every button (My Apps/CLAUDE.md): centre the letters, not
+   the line box. Height from padding and the 44px floor, line-height 1, and
+   text-box trimmed to the cap height, so a label sits in the middle of its
+   button and not on the descender space below it. */
+button{font:inherit;cursor:pointer;border-radius:10px;border:1px solid var(--line);background:var(--paper3);color:var(--ink);padding:9px 14px;min-height:44px;
+  display:inline-flex;align-items:center;justify-content:center;line-height:1;box-sizing:border-box;
+  text-box:trim-both cap alphabetic}
 button.primary{background:var(--accentBtn);border-color:var(--accentBtn);color:var(--accentInk)}
 /* The language control was a native select until the app grew its own
    dropdown; its styling now lives with .dd.langsel. The old rule is gone
@@ -149,7 +155,7 @@ button.primary{background:var(--accentBtn);border-color:var(--accentBtn);color:v
    siblings: same height, radius and vertical rhythm. Only the horizontal
    padding differs, because an icon and a two-letter label are not the same
    width. Before this they stood 28px against 33.5px and looked misaligned. */
-.lang button{min-height:42px;display:inline-flex;align-items:center;justify-content:center}
+.lang button{min-height:44px;display:inline-flex;align-items:center;justify-content:center}
 .lang.theme button{padding:0 10px;min-width:52px;color:var(--ink2)}
 .lang.theme button.on{color:var(--accentInk)}
 /* 18 px like every other icon here. The global svg rule stretches an icon to its
@@ -185,7 +191,7 @@ svg{display:block;width:100%;height:auto;touch-action:manipulation}
 .muted{color:var(--ink2)}
 .tiny{font-size:12px;color:var(--ink3)}
 .detail{background:var(--paper3);border-radius:12px;padding:12px;margin-top:10px;min-height:20px}
-.detail.empty{color:var(--ink3);font-style:italic}
+.detail.empty{color:var(--ink2);font-style:italic}   /* ink3 on the detail ground measured 4.2:1, under 4.5 */
 /* ---- city atlas download ---- */
 .atlasbar{margin-top:8px}
 .atlasbar .bar{height:4px;border-radius:2px;background:var(--paper3);overflow:hidden}
@@ -392,7 +398,8 @@ button.ico:disabled{opacity:.4;cursor:default}
 .orbrow.minor .nm{color:var(--ink2)}
 /* The switch: a 44px label wrapping a real checkbox, so the whole row height is
    the target and the control stays a checkbox for assistive technology. */
-.sw{display:inline-flex;align-items:center;flex:none;cursor:pointer;margin:0;padding:0 2px}
+.sw{display:inline-flex;align-items:center;flex:none;cursor:pointer;margin:0;padding:0 2px;
+  min-height:44px;align-self:stretch}   /* the promise above, measured: it was 23 px */
 .sw input{position:absolute;opacity:0;width:0;height:0}
 .sw span{display:block;width:38px;height:22px;border-radius:11px;background:var(--paper3);
   border:1px solid var(--line);position:relative;transition:background .15s}
@@ -435,7 +442,10 @@ button.ico:disabled{opacity:.4;cursor:default}
 html.native #printBtn{display:none}
 /* One press, and it says so afterwards. A copy control that gives no feedback
    leaves you pressing it twice and still not knowing. */
-.copybtn{font-size:12px;padding:.45em .8em;min-height:32px}
+.copybtn{font-size:12px;padding:.45em .8em;min-height:32px;position:relative}
+/* Drawn at 32px, touched at 44: the extra six above and below are invisible
+   and never reach a neighbour, which sits beside it, not above. */
+.copybtn::before{content:'';position:absolute;inset:-7px 0}
 .copybtn.done{border-color:var(--accent);color:var(--accent)}
 .cardhead{display:flex;align-items:center;gap:8px;margin:0 0 8px}
 .cardhead .sp{flex:1}
@@ -536,8 +546,11 @@ details.unit .dt{padding:0 0 10px;color:var(--ink2);font-size:14px}
 .metactl>.tiny{margin-right:2px}
 .metactl .dd{width:auto;flex:none;max-width:100%}
 .metactl .ddbtn{min-height:32px;padding:4px 24px 4px 10px;font-size:13px;border-radius:999px;
-  background-color:var(--paper2);position:relative;
+  background-color:var(--paper2);position:static;
   background-position:calc(100% - 13px) 52%,calc(100% - 8px) 52%}
+/* Static, so the reach below hangs off the .dd wrapper: positioned on the
+   button it was clipped by the button's own overflow:hidden (kept for the
+   ellipsis), and the thumb got 32 px, measured, not the 44 promised above. */
 .metactl .ddbtn::after{content:'';position:absolute;left:0;right:0;top:-6px;bottom:-6px}
 .setnote{margin:0 0 10px;line-height:1.45}
 .printonly{display:none}
@@ -561,7 +574,7 @@ dialog.panel[open]{animation:panelIn 200ms cubic-bezier(.2,.7,.2,1) both}
 .panelsort{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 20px 6px;flex:none}
 .panelsort .dd{width:auto;flex:none}
 .panelsort .ddbtn{min-height:32px;padding:4px 24px 4px 10px;font-size:13px;border-radius:999px;
-  background-color:var(--paper2);position:relative;
+  background-color:var(--paper2);position:static;
   background-position:calc(100% - 13px) 52%,calc(100% - 8px) 52%}
 .panelsort .ddbtn::after{content:'';position:absolute;left:0;right:0;top:-6px;bottom:-6px}
 .panelsort .ddlist{left:auto;right:0}
@@ -643,12 +656,16 @@ details.fold>summary:active h2{opacity:.55}
 
 /* Collapsible reference card: the heading IS the control, so it carries the
    disclosure marker and the press feedback above. */
-details.fold>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px}
+/* The heading takes the card's padding as its own, so the whole band across
+   the top of a closed card is the target: the bare heading was a 23px strip
+   inside a 55px card. The card looks the same. */
+details.fold>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;
+  margin:-16px;padding:16px;border-radius:var(--radius)}
 details.fold>summary::-webkit-details-marker{display:none}
 details.fold>summary h2{margin:0}
 details.fold>summary::after{content:'+';margin-left:auto;color:var(--ink3);font-size:15px}
 details.fold[open]>summary::after{content:'−'}
-details.fold[open]>summary{margin-bottom:12px}
+details.fold[open]>summary{margin-bottom:-4px}
 .citylist div:active{background:var(--paper3)}
 @media (hover:hover){
   button:hover,.chip:hover{border-color:var(--ink3)}
