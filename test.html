@@ -5202,6 +5202,83 @@ function run(){
       return FACT_POINTS.filter(p=>F.planets[p]&&F.planets[p].solar.condition!==null);})()`);
     return !r.length||'солнечное состояние у '+r.join(', ');
   });
+  t('#20 сетка не показывает того, чего нет на круге: без оппозиции узлов, орб точек',()=>{
+    const r=ev(`(()=>{renderGrid(CURRENT,null);
+      const cells=[...document.querySelectorAll('#aspGrid .gc.on')].map(c=>({r:c.dataset.r,c:c.dataset.c,a:c.dataset.a,o:+c.dataset.o}));
+      const nodes=cells.filter(x=>nodePair(x.r,x.c)).length;
+      const wide=cells.filter(x=>(isAspectPoint(x.r)||isAspectPoint(x.c))&&x.o>POINT_ORB+1e-9).length;
+      const fa=findAspects(CURRENT.pos).filter(a=>GRID_BODIES.includes(a.p1)&&GRID_BODIES.includes(a.p2)).length;
+      const planetCells=cells.filter(x=>x.r!=='ASC'&&x.r!=='MC'&&x.c!=='ASC'&&x.c!=='MC').length;
+      renderTransits(CURRENT); return {nodes,wide,fa,planetCells};})()`);
+    const bad=[];
+    if(r.nodes) bad.push('в сетке оппозиция узлов');
+    if(r.wide) bad.push(`${r.wide} аспектов точек шире орба точек`);
+    if(r.planetCells!==r.fa) bad.push(`в сетке ${r.planetCells} аспектов тел и точек, на круге ${r.fa}`);
+    return !bad.length||bad.join('; ');
+  });
+  t('#27 орб точек сужает и транзитный узел',()=>{
+    const r=ev(`(()=>{const k=RING_MODE; RING_MODE='transit'; const c=ringOrbCap('NNode','Sun'); RING_MODE=k; return [c,POINT_ORB];})()`);
+    return r[0]===Math.min(3.5,r[1])||`cap ${r[0]}, орб точек ${r[1]}`;
+  });
+  t('#21 без партнёра под заголовком синастрии не остаются транзиты',()=>{
+    const r=ev(`(()=>{const k={m:RING_MODE,p:PARTNER};
+      try{ RING_MODE='transit'; renderTransits(CURRENT);
+        const before=document.getElementById('transitlist').children.length;
+        RING_MODE='synastry'; PARTNER=null; renderTransits(CURRENT);
+        return {before, after:document.getElementById('transitlist').children.length};
+      }finally{ RING_MODE=k.m; PARTNER=k.p; renderTransits(CURRENT); }})()`);
+    return r.after===0||`осталось ${r.after} строк (до смены режима ${r.before})`;
+  });
+  t('#23 синастрия в обе стороны, и без углов у партнёра без времени',()=>{
+    const r=ev(`(()=>{const k={m:RING_MODE,p:PARTNER,s:RING_SWAP};
+      try{
+        const withT=CHART_LIBRARY.find(e=>e.t!=null), noT=CHART_LIBRARY.find(e=>e.t==null);
+        RING_MODE='synastry'; RING_SWAP=false;
+        PARTNER={src:'lib',id:withT.id}; renderTransits(CURRENT);
+        const revAng=TR_HITS.filter(h=>h.rev&&(h.np==='ASC'||h.np==='MC')).length;
+        const anyRev=TR_HITS.filter(h=>h.rev).length;
+        PARTNER={src:'lib',id:noT.id}; renderTransits(CURRENT);
+        const noTimeAng=TR_HITS.filter(h=>h.rev&&(h.np==='ASC'||h.np==='MC')).length;
+        RING_SWAP=true; renderTransits(CURRENT);
+        const swappedAng=TR_HITS.filter(h=>!h.rev&&(h.np==='ASC'||h.np==='MC')).length;
+        return {revAng,anyRev,noTimeAng,swappedAng, unknown:!!TR_CHART.timeUnknown};
+      }finally{ RING_MODE=k.m; PARTNER=k.p; RING_SWAP=k.s; renderTransits(CURRENT); }})()`);
+    const bad=[];
+    if(!r.anyRev) bad.push('нет ни одного контакта к углам и точкам партнёра');
+    if(r.noTimeAng) bad.push(`к углам партнёра без времени ${r.noTimeAng} аспектов`);
+    if(r.swappedAng) bad.push(`после обмена к полуденным углам ${r.swappedAng} аспектов`);
+    if(!r.unknown) bad.push('карта партнёра без времени не помечена');
+    return !bad.length||bad.join('; ');
+  });
+  t('#26 сходящийся до точности остаётся сходящимся, даже если точность внутри шага',()=>{
+    const r=ev(`(()=>{const sq=ASPECT_DEFS.find(a=>a.name==='square'), cj=ASPECT_DEFS.find(a=>a.name==='conjunction'), op=ASPECT_DEFS.find(a=>a.name==='opposition');
+      const ch={pos:{Sun:{lon:100}},asc:0,mc:0};
+      const m=(now,later,asp)=>markApplying(ch,{Moon:{lon:now}},{Moon:{lon:later}},[{tp:'Moon',np:'Sun',asp,orb:0}])[0].applying;
+      return [m(9.9,10.15,sq), m(99.9,100.2,cj), m(279.9,280.3,op), m(100.2,100.4,cj), m(10.3,10.5,sq)];})()`);
+    const want=[true,true,true,false,false];
+    return r.every((v,i)=>v===want[i])||`получено ${r.join(', ')}, ожидалось ${want.join(', ')}`;
+  });
+  t('#24 соляр называет свой момент и место и рисует свои углы',()=>{
+    const r=ev(`(()=>{const k=RING_MODE;
+      try{ RING_MODE='solar'; renderTransits(CURRENT);
+        return {loc:document.getElementById('momLoc').textContent, ms:TR_CHART&&TR_CHART.returnMs,
+          ang:[...document.querySelectorAll('#wheel .trAng text')].map(x=>x.textContent)};
+      }finally{ RING_MODE=k; renderTransits(CURRENT); }})()`);
+    const bad=[];
+    if(!r.ms) bad.push('момент возврата не найден');
+    if(!r.loc.includes(ev(`t('ring_solar')`))||!/UT/.test(r.loc)) bad.push('под ползунком: "'+r.loc+'"');
+    if(r.ang.join(',')!=='Asc,MC') bad.push('углы соляра на колесе: '+r.ang.join(','));
+    return !bad.length||bad.join('; ');
+  });
+  t('#28 смена орба обновляет текст экспорта',()=>{
+    const r=ev(`(()=>{const keep=JSON.stringify(ORBS);
+      const card=document.getElementById('exportCard'), was=card.open; card.open=true;
+      try{ fillExport(); const a=document.getElementById('exportText').textContent;
+        ORBS.quincunx.on=!ORBS.quincunx.on; ORBS.quincunx.orb=5; rebuildAspects(); redrawAspects();
+        const b=document.getElementById('exportText').textContent; return a!==b;
+      }finally{ const o=JSON.parse(keep); Object.keys(o).forEach(n=>ORBS[n]=o[n]); saveOrbs(); rebuildAspects(); redrawAspects(); card.open=was; }})()`);
+    return r||'текст экспорта не изменился после включения квинконса';
+  });
   /* REVIEW-2026-10-15-END */
 
   render();

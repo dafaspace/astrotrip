@@ -6795,6 +6795,19 @@ function drawWheel(ch,tr,t3=TR3_CHART){
       s+=`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${h.asp.color}" stroke-width="1" stroke-dasharray="3 3" opacity="0.55"/>`;
     });
     s+=ringBand(tr,rTrG,'var(--accent)','trp',sepTr,tri?rMidScale-8:rZodIn-1,LIT_OUT);
+    /* The second chart's own Ascendant and Midheaven, across its band. They
+       were computed - for a return at the place it is cast for, for the
+       partner at theirs - and then never drawn, so moving a solar return to
+       another city changed nothing visible. Not for transits, whose angles
+       spin a full turn a day, and not for a chart whose birth time is unknown. */
+    if(['solar','lunar','synastry','progressed','directed'].includes(RING_MODE)&&!tr.timeUnknown&&tr.asc!=null){
+      [[tr.asc,'Asc'],[tr.mc,'MC']].forEach(([lon,lbl])=>{
+        const [x1,y1]=polar(lon,rTrG-12),[x2,y2]=polar(lon,rTrG+12),[lx,ly]=polar(lon,rTrG);
+        s+=`<g class="trAng"><line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="var(--accent)" stroke-width="1.4"/>`
+          +`<text x="${lx.toFixed(1)}" y="${(ly+2.6).toFixed(1)}" text-anchor="middle" font-size="7.5" font-weight="600"`
+          +` paint-order="stroke" stroke="var(--paper)" stroke-width="2.4" stroke-linejoin="round" fill="var(--accent)">${lbl}</text></g>`;
+      });
+    }
     if(tri) s+=ringBand(t3,rTr,'var(--ring3)','trp3',sep3,rZodIn-1);
   }
   /* The angle labels go on top of everything. Turned inward at the left and
@@ -7851,6 +7864,12 @@ function partnerEntry(){
   return e?{...e,_own:PARTNER.src==='own'}:null;
 }
 function partnerName(e){ return e?(e._own?e.name:LX(e.name)):''; }
+/* Whose chart a ring is in synastry: the outer one is the partner unless the
+   two have been swapped. Used to say whose angle a reversed contact lands on. */
+function ringOwner(outer){
+  const partnerOuter=!RING_SWAP;
+  return outer===partnerOuter ? partnerName(partnerEntry()) : (formVal('chartName')||t('natal'));
+}
 function partnerChart(ch){
   const e=partnerEntry(); if(!e) return null;
   /* Cast at the partner's own place and time. The houses drawn on the wheel
@@ -7859,7 +7878,24 @@ function partnerChart(ch){
      computed so that their Ascendant and MC can receive aspects. */
   const tz=e._own?e.tz:libTz(e);
   const hh=e.t==null?12:e.t;
-  return computeChart(e.y,e.mo,e.d,hh,tz,e.lat,e.lon,'retro');
+  const c=computeChart(e.y,e.mo,e.d,hh,tz,e.lat,e.lon,'retro');
+  if(e.t==null) c.timeUnknown=true;
+  return c;
+}
+/* The orb cap for a pair across two rings. Three different jobs, three
+   different caps. A transit is capped by how fast the body moves. A
+   progression or a direction moves about a degree a year, so a six-degree orb
+   would keep an aspect "active" for six years and the list would never
+   change. Synastry is not moving at all: neither chart advances, so nothing
+   needs narrowing and the orb you configured is the orb you get. A karmic
+   point on EITHER side narrows it the same way it does in the natal chart -
+   it said either side and checked only the receiving one, so a transiting
+   node kept a 3.5 degree orb whatever the point orb was. The grid reads the
+   same function, so the grid, the list and the wheel agree. */
+function ringOrbCap(T,np){
+  let cap=RING_MODE==='transit'?(SPEED_ORB[T]||1.5)+2:(STATIC_RING.includes(RING_MODE)?99:1);
+  if(isAspectPoint(np)||isAspectPoint(T)) cap=Math.min(cap,POINT_ORB);
+  return cap;
 }
 function aspectOrbs(ch,tp){
   const hits=[];
@@ -7879,11 +7915,7 @@ function aspectOrbs(ch,tp){
          and the list would never change. Synastry is not moving at all: neither
          chart advances, so nothing needs narrowing and the orb you configured
          is the orb you get. */
-      let cap=RING_MODE==='transit'?SPEED_ORB[T]+2:(STATIC_RING.includes(RING_MODE)?99:1);
-      /* A karmic point on either side narrows the orb the same way it does in
-         the natal chart, so the two halves of the app cannot disagree about
-         how much weight a node carries. */
-      if(isAspectPoint(np)) cap=Math.min(cap,POINT_ORB);
+      const cap=ringOrbCap(T,np);
       for(const asp of ASPECTS){const orb=Math.abs(diff-asp.angle),maxo=Math.min(asp.orb,cap);if(orb<=maxo){hits.push({tp:T,np,asp,orb,maxo});break;}}
     });
   });
@@ -7894,12 +7926,24 @@ function aspectOrbs(ch,tp){
    the planet is, so the orb is simply measured again an hour later. An hour is
    long enough that the Moon's 33 arc-minutes dwarf any rounding and short
    enough that nothing changes aspect. */
+/* It compared the orb now with the orb a step later. With a step of seven
+   days for progressions and thirty for directions, an aspect whose exact
+   moment fell inside the step came out "separating" days before it was
+   exact, and one about to leave the orb lost its label. Now it is the sign of
+   the deviation times the direction the separation itself is moving, which
+   has no kink at the exact moment and needs nothing to still be in orb. */
 function markApplying(ch,tp,tpLater,hits){
-  const later=new Map();
-  aspectOrbs(ch,tpLater).forEach(h=>later.set(`${h.tp}.${h.asp.name}.${h.np}`,h.orb));
+  /* Signed, not folded to 0-180: a folded separation bounces at 0 and 180, so
+     a conjunction or opposition made exact inside the step still looked as if
+     it were opening. The signed one runs straight through. */
+  const sgn=(a,b)=>((a-b+540)%360)-180;
   hits.forEach(h=>{
-    const o2=later.get(`${h.tp}.${h.asp.name}.${h.np}`);
-    h.applying = o2==null ? null : o2<h.orb;
+    const nlon=h.np==='ASC'?ch.asc:h.np==='MC'?ch.mc:(ch.pos[h.np]?ch.pos[h.np].lon:null);
+    if(h.rev||nlon==null||!tp[h.tp]||!tpLater[h.tp]){ h.applying=null; return; }
+    const s0=sgn(tp[h.tp].lon,nlon), s1=sgn(tpLater[h.tp].lon,nlon), ds=sgn(s1,s0);
+    const A=h.asp.angle, target=A===0?0:(s0>=0?A:-A);
+    const dev=sgn(s0,target);
+    h.applying=dev*ds<0;
   });
   return hits;
 }
@@ -8065,7 +8109,12 @@ function renderMoment(){
      it is the same instant on the birthplace's clock, for the other two it is
      how old the person is and where that puts the ephemeris. */
   let sub = TR_TZ ? momText(TR_MS,TR_TZ)+' '+formatOffset(TR_TZ) : '';
-  if(RING_MODE!=='transit'&&BIRTH_MS!=null){
+  /* A return is a moment of its own, and which one is drawn has to be said:
+     a lunar return changes every 27 days and the slider only picks the one in
+     force. Its place too, since that is what the return is cast for. */
+  if((RING_MODE==='solar'||RING_MODE==='lunar')&&TR_CHART&&TR_CHART.returnMs!=null){
+    sub=`${t('ring_'+RING_MODE)} ${momText(TR_CHART.returnMs,0)} UT · ${fmtGeo(TR_CHART.geolat,TR_CHART.geolon)}`;
+  }else if(RING_MODE!=='transit'&&BIRTH_MS!=null){
     const yrs=(TR_MS-BIRTH_MS)/86400000/TROPICAL_YEAR;
     sub=`${t('age')} ${yrs.toFixed(2)}`;
     if(RING_MODE==='progressed') sub+=` · ${t('progmoment')} ${momText(progressedMs(null,TR_MS),0).slice(0,10)}`;
@@ -8174,7 +8223,12 @@ function renderTransits(ch){
      both - progressed and transiting Moon walking together is the reason a
      tri-wheel exists. */
   TR3_CHART=tr&&triOn()?ringChart(ch,TR_MS,RING2_MODE):null;
-  if(!tr){ TR_HITS=[]; drawWheel(ch,null); renderGrid(ch,null); renderConfigurations(ch); renderLearned(); return; }
+  if(!tr){
+    /* The list and the day line go too: with no partner chosen, or a return
+       not found, the card's title already named the new mode while the last
+       mode's transits stayed under it and read as synastry. */
+    TR_HITS=[]; document.getElementById('transitlist').innerHTML=''; document.getElementById('daysyn').textContent='';
+    drawWheel(ch,null); renderGrid(ch,null); renderConfigurations(ch); renderLearned(); return; }
   const stat=STATIC_RING.includes(RING_MODE);
   const syn=RING_MODE==='synastry';
   /* Swapped, the partner's chart supplies the frame and the houses, and the
@@ -8184,13 +8238,26 @@ function renderTransits(ch){
      drawn in. */
   const swapped=syn&&RING_SWAP;
   const inner=swapped?tr:ch, outer=swapped?ch:tr;
-  if(!stat) renderMoment();
+  if(!stat||RING_MODE==='solar'||RING_MODE==='lunar') renderMoment();
   /* Outer-planet-to-outer-planet hits are dropped for transits because they
      are generational: everyone born that decade has them. In a progressed or
      directed chart they are personal again, since the arc is this person's. */
   let hits=aspectOrbs(inner,outer.pos)
     .filter(h=>RING_MODE!=='transit'
       ||!(['Uranus','Neptune','Pluto'].includes(h.tp)&&['Uranus','Neptune','Pluto'].includes(h.np)));
+  /* Synastry is read both ways. The outer person's planets reach the inner
+     person's angles and points above; the inner person's planets reaching the
+     OUTER person's angles and points were missing, so "my Venus on your
+     Ascendant" appeared only after the swap, and the same pair gave two
+     different lists. They are added here, marked so the list can say whose
+     angle it is. */
+  if(syn){
+    aspectOrbs(outer,inner.pos).filter(h=>h.np==='ASC'||h.np==='MC'||isAspectPoint(h.np))
+      .forEach(h=>hits.push({...h,rev:true}));
+  }
+  /* A chart whose birth time is unknown is cast for noon, and its angles are
+     the noon angles: nothing is reported against them. */
+  hits=hits.filter(h=>!((h.np==='ASC'||h.np==='MC')&&(h.rev?outer:inner).timeUnknown));
   /* Applying and separating mean nothing in synastry: neither chart is going
      anywhere. Left unset so the label simply does not appear, rather than
      printed as "separating" because two identical orbs compared equal. */
@@ -8226,7 +8293,7 @@ function renderTransits(ch){
       </div>`:'';
     return `<div class="transit" data-sig="${s}">
       <div class="head"><span class="af" style="font-size:18px">${GLYPH[h.tp]}</span><span class="af" style="font-size:14px;color:var(--ink3)">${ASPECT_GLYPH[h.asp.name]}</span><span class="af" style="font-size:18px">${GLYPH[h.np]||''}</span>${prose}${app}</div>
-      <div class="tiny">${PN(h.tp)} ${LX(ASPECT_NAME)[h.asp.name]} ${PN(h.np)} · ${t('orb')} ${fmtOrb(h.orb)}${weight}</div>
+      <div class="tiny">${PN(h.tp)} ${LX(ASPECT_NAME)[h.asp.name]} ${PN(h.np)}${h.rev?` (${escH(ringOwner(true))})`:''} · ${t('orb')} ${fmtOrb(h.orb)}${weight}</div>
       <div class="bar"><i style="width:${Math.round(intensity*100)}%"></i></div>
       ${rating}</div>`;
   }).join('');
@@ -8442,14 +8509,17 @@ function renderOrbs(){
 }
 function redrawAspects(){
   renderOrbs();
-  if(CURRENT){ renderTransits(CURRENT); if(ISO) showDetail(ISO,CURRENT); }
+  /* The text block too: it lists aspects, and an open export kept the list
+     from before the orb changed while Copy produced the new one. */
+  if(CURRENT){ renderTransits(CURRENT); fillExport(); if(ISO) showDetail(ISO,CURRENT); }
 }
 /* ---------- configurations ----------
-   Planets only, and deliberately not the angles. The Ascendant and Midheaven
-   sit roughly ninety degrees apart in a great many charts, so admitting them
-   would manufacture a T-square out of the frame itself in half the library.
-   The nodes are out for the same reason in reverse: they are always exactly
-   opposed, so every planet square either one would report a T-square.
+   Bodies and the karmic points, and deliberately not the angles. The
+   Ascendant and Midheaven sit roughly ninety degrees apart in a great many
+   charts, so admitting them would manufacture a T-square out of the frame
+   itself in half the library. The nodes take part, but their opposition to
+   each other is never an aspect (nodePair), so a planet square the nodal
+   axis does not become a T-square.
 
    Orbs are the configured ones. Many astrologers tighten orbs for patterns;
    doing that here would mean a chord drawn on the wheel and a pattern that
@@ -8567,7 +8637,8 @@ function gridLon(ch,n){ return n==='ASC'?ch.asc:n==='MC'?ch.mc:(ch.pos[n]?ch.pos
 function renderGrid(ch,tr){
   const box=document.getElementById('aspGrid'); if(!box) return;
   const cols=GRID_BODIES.filter(n=>gridLon(ch,n)!=null);
-  const rows=tr ? WHEEL_BODIES.filter(n=>tr.pos[n]) : cols;
+  const rows=tr ? WHEEL_BODIES.filter(n=>tr.pos[n])
+      .concat(RING_MODE==='synastry'&&!tr.timeUnknown?['ASC','MC']:[]) : cols;
   const cell=(content,cls,data)=>`<div class="gc ${cls||''}"${data||''}>${content}</div>`;
   let html='', n=0;
   /* Header row of column glyphs, and a corner that names which chart the
@@ -8581,8 +8652,12 @@ function renderGrid(ch,tr){
          repeat the lower half and the diagonal is a body against itself. */
       if(!tr&&ci>=ri){ html+=cell('', ci===ri?'self':'blank'); return; }
       const a=gridLon(tr||ch,r), b=gridLon(ch,c);
-      if(a==null||b==null){ html+=cell('','blank'); return; }
-      const hit=aspectBetween(a,b);
+      if(a==null||b==null||(!tr&&nodePair(r,c))){ html+=cell('','blank'); return; }
+      /* The same orb rules as the wheel and the list: the node opposition is
+         a definition, points take the point orb, and across rings the ring's
+         own cap. The grid used the bare aspect orbs and showed aspects that
+         were nowhere else in the app. */
+      const hit=aspectBetween(a,b,tr?ringOrbCap(r,c):pairOrbCap(r,c));
       if(!hit){ html+=cell('','empty'); return; }
       n++;
       html+=cell(`<span class="af" style="color:${hit.asp.color}">${ASPECT_GLYPH[hit.asp.name]}</span>`,

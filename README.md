@@ -238,11 +238,12 @@ Tapping one lights it on the wheel and dims everything else, which is the only
 way a grand cross reads as a shape rather than as four more chords among
 twenty.
 
-**Planets only, without the angles or the nodes.** The Ascendant and Midheaven
-sit near ninety degrees apart in a great many charts, so admitting them would
-manufacture a T-square out of the frame itself; the nodes are always exactly
-opposed, so every planet square either one would report another. A figure built
-on those is a property of the drawing, not of the chart.
+**Bodies and the karmic points, without the angles.** The Ascendant and
+Midheaven sit near ninety degrees apart in a great many charts, so admitting
+them would manufacture a T-square out of the frame itself. The nodes, the Black
+Moon, Selena and Fortune take part, as they do in the aspects (decided 22 Sep
+2026), but the two nodes' opposition is their definition and is never counted,
+so a planet square the nodal axis is not reported as a T-square.
 
 **Orbs are the configured ones.** Many astrologers tighten orbs for patterns.
 Doing that here would mean a chord drawn on the wheel and a figure denying it
