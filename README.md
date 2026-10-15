@@ -14,26 +14,31 @@ face. Served, it installs to the home screen and runs with the network off.
 
 ### The ephemeris
 
-VSOP87D for the Sun and the inner planets, turned into the FK5 frame (Meeus 32.3).
-ELP82B truncated to 607 terms for the Moon, with a correction fitted to JPL DE441
-(`tools-moon.mjs`): the truncated theory carried an older tidal acceleration and
-was 20" off by 1550. Piecewise Chebyshev fits to JPL DE441 for Jupiter, Saturn,
-Uranus and Neptune (`tools-planets.mjs`, VSOP87D outside 1550-2250), for Pluto,
-because no compact analytic theory for Pluto holds outside 1885-2099, and for
-Chiron, from JPL's own solution for small body 2060. Apparent geocentric
-positions: light-time, the Sun's deflection of light, annual aberration, nutation
-(the leading IAU 2000B terms and the next twenty-five of IAU 1980, 0.01" from
-Swiss Ephemeris), IAU 2006 mean obliquity, and Greenwich apparent sidereal time
-from the Earth Rotation Angle. Delta T is JPL's own table to 1972 and TT minus UTC
-with the leap seconds after (`tools-deltat.mjs`).
+Chebyshev fits to JPL DE441 (`tools-planets.mjs`, `planets.js`, 946 KB) for Venus,
+the Earth-Moon barycentre, Mars, Jupiter, Saturn, Uranus and Neptune over 1550-2250,
+VSOP87D outside that span; the Earth is the barycentre less its share of the Moon.
+Mercury stays on VSOP87D (turned into FK5, Meeus 32.3): its orbit would need a
+segment a fortnight long. ELP82B truncated to 607 terms for the Moon, with a
+correction fitted to JPL DE441 (`tools-moon.mjs`): the truncated theory carried an
+older tidal acceleration and was 20" off by 1550. Pluto and Chiron are fitted the
+same way. Apparent geocentric positions: light-time, the Sun's deflection of light,
+annual aberration, nutation (the leading IAU 2000B terms and the next twenty-five
+of IAU 1980, 0.01" from Swiss Ephemeris), IAU 2006 mean obliquity, and Greenwich
+apparent sidereal time from the Earth Rotation Angle. Delta T is JPL's own table to
+1972 and TT minus UTC with the leap seconds after (`tools-deltat.mjs`).
 
 Checked against JPL Horizons, body by body, at 64 moments over 1550-2250
-(`tools-check-jpl.mjs`, measured 15 Oct 2026): every body within 1.4", and within
-0.6" over 1700-2100. The two that remain at the top are Mars (1.4" at 1550, 1.2" at
-2250) and Venus (0.9" at 2250), still on the truncated VSOP87D; everything else is
-within 0.4" over the whole span. On the library's charts, which also test the date,
-the place and the time zone, the worst is 1.15" (Bach, 1685). Before that night's
-work the Moon was 20.9" out at 1550, Neptune 5.8", Uranus 3.7".
+(`tools-check-jpl.mjs`, measured 15 Oct 2026): the Sun, Venus, Mars and Jupiter
+within 0.13", Mercury 0.26", Saturn to Neptune, Pluto and Chiron within 0.21", the
+Moon within 1.05" at worst and 0.15" typical (`tools-moon.mjs` checks it at 62,000
+moments). The 0.06-0.13" that the Sun, Venus, Mars and Jupiter share is Horizons'
+own convention, not an error of either side: it applies the observed celestial
+pole offsets from 1962 on and holds the last ones after its table ends, so its
+"ecliptic of date" moves by 0.19" at that seam. Before that night's work the Moon
+was 20.9" out at 1550, Neptune 5.8", Uranus 3.7", Mars 1.4".
+
+The Moon is now the limit. Closing its last arcsecond takes the full lunar theory
+(ELP82B in all 37,862 terms, or ELP/MPP02), a file to fetch rather than a fit.
 
 What no program can do better: before about 1650 the models of Earth's rotation
 disagree by up to 20 seconds of time (JPL and Swiss Ephemeris among them), which is
@@ -773,8 +778,8 @@ once moved in, under the zodiac band; the city list opened on its own at every l
 ## Known limitations
 
 - Pluto is a fit, valid 1550-2250 and held at the edge outside; such a chart says so.
-- Mars and Venus stay on the truncated VSOP87D: up to 1.4" off JPL at the ends of
-  1550-2250. A Chebyshev fit would cost several hundred KB for them.
+- Mercury stays on the truncated VSOP87D, within 0.34" of JPL; the Moon on the
+  truncated ELP82B with a fitted correction, within 1.05".
 - The mean Black Moon is the ELP mean apogee (Meeus 45.7). Swiss Ephemeris corrects
   its mean apogee toward the average of the true one, so astro.com differs by up to
   7' with a three-year period. Both are "mean"; which to follow is a choice.

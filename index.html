@@ -2883,11 +2883,38 @@ function vsopXYZ(k,t){
   const cb=Math.cos(B);
   return [R*cb*Math.cos(L), R*cb*Math.sin(L), R*Math.sin(B)];
 }
-/* Jupiter to Neptune come from planets.js, Chebyshev fits to JPL DE441 over
-   1550-2250 (tools-planets.mjs), and from VSOP87D outside that span. The
-   truncated series the app carries drifted for these four: Neptune by 1.5"
-   a century, 5.8" at the edges; the fits hold to 0.3". */
-const FIT_OF={ju:'Jupiter',sa:'Saturn',ur:'Uranus',ne:'Neptune'};
+/* Venus, Mars and Jupiter to Neptune come from planets.js, Chebyshev fits to
+   JPL DE441 over 1550-2250 (tools-planets.mjs), and from VSOP87D outside that
+   span. The truncated series drifted: Neptune by 1.5" a century and 5.8" at
+   the edges, Mars 1.4". The fits hold Venus and Mars to 0.007", Jupiter to
+   0.005", Saturn, Uranus and Neptune to 0.07-0.15" (their heliocentric orbits
+   carry the Sun's own small, fast wobble, which a long segment cannot follow).
+   Mercury stays on VSOP87D, within 0.34": its 88-day orbit would need a
+   segment a fortnight long, megabytes for seven centuries. */
+const FIT_OF={ve:'Venus',ma:'Mars',ju:'Jupiter',sa:'Saturn',ur:'Uranus',ne:'Neptune'};
+/* A body's coefficients arrive as base-36 integers of 1e-9 AU and are decoded
+   the first time it is asked for: nobody waits for a planet nobody cast. */
+function fitOf(n){
+  const F=typeof PLANET_FIT!=='undefined'&&PLANET_FIT[n]; if(!F) return null;
+  if(!F.c){
+    const v=F.e.split(','), m=F.deg+1, c=[]; let i=0;
+    for(let s=0;s<F.nseg;s++){ const sg=[];
+      for(let k=0;k<3;k++){ const a=new Float64Array(m); for(let j=0;j<m;j++) a[j]=parseInt(v[i++],36)*1e-9; sg.push(a); }
+      c.push(sg); }
+    F.c=c; delete F.e;
+  }
+  return F;
+}
+/* The Earth is the Earth-Moon barycentre less its share of the Moon: the
+   barycentre's orbit is smooth enough to fit, the Earth's carries a monthly
+   wobble of 4,700 km that no year-long segment follows. The Moon comes from
+   ELP82B, and its arcsecond of error moves the Earth by 0.006" here. */
+const EM_RATIO=1/(1+81.30056907), AU_KM=149597870.7;
+function earthFromEMB(B,t){
+  const T=t*10, r=moonXYZ(T), d=Math.hypot(r[0],r[1],r[2]);
+  const [l,b]=precessEcl(Math.atan2(r[1],r[0]),Math.asin(r[2]/d),T), k=d/AU_KM*EM_RATIO;
+  return [B[0]-k*Math.cos(b)*Math.cos(l), B[1]-k*Math.cos(b)*Math.sin(l), B[2]-k*Math.sin(b)];
+}
 /* A fit is read a day past either end without clamping: light-time asks for
    the planet hours before the moment, and at the very first day of the span
    a clamp froze it there - 3" of Pluto on 1 January 1550. A Chebyshev series
@@ -2900,8 +2927,9 @@ function chebFit(F,tm){
   return [chebEval(F.c[s][0],u),chebEval(F.c[s][1],u),chebEval(F.c[s][2],u)];
 }
 function helioXYZ(k,t){
-  const n=FIT_OF[k];
-  if(n&&typeof PLANET_FIT!=='undefined'&&PLANET_FIT[n]){ const p=chebFit(PLANET_FIT[n],t); if(p) return p; }
+  if(k==='ea'){ const F=fitOf('EMB'), B=F&&chebFit(F,t); if(B) return earthFromEMB(B,t); return vsopXYZ(k,t); }
+  const n=FIT_OF[k], F=n&&fitOf(n);
+  if(F){ const p=chebFit(F,t); if(p) return p; }
   return vsopXYZ(k,t);
 }
 
