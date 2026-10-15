@@ -13,12 +13,18 @@
    to APP_VERSION in index.html: the number shown next to the title is how a
    stale install is spotted, so it has to name the same release as this cache. */
 const CACHE = 'astrotrip-v3.18.3';
+/* The engine files carry the version in their URL, as index.html asks for
+   them. Unversioned, the first session after a release ran the new page on
+   the previous engine: the page came from the network, the engine from the
+   old cache, and the number beside the title named a build that was not the
+   one computing. */
+const V = CACHE.replace('astrotrip-v', '');
 const ASSETS = [
   './',
   './index.html',
   // The ephemeris series. Without it the app cannot cast anything at all,
   // so it is as critical as the document itself.
-  './ephemeris.js',
+  `./ephemeris.js?v=${V}`,
   // The city atlas: 235,779 places, 6.7 MB of text. Optional on purpose - the
   // app boots, casts and reads without it, falling back to the inline seed of
   // the 131 largest cities, so a failed or slow fetch here must not fail the
@@ -48,15 +54,25 @@ const ASSETS = [
    would fall back to a platform font, the exact layout shift self-hosting
    exists to prevent. Icons are cosmetic and may miss. */
 const CRITICAL = ASSETS.filter(u => u === './' || u.endsWith('.html')
-  || u.endsWith('.woff2') || u === './ephemeris.js');
+  || u.endsWith('.woff2') || u.startsWith('./ephemeris.js'));
 const OPTIONAL = ASSETS.filter(u => !CRITICAL.includes(u));
+
+/* Whether an earlier cache holds the asteroid file, i.e. whether this person
+   switched asteroids on. Then the new version's file is fetched now, because
+   activate is about to delete the old cache, and the first offline launch
+   after an update otherwise found no asteroids anywhere and switched them off. */
+const hadAsteroids = () => caches.keys().then(keys => Promise.all(
+  keys.filter(k => k !== CACHE).map(k => caches.open(k).then(c => c.keys())
+    .then(rs => rs.some(r => /\/asteroids\.js/.test(r.url))))
+)).then(found => found.some(Boolean));
 
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE)
       .then(c => Promise.all([
         c.addAll(CRITICAL),
-        ...OPTIONAL.map(u => c.add(u).catch(() => {}))
+        ...OPTIONAL.map(u => c.add(u).catch(() => {})),
+        hadAsteroids().then(had => had && c.add(`./asteroids.js?v=${V}`).catch(() => {}))
       ]))
       .then(() => self.skipWaiting())
   );
@@ -77,9 +93,15 @@ self.addEventListener('fetch', e => {
   if (url.origin !== self.location.origin) return;
 
   if (req.mode === 'navigate') {
+    /* Only the app itself becomes the offline shell. Any other page in the
+       folder - test.html, tools-parity.html - used to be stored under
+       index.html too, and the next offline launch opened the test page. */
+    const scope = new URL(self.registration.scope).pathname;
+    const isShell = url.pathname === scope || url.pathname === scope + 'index.html';
     e.respondWith(
       fetch(req)
         .then(res => {
+          if (!isShell) return res;
           // Only a real 200 may replace the offline shell. Without this an
           // error page served mid-deploy overwrites index.html and the app
           // then boots into that error offline until the next good load.

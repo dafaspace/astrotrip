@@ -750,7 +750,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
         <h3 class="setsec" data-i="accessTitle"></h3>
         <div class="tiny setstate" id="accessState"></div>
         <div class="setrow">
-          <input id="accessCode" type="text" autocomplete="off" autocapitalize="off" spellcheck="false">
+          <input id="accessCode" data-i-title="accessPh" type="text" autocomplete="off" autocapitalize="off" spellcheck="false">
           <button type="button" id="accessApply" data-i="accessApply"></button>
         </div>
       </div>
@@ -810,7 +810,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
          units tip to tip, the crescent 12.4. The sun is allowed the wider span
          because thin rays read lighter than a closed shape, so equal spans
          would make the moon look the larger of the two. -->
-    <button data-theme-set="light" title="Светлая" aria-label="Светлая тема"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="3.1"/><g stroke-linecap="round"><path d="M8 3.1V1.5M8 12.9v1.6M3.1 8H1.5M12.9 8h1.6M4.54 4.54 3.4 3.4M11.46 11.46l1.14 1.14M11.46 4.54 12.6 3.4M4.54 11.46 3.4 12.6"/></g></svg></button><button data-theme-set="dark" title="Тёмная" aria-label="Тёмная тема"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M14.2 8.54A6.2 6.2 0 1 1 7.46 1.8 4.82 4.82 0 0 0 14.2 8.54z" stroke-linejoin="round"/></svg></button>
+    <button data-theme-set="light" data-i-title="themeLight"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="3.1"/><g stroke-linecap="round"><path d="M8 3.1V1.5M8 12.9v1.6M3.1 8H1.5M12.9 8h1.6M4.54 4.54 3.4 3.4M11.46 11.46l1.14 1.14M11.46 4.54 12.6 3.4M4.54 11.46 3.4 12.6"/></g></svg></button><button data-theme-set="dark" data-i-title="themeDark"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M14.2 8.54A6.2 6.2 0 1 1 7.46 1.8 4.82 4.82 0 0 0 14.2 8.54z" stroke-linejoin="round"/></svg></button>
   </div>
       </div>
       <!-- Eight languages will not fit as buttons on a phone, and the same order
@@ -838,7 +838,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
          entries already carry three axes of their own - name, date, place -
          and a folder tree would force one of them to win permanently. -->
     <div class="panelsearch">
-      <input id="libFind" type="search" autocomplete="off">
+      <input id="libFind" data-i-title="libFind" type="search" autocomplete="off">
     </div>
     <!-- The sort is a chip beside the count, not a field beside the search:
          sharing a row, the two cut the search hint down to "Name, place, ye". -->
@@ -890,11 +890,11 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
     </div>
     <div><label for="chartName" data-i="nameLabel"></label><input id="chartName" type="text" autocomplete="off"></div>
     <div class="grid" style="margin-top:10px">
-      <div><label data-i="date"></label><input id="date" type="date"></div>
-      <div><label data-i="time"></label><input id="time" type="time"></div>
+      <div><label data-i="date" for="date"></label><input id="date" type="date"></div>
+      <div><label data-i="time" for="time"></label><input id="time" type="time"></div>
     </div>
     <div class="citywrap" style="margin-top:10px">
-      <label data-i="city"></label>
+      <label data-i="city" for="city"></label>
       <input id="city" type="text" autocomplete="off">
       <div id="citylist" class="citylist"></div>
     </div>
@@ -912,9 +912,9 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
     </div>
     <div id="geoFields" hidden>
       <div class="grid3">
-        <div><label data-i="lat"></label><input id="lat" type="number" step="0.0001"></div>
-        <div><label data-i="lng"></label><input id="lng" type="number" step="0.0001"></div>
-        <div><label data-i="tz"></label><input id="tz" type="text" placeholder="+03:00"></div>
+        <div><label data-i="lat" for="lat"></label><input id="lat" type="number" step="0.0001"></div>
+        <div><label data-i="lng" for="lng"></label><input id="lng" type="number" step="0.0001"></div>
+        <div><label data-i="tz" for="tz"></label><input id="tz" type="text" placeholder="+03:00"></div>
       </div>
       <div class="tiny" data-i="hint" style="margin-top:6px"></div>
     </div>
@@ -997,7 +997,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
             <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M4.8 3.2 12.4 8l-7.6 4.8z"/></svg></button>
           <button class="ico" id="stepFwd" data-i-title="stepfwd">
             <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 3.5 10.5 8l-5 4.5"/><path d="M12.4 3.5v9"/></svg></button>
-          <label class="steplab" data-i="stepLabel"></label><select id="scrubUnit"></select>
+          <label class="steplab" data-i="stepLabel" for="scrubUnit"></label><select id="scrubUnit"></select>
         </div>
         <!-- Second row rather than a wrap: left to itself the flex row broke
              into three on a phone and the card stopped fitting the screen. -->
@@ -1093,8 +1093,8 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
       <p class="tiny" id="ringNote" style="margin:0 0 12px"></p>
       <!-- Jump rather than scrub: type a moment instead of dragging to it. -->
       <div class="grid" style="margin-bottom:14px">
-        <div><label data-i="transitdate"></label><input id="transitDate" type="date"></div>
-        <div><label data-i="transittime"></label><input id="transitTime" type="time" step="1"></div>
+        <div><label data-i="transitdate" for="transitDate"></label><input id="transitDate" type="date"></div>
+        <div><label data-i="transittime" for="transitTime"></label><input id="transitTime" type="time" step="1"></div>
       </div>
 
       <div id="daysyn" class="daysyn"></div>
@@ -1128,7 +1128,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 </div>
 
 
-<script src="./ephemeris.js"></script>
+<script src="./ephemeris.js?v=3.18.3"></script>
 <script>
 "use strict";
 /* ============================================================
@@ -1211,15 +1211,12 @@ const STR = {
   hint:{ru:'Смещение UTC подставляется автоматически из часового пояса города для точной даты, исторические переходы учтены.',en:'The UTC offset fills in automatically from the city time zone for the exact date, historical shifts included.'},
   libTitle:{ru:'Библиотека карт',en:'Chart library'},
   saveChart:{ru:'Сохранить текущую',en:'Save current'},
-  namePh:{ru:'Чья это карта? Например, «мама»',en:'Whose chart is this? For example, mum'},
   libFind:{ru:'Имя, место, год, «кино», «Чернобыль»…',en:'Name, place, year, "film", "Chernobyl"…'},
   libNone:{ru:'Ничего не нашлось. Попробуйте часть имени или города.',en:'Nothing found. Try part of a name or city.'},
-  libNote:{ru:'Сохранённые карты хранятся только на этом устройстве',en:'Saved charts stay on this device only'},
   noTime:{ru:'время неизвестно, карта на полдень',en:'birth time unknown, cast for noon'},
   rrKnown:{ru:'время из документа',en:'time from a document'},
   delChart:{ru:'удалить',en:'delete'},
   hsysLabel:{ru:'СИСТЕМА ДОМОВ',en:'HOUSE SYSTEM'},
-  lilLabel:{ru:'ЧЁРНАЯ ЛУНА',en:'BLACK MOON'},
   retrograde:{ru:'ретроградный',en:'retrograde'},
   m_mean:{ru:'средняя',en:'mean'}, m_true:{ru:'истинная',en:'true'},
   tropical:{ru:'тропический',en:'tropical'},
@@ -1557,11 +1554,10 @@ const I18N={
     cast:"Levantar la carta", city:"Ciudad de nacimiento", cityph:"Empieza a escribir un nombre...",
     hint:"El desfase UTC se rellena solo a partir de la zona horaria de la ciudad para esa fecha exacta, con los cambios históricos incluidos.",
     libTitle:"Biblioteca de cartas", saveChart:"Guardar la actual",
-    namePh:"¿De quién es esta carta? Por ejemplo, mamá", libFind:"Nombre, lugar, año, «cine», «Chernóbil»…",
+    libFind:"Nombre, lugar, año, «cine», «Chernóbil»…",
     libNone:"No se encontró nada. Prueba con parte de un nombre o de una ciudad.",
-    libNote:"Las cartas guardadas se quedan solo en este dispositivo",
     noTime:"hora de nacimiento desconocida, carta al mediodía", rrKnown:"hora tomada de un documento",
-    delChart:"eliminar", hsysLabel:"SISTEMA DE CASAS", wzReset:"Ver la rueda completa", rulersLabel:"REGENTES", rulers_modern:"Modernos", rulers_classical:"Tradicionales", rulers_both:"Ambos", lilLabel:"LUNA NEGRA", lil_mean:"Media (Lilith)", lil_mean_s:"Media",
+    delChart:"eliminar", hsysLabel:"SISTEMA DE CASAS", wzReset:"Ver la rueda completa", rulersLabel:"REGENTES", rulers_modern:"Modernos", rulers_classical:"Tradicionales", rulers_both:"Ambos", lil_mean:"Media (Lilith)", lil_mean_s:"Media",
     lil_true:"Verdadera (osculatriz)", lil_true_s:"Verdadera", transittime:"Hora UT",
     secondsLabel:"Mostrar segundos de arco en las posiciones",
     needdata:"Rellena la fecha, la hora y el lugar.",
@@ -1612,13 +1608,10 @@ const I18N={
     cityph:"Commencez à taper un nom...",
     hint:"Le décalage UTC se remplit automatiquement à partir du fuseau de la ville pour la date exacte, changements historiques compris.",
     libTitle:"Bibliothèque de cartes", saveChart:"Enregistrer la carte",
-    namePh:"À qui est cette carte ? Par exemple, maman",
     libFind:"Nom, lieu, année, « cinéma », « Tchernobyl »…",
     libNone:"Rien trouvé. Essayez une partie du nom ou de la ville.",
-    libNote:"Les cartes enregistrées restent sur cet appareil uniquement",
     noTime:"heure de naissance inconnue, carte dressée à midi", rrKnown:"heure tirée d’un document",
-    delChart:"supprimer", hsysLabel:"SYSTÈME DE MAISONS", wzReset:"Afficher toute la roue", rulersLabel:"MAÎTRES", rulers_modern:"Modernes", rulers_classical:"Traditionnels", rulers_both:"Les deux", lilLabel:"LUNE NOIRE",
-    lil_mean:"Moyenne (Lilith)", lil_mean_s:"Moyenne", lil_true:"Vraie (osculatrice)", lil_true_s:"Vraie", transittime:"Heure UT",
+    delChart:"supprimer", hsysLabel:"SYSTÈME DE MAISONS", wzReset:"Afficher toute la roue", rulersLabel:"MAÎTRES", rulers_modern:"Modernes", rulers_classical:"Traditionnels", rulers_both:"Les deux", lil_mean:"Moyenne (Lilith)", lil_mean_s:"Moyenne", lil_true:"Vraie (osculatrice)", lil_true_s:"Vraie", transittime:"Heure UT",
     secondsLabel:"Afficher les secondes d’arc dans les positions",
     needdata:"Renseignez la date, l’heure et le lieu.",
     empty:"Saisissez les données de naissance et dressez la carte.", natal:"Carte natale",
@@ -1666,11 +1659,10 @@ const I18N={
     cast:"Chart berechnen", city:"Geburtsort", cityph:"Namen eintippen...",
     hint:"Der UTC-Versatz wird automatisch aus der Zeitzone des Ortes für das genaue Datum eingesetzt, historische Umstellungen eingeschlossen.",
     libTitle:"Chart-Bibliothek", saveChart:"Aktuelles speichern",
-    namePh:"Wessen Chart ist das? Zum Beispiel Mama", libFind:"Name, Ort, Jahr, „Film“, „Tschernobyl“…",
+    libFind:"Name, Ort, Jahr, „Film“, „Tschernobyl“…",
     libNone:"Nichts gefunden. Versuch einen Teil des Namens oder der Stadt.",
-    libNote:"Gespeicherte Charts bleiben nur auf diesem Gerät",
     noTime:"Geburtszeit unbekannt, Chart auf Mittag gerechnet", rrKnown:"Zeit aus einem Dokument",
-    delChart:"löschen", hsysLabel:"HÄUSERSYSTEM", wzReset:"Ganzes Rad zeigen", rulersLabel:"HERRSCHER", rulers_modern:"Modern", rulers_classical:"Traditionell", rulers_both:"Beide", lilLabel:"SCHWARZER MOND", lil_mean:"Mittlere (Lilith)", lil_mean_s:"Mittlere",
+    delChart:"löschen", hsysLabel:"HÄUSERSYSTEM", wzReset:"Ganzes Rad zeigen", rulersLabel:"HERRSCHER", rulers_modern:"Modern", rulers_classical:"Traditionell", rulers_both:"Beide", lil_mean:"Mittlere (Lilith)", lil_mean_s:"Mittlere",
     lil_true:"Wahre (oskulierend)", lil_true_s:"Wahre", transittime:"Zeit UT",
     secondsLabel:"Bogensekunden in den Positionen zeigen", needdata:"Datum, Zeit und Ort ausfüllen.",
     empty:"Geburtsdaten eingeben und das Chart berechnen.", natal:"Radix", era1:"Vor dem Kino",
@@ -1718,11 +1710,10 @@ const I18N={
     city:"Città di nascita", cityph:"Inizia a scrivere un nome...",
     hint:"Lo scarto UTC si compila da solo dal fuso della città per la data esatta, cambi storici compresi.",
     libTitle:"Biblioteca di carte", saveChart:"Salva la corrente",
-    namePh:"Di chi è questa carta? Per esempio, mamma", libFind:"Nome, luogo, anno, «cinema», «Chernobyl»…",
+    libFind:"Nome, luogo, anno, «cinema», «Chernobyl»…",
     libNone:"Non ho trovato nulla. Prova una parte del nome o della città.",
-    libNote:"Le carte salvate restano solo su questo dispositivo",
     noTime:"ora di nascita ignota, carta calcolata a mezzogiorno", rrKnown:"ora presa da un documento",
-    delChart:"elimina", hsysLabel:"SISTEMA DI CASE", wzReset:"Mostra la ruota intera", rulersLabel:"GOVERNATORI", rulers_modern:"Moderni", rulers_classical:"Tradizionali", rulers_both:"Entrambi", lilLabel:"LUNA NERA", lil_mean:"Media (Lilith)", lil_mean_s:"Media",
+    delChart:"elimina", hsysLabel:"SISTEMA DI CASE", wzReset:"Mostra la ruota intera", rulersLabel:"GOVERNATORI", rulers_modern:"Moderni", rulers_classical:"Tradizionali", rulers_both:"Entrambi", lil_mean:"Media (Lilith)", lil_mean_s:"Media",
     lil_true:"Vera (osculatrice)", lil_true_s:"Vera", transittime:"Ora UT",
     secondsLabel:"Mostra i secondi d’arco nelle posizioni", needdata:"Compila data, ora e luogo.",
     empty:"Inserisci i dati di nascita e calcola la carta.", natal:"Carta natale", era1:"Prima del cinema",
@@ -1769,12 +1760,10 @@ const I18N={
     time:"Час (місцевий)", lat:"Широта", lng:"Довгота", tz:"Зсув UTC", cast:"Побудувати карту",
     city:"Місто народження", cityph:"Почніть вводити назву...",
     hint:"Зсув UTC підставляється автоматично з часового поясу міста на точну дату, історичні переходи враховано.",
-    libTitle:"Бібліотека карт", saveChart:"Зберегти поточну", namePh:"Чия це карта? Наприклад, «мама»",
-    libFind:"Ім’я, місце, рік, «кіно», «Чорнобиль»…",
+    libTitle:"Бібліотека карт", saveChart:"Зберегти поточну", libFind:"Ім’я, місце, рік, «кіно», «Чорнобиль»…",
     libNone:"Нічого не знайшлося. Спробуйте частину імені або міста.",
-    libNote:"Збережені карти лишаються тільки на цьому пристрої",
     noTime:"час народження невідомий, карта на полудень", rrKnown:"час із документа", delChart:"видалити",
-    hsysLabel:"СИСТЕМА ДОМІВ", wzReset:"Показати коло повністю", rulersLabel:"УПРАВИТЕЛІ", rulers_modern:"Сучасні", rulers_classical:"Класичні", rulers_both:"Обидва набори", lilLabel:"ЧОРНИЙ МІСЯЦЬ", lil_mean:"Середній (Ліліт)", lil_mean_s:"Середній",
+    hsysLabel:"СИСТЕМА ДОМІВ", wzReset:"Показати коло повністю", rulersLabel:"УПРАВИТЕЛІ", rulers_modern:"Сучасні", rulers_classical:"Класичні", rulers_both:"Обидва набори", lil_mean:"Середній (Ліліт)", lil_mean_s:"Середній",
     lil_true:"Істинний (оскулюючий)", lil_true_s:"Істинний", transittime:"Час UT",
     secondsLabel:"Показувати кутові секунди в позиціях", needdata:"Заповніть дату, час і місце.",
     empty:"Введіть дані народження і побудуйте карту.", natal:"Натальна карта", era1:"До кінематографа",
@@ -1821,12 +1810,10 @@ const I18N={
     date:"თარიღი", time:"დრო (ადგილობრივი)", lat:"განედი", lng:"გრძედი", tz:"UTC წანაცვლება",
     cast:"რუკის აგება", city:"დაბადების ქალაქი", cityph:"დაიწყე სახელის აკრეფა...",
     hint:"UTC წანაცვლება ავტომატურად ივსება ქალაქის სასაათო სარტყლიდან ზუსტი თარიღისთვის, ისტორიული ცვლილებების ჩათვლით.",
-    libTitle:"რუკების ბიბლიოთეკა", saveChart:"მიმდინარის შენახვა", namePh:"ვისი რუკაა? მაგალითად, დედა",
-    libFind:"სახელი, ადგილი, წელი, „კინო“, „ჩერნობილი“…",
+    libTitle:"რუკების ბიბლიოთეკა", saveChart:"მიმდინარის შენახვა", libFind:"სახელი, ადგილი, წელი, „კინო“, „ჩერნობილი“…",
     libNone:"ვერაფერი მოიძებნა. სცადე სახელის ან ქალაქის ნაწილი.",
-    libNote:"შენახული რუკები რჩება მხოლოდ ამ მოწყობილობაზე",
     noTime:"დაბადების დრო უცნობია, რუკა შუადღეზეა აგებული", rrKnown:"დრო დოკუმენტიდან", delChart:"წაშლა",
-    hsysLabel:"სახლების სისტემა", wzReset:"მთლიანი წრის ჩვენება", rulersLabel:"მმართველები", rulers_modern:"თანამედროვე", rulers_classical:"ტრადიციული", rulers_both:"ორივე", lilLabel:"შავი მთვარე", lil_mean:"საშუალო (ლილიტი)", lil_mean_s:"საშუალო",
+    hsysLabel:"სახლების სისტემა", wzReset:"მთლიანი წრის ჩვენება", rulersLabel:"მმართველები", rulers_modern:"თანამედროვე", rulers_classical:"ტრადიციული", rulers_both:"ორივე", lil_mean:"საშუალო (ლილიტი)", lil_mean_s:"საშუალო",
     lil_true:"ჭეშმარიტი (ოსკულირებადი)", lil_true_s:"ჭეშმარიტი", transittime:"დრო UT",
     secondsLabel:"რკალის წამების ჩვენება პოზიციებში", needdata:"შეავსე თარიღი, დრო და ადგილი.",
     empty:"შეიყვანე დაბადების მონაცემები და ააგე რუკა.", natal:"ნატალური რუკა", era1:"კინომდე",
@@ -2761,6 +2748,13 @@ Object.assign(I18N.ka,{
   importRejected:"ვერ წაიკითხა: {n} (შეამოწმე თარიღი, დრო, კოორდინატები და UTC წანაცვლება)",
   storageFull:"არ შეინახა: აპის ადგილი ამ მოწყობილობაზე სავსეა. გაიტანე CSV, შემდეგ შეამოკლე შენიშვნები ან წაშალე რუკები."
 });
+Object.assign(STR,{themeLight:{ru:'Светлая тема',en:'Light theme'},themeDark:{ru:'Тёмная тема',en:'Dark theme'}});
+Object.assign(I18N.es,{themeLight:"Tema claro",themeDark:"Tema oscuro"});
+Object.assign(I18N.fr,{themeLight:"Thème clair",themeDark:"Thème sombre"});
+Object.assign(I18N.de,{themeLight:"Helles Design",themeDark:"Dunkles Design"});
+Object.assign(I18N.it,{themeLight:"Tema chiaro",themeDark:"Tema scuro"});
+Object.assign(I18N.uk,{themeLight:"Світла тема",themeDark:"Темна тема"});
+Object.assign(I18N.ka,{themeLight:"ღია თემა",themeDark:"მუქი თემა"});
 Object.assign(STR,{accessEnded:{ru:'Неделя полного доступа закончилась. Одна карта и всё о ней остаются бесплатными.',
   en:'The week of full access has ended. One chart and everything about it stays free.'}});
 Object.assign(I18N.es,{accessEnded:"La semana de acceso completo ha terminado. Una carta y todo lo que contiene siguen siendo gratis."});
@@ -3069,7 +3063,10 @@ function loadAsteroids(){
     /* A failure is not fatal and must not look like one: the chart is cast
        without them and the switch goes back off, so the next attempt is the
        user's rather than a silent retry loop. */
-    sc.onerror=()=>{ ASTEROIDS=false; localStorage.setItem(AST_KEY,'0'); res(false); };
+    /* The promise is dropped so the next switch-on asks again, and the stored
+       choice is left alone: a fetch that failed once on a train erased the
+       setting for good and every later attempt answered from the dead promise. */
+    sc.onerror=()=>{ ASTEROIDS=false; AST_LOADING=null; sc.remove(); res(false); };
     document.head.appendChild(sc);
   });
   return AST_LOADING;
@@ -5314,8 +5311,9 @@ function rulersOf(s,mode=RULER_MODE){
 const TRAD_BODIES=['Sun','Moon','Mercury','Venus','Mars','Jupiter','Saturn'];
 const SECT_OF={Sun:'diurnal',Jupiter:'diurnal',Saturn:'diurnal',
   Moon:'nocturnal',Venus:'nocturnal',Mars:'nocturnal'};
-/* Cazimi 17', combust 8°30', under the beams 15°: Lilly's figures, still the
-   ones most traditional practice uses. Kept as one table so that changing a
+/* Cazimi 17' and combust 8°30' are Lilly's figures; under the beams at 15° is
+   the Hellenistic one (Lilly's own is 17°). The mix is the one most
+   traditional practice uses today, and it is named as a mix, not as Lilly. Kept as one table so that changing a
    threshold is one edit and not a hunt. */
 const SOLAR_LIMITS={cazimi:17/60, combust:8.5, underBeams:15};
 /* Named separately from ASPECT_POINTS, which is defined much further down with
@@ -5357,6 +5355,18 @@ function dignityOf(p,s,mode=RULER_MODE){
   if(rulersOf(o,'both').includes(p)) return 'detriment';
   if(EXALT[p]===o) return 'fall';
   return TRAD_BODIES.includes(p)?'peregrine':null;
+}
+/* The second dignity a body can hold in the same sign. Only Mercury does: in
+   Virgo it rules and is exalted, in Pisces it is in detriment and in fall.
+   One value kept only the first, and the card said "detriment" where Solar
+   Fire and Astro Gold say Det, Fall. The first stays the dignity (the chain,
+   the reception and the parity contract read it); this one is shown beside it. */
+function dignityAlso(p,s,first){
+  if(first==null||!TRAD_BODIES.includes(p)) return null;
+  const o=(s+6)%12;
+  if((first==='ruler'||first==='coRuler')&&EXALT[p]===s) return 'exalt';
+  if(first==='detriment'&&EXALT[p]===o) return 'fall';
+  return null;
 }
 /* One facts object per chart per mode. A single cache slot would hand back
    the classical answer after the switch had been moved to modern. */
@@ -5489,6 +5499,7 @@ function chartFacts(ch,mode=RULER_MODE){
     F.planets[p]={
       sign:s, house:hs, lon,
       dignity:dignityOf(p,s,mode),
+      dignityAlso:dignityAlso(p,s,dignityOf(p,s,mode)),
       dispositor:dispositors[0]||null,
       dispositors,
       dispositorChain:chain.slice(1),           // without the body itself
@@ -5550,9 +5561,14 @@ function chartFacts(ch,mode=RULER_MODE){
 }
 let SHOW_SECONDS=localStorage.getItem('astrarium_seconds')==='1';
 function fmtPos(lon){
-  const s=Math.floor(rev(lon)/30),deg=rev(lon)-s*30,dd=Math.floor(deg);
-  const mmF=(deg-dd)*60, mm=Math.floor(mmF);
-  const secPart=SHOW_SECONDS?`${String(Math.round((mmF-mm)*60)).padStart(2,'0')}″`:'';
+  /* Rounded once, in the smallest unit shown, and then split - rounding the
+     seconds on their own printed 10°59′60″ for about one position in 120. */
+  const unit=SHOW_SECONDS?3600:60;
+  let n=Math.round(rev(lon)*unit); if(n>=360*unit) n-=360*unit;
+  const s=Math.floor(n/(30*unit)); n-=s*30*unit;
+  const dd=Math.floor(n/unit), rest=n-dd*unit;
+  const mm=SHOW_SECONDS?Math.floor(rest/60):rest, ss=SHOW_SECONDS?rest%60:0;
+  const secPart=SHOW_SECONDS?`${String(ss).padStart(2,'0')}″`:'';
   return {sign:s,html:`${dd}°${String(mm).padStart(2,'0')}′${secPart} <span class="af">${SIGN_GLYPH[s]}</span>`};
 }
 /* The single place that answers "do these two degrees aspect, and by how
@@ -7270,7 +7286,7 @@ function structureHead(ch,p){
   const r=structureLines(ch,p); if(!r) return '';
   const f=r.f;
   const bits=[LX(SIGN_NAME)[f.sign], t('houseHead').replace('{n}',f.house)];
-  if(f.dignity) bits.push(t(DIG_KEY[f.dignity]));
+  if(f.dignity) bits.push(t(DIG_KEY[f.dignity])+(f.dignityAlso?', '+t(DIG_KEY[f.dignityAlso]).toLowerCase():''));
   return bits.join(' · ');
 }
 
@@ -7517,7 +7533,7 @@ function placementLines(ch){
     const head=[`${PN(p)} ${place(b.lon)}`, t('houseNum').replace('{n}',f.house)];
     if(b.retro) head.push(t('retrograde'));
     if(isStationary(p,b.spd)) head.push(t('stationary'));
-    if(f.dignity) head.push(t(DIG_KEY[f.dignity]));
+    if(f.dignity) head.push(t(DIG_KEY[f.dignity])+(f.dignityAlso?', '+t(DIG_KEY[f.dignityAlso]).toLowerCase():''));
     if(f.angularity) head.push(t(ANG_KEY[f.angularity]));
     if(f.sect.status!=='neutral') head.push(t(f.sect.status==='inSect'?'sectIn':'sectContrary'));
     if(f.solar.condition&&f.solar.condition!=='free') head.push(t(SOL_KEY[f.solar.condition]));
@@ -7526,7 +7542,7 @@ function placementLines(ch){
     else if(f.branches.length===1){
       const b=f.branches[0];
       let d='  '+t('sfDispositor').toLowerCase()+': '+[p,...b.via].map(PN).join(' -> ');
-      if(b.loop) d+=`, ${t('sfCycle').toLowerCase()} ${b.loop.map(PN).join(' <-> ')}, ${t('sfNoFinal').toLowerCase()}`;
+      if(b.loop) d+=`, ${t('sfCycle').toLowerCase()} ${cycleText(b.loop,' -> ',' <-> ')}, ${t('sfNoFinal').toLowerCase()}`;
       else if(b.terminal) d+=`, ${t('sfFinal').toLowerCase()}: ${PN(b.terminal)}`;
       L.push(d);
     }else{
@@ -7535,7 +7551,7 @@ function placementLines(ch){
         +g.rows.map(([x,ds])=>`${PN(x)} -> ${ds.map(PN).join(', ')}`).join('; ');
       if(g.ends.length) d+=`; ${t(g.ends.length>1?'sfFinals':'sfFinal').toLowerCase()}: ${g.ends.map(PN).join(', ')}`;
       if(g.loops.length) d+=`; ${t(g.loops.length>1?'sfCycles':'sfCycle').toLowerCase()}: `
-        +g.loops.map(l=>l.map(PN).join(' <-> ')).join(', ');
+        +g.loops.map(l=>cycleText(l,' -> ',' <-> ')).join(', ');
       L.push(d);
     }
     if(f.rulesHouses.length){
@@ -8940,12 +8956,29 @@ function upgradeSelect(sel){
     if(sel.title) btn.title=sel.title.charAt(0)+sel.title.slice(1).toLowerCase();
     list.innerHTML=[...sel.options].map((o,i)=>
       `<div class="ddopt${o.selected?' on':''}" role="option" data-i="${i}" tabindex="-1">${o.textContent}</div>`).join('');
-    list.querySelectorAll('.ddopt').forEach(el=>el.addEventListener('click',()=>{
-      sel.selectedIndex=+el.dataset.i;
-      sel.dispatchEvent(new Event('change',{bubbles:true}));
-      closeDropdown(); paint(); btn.focus();
-    }));
+    list.querySelectorAll('.ddopt').forEach(el=>{
+      el.addEventListener('click',()=>{
+        sel.selectedIndex=+el.dataset.i;
+        sel.dispatchEvent(new Event('change',{bubbles:true}));
+        closeDropdown(); paint(); btn.focus();
+      });
+      /* An open list is walked with the arrows and chosen with Enter, as a
+         listbox is; Escape goes back to the button. */
+      el.addEventListener('keydown',e=>{
+        const opts=[...list.querySelectorAll('.ddopt')], i=opts.indexOf(el);
+        const to=e.key==='ArrowDown'?Math.min(i+1,opts.length-1):e.key==='ArrowUp'?Math.max(i-1,0)
+          :e.key==='Home'?0:e.key==='End'?opts.length-1:null;
+        if(to!=null){ e.preventDefault(); opts[to].focus(); return; }
+        if(e.key==='Enter'||e.key===' '){ e.preventDefault(); el.click(); }
+        else if(e.key==='Escape'){ e.preventDefault(); closeDropdown(); btn.focus(); }
+      });
+    });
   };
+  /* Leaving with Tab closes it: the list used to hang over the form until a
+     click somewhere else. */
+  wrap.addEventListener('focusout',e=>{
+    if(DD_OPEN&&DD_OPEN.wrap===wrap&&!wrap.contains(e.relatedTarget)) closeDropdown();
+  });
   btn.addEventListener('click',()=>{
     const wasOpen=DD_OPEN&&DD_OPEN.wrap===wrap;
     closeDropdown();
@@ -8958,10 +8991,18 @@ function upgradeSelect(sel){
   /* Arrow keys move the value without opening anything, which is what a native
      select does and what a keyboard user expects. */
   btn.addEventListener('keydown',e=>{
-    if(e.key!=='ArrowDown'&&e.key!=='ArrowUp') return;
+    const open=DD_OPEN&&DD_OPEN.wrap===wrap;
+    if(open&&(e.key==='ArrowDown'||e.key==='ArrowUp')){
+      e.preventDefault(); (list.querySelector('.ddopt.on')||list.querySelector('.ddopt')).focus(); return;
+    }
+    const n=sel.options.length, i=sel.selectedIndex;
+    /* Stops at the ends like a native select, rather than wrapping round. */
+    const to=e.key==='ArrowDown'?Math.min(i+1,n-1):e.key==='ArrowUp'?Math.max(i-1,0)
+      :e.key==='Home'?0:e.key==='End'?n-1:null;
+    if(to==null) return;
     e.preventDefault();
-    const n=sel.options.length;
-    sel.selectedIndex=(sel.selectedIndex+(e.key==='ArrowDown'?1:n-1))%n;
+    if(to===i) return;
+    sel.selectedIndex=to;
     sel.dispatchEvent(new Event('change',{bubbles:true}));
     paint();
   });

@@ -4694,7 +4694,7 @@ function run(){
       'libTitle','libFind','noTime','rrKnown','delChart','libShort','settings','themeLabel',
       'langLabel','close','whatIs','nameLabel','saveBtn','savedBtn','saveToLib','edit','hide',
       'editData','geoNone','accessTitle','accessFree','proNeeded','enterCode','setCalc','setView','setHsys','setLil','setRulers',
-      'hsysLabel','lilLabel','lil_mean','lil_true','transittime','secondsLabel','needdata',
+      'hsysLabel','lil_mean','lil_true','transittime','secondsLabel','needdata',
       'empty','natal','era1','era2','era3','era4','tapdetail','positions','posnote',
       'transitdate','scrubintro','stepLabel','u_sec','u_min','u_hour','u_day','u_week',
       'u_month','u_year','u_dec','u_cent','nowbtn','birthbtn','applying','separating',
@@ -5345,6 +5345,46 @@ function run(){
     const h=ev(`cityRows([{e:'Kirovsk',r:'Кировск',c:'RU',lat:67.61,lon:33.67},{e:'Kirovsk',r:'Кировск',c:'RU',lat:59.88,lon:30.99},{e:'Moscow',r:'Москва',c:'RU',lat:55.75,lon:37.62}])`);
     const n=(h.match(/ · /g)||[]).length;
     return n===2||`координаты у ${n} строк из 2 одноимённых`;
+  });
+  t('#15 секунды не бывают 60″',()=>{
+    const r=ev(`(()=>{const k=SHOW_SECONDS; SHOW_SECONDS=true; try{
+      return [fmtPos(10.9999).html, fmtPos(29.99999).html, fmtPos(359.99999).html];
+    }finally{SHOW_SECONDS=k;}})()`).map(h=>h.replace(/<[^>]+>/g,''));
+    const bad=r.filter(h=>/60″|60′/.test(h));
+    return (!bad.length&&r[0].startsWith('11°00′00″')&&r[2].startsWith('0°00′00″'))||r.join(' | ');
+  });
+  t('#18 цикл в экспорте записан стрелками с замыканием, как на экране',()=>{
+    const r=ev(`(()=>{const ch=computeChart(2000,1,1,0,0,0,0); return chartExportText(ch);})()`);
+    return !/ <-> .* <-> /.test(r)||'в экспорте цикл как пары <->';
+  });
+  t('#19 Меркурий в Рыбах: изгнание и падение, в Деве: управитель и экзальтация',()=>{
+    const r=ev(`[dignityAlso('Mercury',11,dignityOf('Mercury',11,'classical')), dignityAlso('Mercury',5,dignityOf('Mercury',5,'classical'))]`);
+    return (r[0]==='fall'&&r[1]==='exalt')||r.join(', ');
+  });
+  t('#51 #54 кнопки темы переведены, подписи связаны с полями',()=>{
+    const bad=[];
+    const th=D.querySelector('[data-theme-set="light"]').getAttribute('aria-label');
+    if(th!==ev(`t('themeLight')`)) bad.push('кнопка темы: '+th);
+    ['date','time','city','lat','lng','tz'].forEach(id=>{ if(!D.querySelector(`label[for="${id}"]`)) bad.push('нет подписи у '+id); });
+    if(!D.getElementById('accessCode').getAttribute('aria-label')) bad.push('поле ключа без подписи');
+    return !bad.length||bad.join('; ');
+  });
+  t('#48 движок грузится с версией в адресе, и service worker кладёт его с ней',()=>{
+    const src=D.querySelector('script[src*="ephemeris.js"]').getAttribute('src'), v=ev('APP_VERSION');
+    if(src!=='./ephemeris.js?v='+v) return 'в index.html '+src;
+    return /ephemeris\.js\?v=\$\{V\}/.test(SW_SRC)||'sw.js кэширует ephemeris.js без версии';
+  });
+  t('#38 выпадающий список: стрелки стоят на краях, Tab закрывает',()=>{
+    const r=ev(`(()=>{const sel=document.getElementById('hsysSet')||document.querySelector('select[data-dd]');
+      const btn=sel.parentNode.querySelector('.ddbtn'), keep=sel.selectedIndex;
+      try{ sel.selectedIndex=sel.options.length-1; sel._ddPaint();
+        btn.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true}));
+        const atEnd=sel.selectedIndex;
+        btn.click(); const opened=!sel.parentNode.querySelector('.ddlist').hidden;
+        sel.parentNode.dispatchEvent(new FocusEvent('focusout',{relatedTarget:document.body,bubbles:true}));
+        return {atEnd, last:sel.options.length-1, opened, closed:sel.parentNode.querySelector('.ddlist').hidden};
+      }finally{ sel.selectedIndex=keep; sel._ddPaint(); closeDropdown(); }})()`);
+    return (r.atEnd===r.last&&r.opened&&r.closed)||JSON.stringify(r);
   });
   /* REVIEW-2026-10-15-END */
 
