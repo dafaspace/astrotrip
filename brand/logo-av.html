@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Astroverus - монограмма AV</title>
+<style>
+@font-face{font-family:'Literata';src:url(../literata-500.woff2) format('woff2');font-weight:500}
+@font-face{font-family:'Inter';src:url(../inter-400.woff2) format('woff2');font-weight:400}
+@font-face{font-family:'Inter';src:url(../inter-500.woff2) format('woff2');font-weight:500}
+:root{--bg:#100f17;--card:#171520;--line:#332f43;--ink:#e7e6ea;--ink2:#9693a6;--acc:#bc773a}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 Inter,system-ui,sans-serif;padding:28px}
+h1{font:500 22px Literata,serif;margin:0 0 4px} p.sub{color:var(--ink2);margin:0 0 24px;max-width:900px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:20px}
+.c{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+.c h2{font:500 16px Inter;margin:0 0 4px}.c p{color:var(--ink2);margin:0 0 14px;font-size:13px}
+.row{display:flex;align-items:flex-end;gap:16px;margin-bottom:16px}
+.ic{border-radius:22.5%;overflow:hidden;display:block}
+.lock{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:12px;background:#f9f7f3;color:#201d18;margin-top:6px}
+.lock.dark{background:#100f17;color:#e7e6ea;border:1px solid var(--line)}
+.wm{font:500 26px Literata,serif;letter-spacing:-.01em}
+.wm b{font-weight:500;color:var(--acc)} .lock:not(.dark) .wm b{color:#9d5d25}
+</style></head><body>
+<h1>Монограмма AV из аспектов</h1>
+<p class="sub">Каждая линия соединяет две точки на круге эклиптики, и угол между ними это настоящий аспект: тригон 120°, оппозиция 180°, квадрат 90°, секстиль 60°. Точки это планеты. Подпись под каждым вариантом называет, какие аспекты сложились в буквы.</p>
+<div class="grid" id="g"></div>
+<script>
+const S=512,C=256,R=176,BG='#100f17',ACC='#bc773a',INK='#e7e6ea',RING='#9693a6';
+const TRI='#6f8fd8',OPP='#d2604f',SQR='#d2604f',SEX='#5aa88a';   // the app's aspect hues
+const P=deg=>{const a=(deg-90)*Math.PI/180;return [C+R*Math.cos(a),C+R*Math.sin(a)];};
+const sep=(a,b)=>{const d=Math.abs(((a-b)%360+360)%360);return Math.min(d,360-d);};
+const kind=(a,b)=>({120:'тригон',180:'оппозиция',90:'квадрат',60:'секстиль'})[Math.round(sep(a,b))]||Math.round(sep(a,b))+'°';
+const hue=(a,b)=>({120:TRI,180:OPP,90:SQR,60:SEX})[Math.round(sep(a,b))]||ACC;
+/* Each variant: lines as [from,to] in degrees from the top, clockwise; colour mode. */
+const V={
+ 1:{t:'Λ и V навстречу',d:'A: две линии из верхней точки (тригоны) и оппозиция поперёк. V: две линии в нижнюю точку (тригоны).',
+    L:[[0,120],[0,240],[90,270],[180,60],[180,300]]},
+ 8:{t:'Λ и V навстречу, без оппозиции',d:'Как первый, но без перекладины: два тригона из верхней точки и два тригона в нижнюю. Только золото.',
+    L:[[0,120],[0,240],[180,60],[180,300]],gold:true},
+ 2:{t:'AV зигзагом',d:'Одна ломаная по четырём планетам: подъём A, спуск в V, подъём. Общая линия у букв. Перекладина A это короткий аспект.',
+    L:[[225,315],[315,135],[135,45],[255,345]]},
+ 3:{t:'A внутри V',d:'Большое V двумя тригонами от нижней точки, внутри маленькое A из квадратов. Буквы вложены, как карта в карту.',
+    L:[[180,60],[180,300],[0,90],[0,270],[90,270]]},
+ 4:{t:'Только A, перекладина-оппозиция',d:'Λ из двух тригонов и оппозиция-перекладина, которая доходит до самой эклиптики. Самый простой вариант.',
+    L:[[0,120],[0,240],[90,270]]},
+ 6:{t:'A над V, перекладина на месте',d:'A из квадратов от верхней точки, его ноги это верхушки V из квадратов к нижней точке. Перекладина A - тригон, на своей высоте. Буквы делят две планеты.',
+    L:[[0,90],[0,270],[180,90],[180,270],[300,60]]},
+ 7:{t:'Высокое A и короткое V',d:'A из двух тригонов от верхней точки, короткое V из секстилей подвешено к его ногам. Перекладина - тригон.',
+    L:[[0,120],[0,240],[180,120],[180,240],[300,60]]},
+ 5:{t:'Только V, плечи-секстили',d:'V из двух линий в нижнюю точку и линия-секстиль между вершинами: в V угадывается треугольник.',
+    L:[[180,60],[180,300],[300,0],[0,60]]},
+};
+function draw(k,mono){
+  const L=V[k].L, pts=[...new Set(L.flat())];
+  let s=`<rect width="${S}" height="${S}" fill="${BG}"/><circle cx="${C}" cy="${C}" r="${R}" fill="none" stroke="${RING}" stroke-width="7" opacity=".6"/>`;
+  L.forEach(([a,b])=>{const[x1,y1]=P(a),[x2,y2]=P(b);s+=`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${mono?ACC:hue(a,b)}" stroke-width="15" stroke-linecap="round"/>`;});
+  pts.forEach(d=>{const[x,y]=P(d);s+=`<circle cx="${x}" cy="${y}" r="20" fill="${INK}"/>`;});
+  return s;
+}
+const icon=(k,size,mono)=>`<svg class="ic" width="${size}" height="${size}" viewBox="0 0 ${S} ${S}">${draw(k,mono)}</svg>`;
+document.getElementById('g').innerHTML=Object.keys(V).map(k=>{
+  const asp=[...new Set(V[k].L.map(([a,b])=>kind(a,b)))].join(', ');
+  return `<div class="c"><h2>${k}. ${V[k].t}</h2><p>${V[k].d}<br>Аспекты: ${asp}.</p>
+  <div class="row">${icon(k,120,true)}${V[k].gold?icon(k,180,true):icon(k,120,false)}${icon(k,60,true)}${icon(k,29,true)}</div>
+  <div class="lock">${icon(k,34,true)}<span class="wm">Astro<b>verus</b></span></div>
+  <div class="lock dark">${icon(k,34,!!V[k].gold)}<span class="wm">Astro<b>verus</b></span></div></div>`;}).join('');
+</script></body></html>

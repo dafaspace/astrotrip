@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Astroverus - варианты логотипа</title>
+<style>
+@font-face{font-family:'Literata';src:url(../literata-500.woff2) format('woff2');font-weight:500}
+@font-face{font-family:'Inter';src:url(../inter-400.woff2) format('woff2');font-weight:400}
+@font-face{font-family:'Inter';src:url(../inter-500.woff2) format('woff2');font-weight:500}
+:root{--bg:#100f17;--card:#171520;--line:#332f43;--ink:#e7e6ea;--ink2:#9693a6;--acc:#bc773a}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 Inter,system-ui,sans-serif;padding:28px}
+h1{font:500 22px Literata,serif;margin:0 0 4px} p.sub{color:var(--ink2);margin:0 0 24px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:20px}
+.c{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+.c h2{font:500 16px Inter;margin:0 0 4px}.c p{color:var(--ink2);margin:0 0 14px;font-size:13px}
+.row{display:flex;align-items:flex-end;gap:16px;margin-bottom:16px}
+.ic{border-radius:22.5%;overflow:hidden;display:block}
+.lock{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:12px;background:#f9f7f3;color:#201d18;margin-top:6px}
+.lock.dark{background:#100f17;color:#e7e6ea;border:1px solid var(--line)}
+.wm{font:500 26px Literata,serif;letter-spacing:-.01em}
+.wm b{font-weight:500;color:var(--acc)}
+.lock:not(.dark) .wm b{color:#9d5d25}
+</style></head><body>
+<h1>Astroverus</h1>
+<p class="sub">Четыре направления значка и надпись. Каждый показан в размере значка приложения (120), в размере на экране «Домой» (60) и мелко (29), плюс с надписью на светлом и тёмном фоне.</p>
+<div class="grid" id="g"></div>
+<script>
+const S=512,C=256,BG='#100f17',ACC='#bc773a',INK='#e7e6ea',INK2='#9693a6';
+const P=(r,deg)=>{const a=(deg-90)*Math.PI/180;return [C+r*Math.cos(a),C+r*Math.sin(a)];};
+const ticks=(r,len,every,w,col,op)=>{let d='';for(let g=0;g<360;g+=every){const[x1,y1]=P(r,g),[x2,y2]=P(r-len,g);d+=`M${x1.toFixed(1)} ${y1.toFixed(1)}L${x2.toFixed(1)} ${y2.toFixed(1)}`;}return `<path d="${d}" stroke="${col}" stroke-width="${w}" opacity="${op}" fill="none"/>`;};
+const V={
+ A:{t:'Верная точка',d:'Шкала круга по 10°, и одна метка точно на градусе планеты. Смысл «verus»: положение, которому можно верить.',
+  svg:()=>{const[px,py]=P(158,48),[t1x,t1y]=P(178,48),[t2x,t2y]=P(206,48);
+   return `<circle cx="${C}" cy="${C}" r="178" fill="none" stroke="${ACC}" stroke-width="10"/>`+ticks(178,16,10,5,ACC,.55)
+   +`<line x1="${t1x}" y1="${t1y}" x2="${t2x}" y2="${t2y}" stroke="${INK}" stroke-width="10" stroke-linecap="butt"/>`
+   +`<circle cx="${px}" cy="${py}" r="34" fill="${ACC}"/><circle cx="${C}" cy="${C}" r="46" fill="${INK}"/>`;}},
+ B:{t:'V из аспектов',d:'Две линии аспекта сходятся в точке на круге и складываются в V, первую букву Verus. Вершина это планета.',
+  svg:()=>{const[ax,ay]=P(176,320),[bx,by]=P(176,40),[vx,vy]=P(176,180);
+   return `<circle cx="${C}" cy="${C}" r="176" fill="none" stroke="${INK2}" stroke-width="8" opacity=".55"/>`
+   +`<path d="M${ax} ${ay}L${vx} ${vy}L${bx} ${by}" fill="none" stroke="${ACC}" stroke-width="16" stroke-linejoin="round" stroke-linecap="round"/>`
+   +`<circle cx="${ax}" cy="${ay}" r="22" fill="${INK}"/><circle cx="${bx}" cy="${by}" r="22" fill="${INK}"/><circle cx="${vx}" cy="${vy}" r="34" fill="${ACC}"/>`;}},
+ C:{t:'Прицел на планете',d:'Нынешний значок, планета на орбите, и тонкое перекрестие на ней: точность попадания. Узнаваемо для тех, кто видел AstroTrip.',
+  svg:()=>{const[px,py]=P(158,48);
+   return `<circle cx="${C}" cy="${C}" r="158" fill="none" stroke="${ACC}" stroke-width="12"/>`
+   +`<circle cx="${C}" cy="${C}" r="48" fill="${INK}"/>`
+   +`<circle cx="${px}" cy="${py}" r="58" fill="${BG}"/><circle cx="${px}" cy="${py}" r="30" fill="${ACC}"/>`
+   +`<circle cx="${px}" cy="${py}" r="52" fill="none" stroke="${INK}" stroke-width="6"/>`
+   +[0,90,180,270].map(g=>{const a=g*Math.PI/180;return `<line x1="${px+40*Math.cos(a)}" y1="${py+40*Math.sin(a)}" x2="${px+66*Math.cos(a)}" y2="${py+66*Math.sin(a)}" stroke="${INK}" stroke-width="6"/>`;}).join('');}},
+ D:{t:'Колесо карты',d:'Само колесо: кольцо знаков, двенадцать делений, ось асцендента. Самое прямое «это астрологическая программа».',
+  svg:()=>{let s=`<circle cx="${C}" cy="${C}" r="190" fill="none" stroke="${ACC}" stroke-width="10"/><circle cx="${C}" cy="${C}" r="148" fill="none" stroke="${ACC}" stroke-width="5" opacity=".7"/>`;
+   for(let g=0;g<360;g+=30){const[x1,y1]=P(190,g),[x2,y2]=P(148,g);s+=`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${ACC}" stroke-width="5" opacity=".7"/>`;}
+   const[a1,b1]=P(148,270),[a2,b2]=P(148,90);s+=`<line x1="${a1}" y1="${b1}" x2="${a2}" y2="${b2}" stroke="${INK}" stroke-width="9"/>`;
+   const[px,py]=P(108,200);s+=`<circle cx="${px}" cy="${py}" r="26" fill="${INK}"/>`;return s;}}
+};
+const icon=(k,size)=>`<svg class="ic" width="${size}" height="${size}" viewBox="0 0 ${S} ${S}"><rect width="${S}" height="${S}" fill="${BG}"/>${V[k].svg()}</svg>`;
+document.getElementById('g').innerHTML=Object.keys(V).map(k=>`<div class="c"><h2>${k}. ${V[k].t}</h2><p>${V[k].d}</p>
+ <div class="row">${icon(k,120)}${icon(k,60)}${icon(k,29)}</div>
+ <div class="lock">${icon(k,34)}<span class="wm">Astro<b>verus</b></span></div>
+ <div class="lock dark">${icon(k,34)}<span class="wm">Astro<b>verus</b></span></div></div>`).join('');
+</script></body></html>

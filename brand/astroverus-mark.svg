@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+<!-- Astroverus mark. Two letters, A and V, drawn as trines on the ecliptic; turned 5 deg clockwise.
+     Every size follows phi: circle diameter = side / phi, line = radius / phi^6, ring = line / phi,
+     small point = line * phi / 2, large point = small * phi. -->
+<rect width="1024" height="1024" fill="#100f17"/>
+<circle cx="512" cy="512" r="316.43" fill="none" stroke="#9693a6" stroke-width="10.90" opacity=".55"/>
+<line x1="539.58" y1="196.77" x2="771.21" y2="693.50" stroke="#bc773a" stroke-width="17.63" stroke-linecap="round"/>
+<line x1="539.58" y1="196.77" x2="225.21" y2="645.73" stroke="#bc773a" stroke-width="17.63" stroke-linecap="round"/>
+<line x1="484.42" y1="827.23" x2="798.79" y2="378.27" stroke="#bc773a" stroke-width="17.63" stroke-linecap="round"/>
+<line x1="484.42" y1="827.23" x2="252.79" y2="330.50" stroke="#bc773a" stroke-width="17.63" stroke-linecap="round"/>
+<circle cx="539.58" cy="196.77" r="23.08" fill="#e7e6ea"/>
+<circle cx="771.21" cy="693.50" r="14.27" fill="#e7e6ea"/>
+<circle cx="225.21" cy="645.73" r="14.27" fill="#e7e6ea"/>
+<circle cx="484.42" cy="827.23" r="23.08" fill="#e7e6ea"/>
+<circle cx="798.79" cy="378.27" r="14.27" fill="#e7e6ea"/>
+<circle cx="252.79" cy="330.50" r="14.27" fill="#e7e6ea"/>
+</svg>

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Astroverus - вариант 8, повороты</title>
+<style>
+@font-face{font-family:'Literata';src:url(../literata-500.woff2) format('woff2');font-weight:500}
+@font-face{font-family:'Inter';src:url(../inter-400.woff2) format('woff2');font-weight:400}
+@font-face{font-family:'Inter';src:url(../inter-500.woff2) format('woff2');font-weight:500}
+:root{--bg:#100f17;--card:#171520;--line:#332f43;--ink:#e7e6ea;--ink2:#9693a6;--acc:#bc773a}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 Inter,system-ui,sans-serif;padding:24px}
+h1{font:500 22px Literata,serif;margin:0 0 4px} p.sub{color:var(--ink2);margin:0 0 20px;max-width:900px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
+.c{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px}
+.c h2{font:500 15px Inter;margin:0 0 2px}.c p{color:var(--ink2);margin:0 0 10px;font-size:12.5px}
+.row{display:flex;align-items:flex-end;gap:12px;margin-bottom:12px}
+.ic{border-radius:22.5%;overflow:hidden;display:block}
+.lock{display:flex;align-items:center;gap:9px;padding:10px 12px;border-radius:12px;background:#f9f7f3;color:#201d18}
+.wm{font:500 22px Literata,serif;letter-spacing:-.01em}.wm b{font-weight:500;color:#9d5d25}
+</style></head><body>
+<h1>5° по φ: как сделать кольцо видимым</h1>
+<p class="sub">Две буквы из тригонов, только золото. Точки на вершинах букв (верх A и низ V) радиусом 13, остальные в φ раз мельче, 8. Линии 11. Поворот по часовой стрелке.</p>
+<div class="grid" id="g"></div>
+<script>
+const S=512,C=256,R=176,BG='#100f17',ACC='#bc773a',INK='#e7e6ea',RING='#9693a6',PHI=(1+Math.sqrt(5))/2;
+const ROT_OLD=[[0,'0°','без поворота, для сравнения'],[3,'3°','Фибоначчи'],[5,'5°','Фибоначчи'],[5.4,'5,4°','60° / φ⁵'],[8,'8°','Фибоначчи'],[8.8,'8,8°','60° / φ⁴'],[-5.4,'−5,4°','60° / φ⁵, против часовой'],[-8.8,'−8,8°','60° / φ⁴, против часовой'],[13,'13°','Фибоначчи, для сравнения: уже решётка']];
+const ROT=[[5,'Как было','кольцо 5,4, серое, прозрачность 55%',1,'a'],
+  [5,'Кольцо сплошное и светлее','та же толщина 5,4, без прозрачности, цвет как у вторичного текста',1,'b'],
+  [5,'Кольцо = линия букв','кольцо 8,8, как буквы, светло-серое; φ теперь между линией и точками',1,'c'],
+  [5,'Кольцо = линия · φ','кольцо толще букв, 14,2, но тёмное: держит форму, не спорит с буквами',1,'d']];
+const L=[[0,120],[0,240],[180,60],[180,300]], BIG=[0,180];
+const GEOM=(g,m)=>{ if(g===1){const R=S/PHI/2, line=R/Math.pow(PHI,6)*1.0; return {R, line, ring:line/PHI, big:line*PHI/2*PHI, small:line*PHI/2};}
+  if(g===2){const R=176, line=R/Math.pow(PHI,6); return {R, line, ring:line/PHI, big:line*PHI/2*PHI, small:line*PHI/2};}
+  return {R:176,line:11,ring:6,big:13,small:13/PHI}; };
+function draw(rot,g,m){
+  const G=GEOM(g), R=G.R;
+  const RS={a:[G.ring,RING,.55],b:[G.ring,'#b3b0c2',1],c:[G.line,'#b3b0c2',1],d:[G.line*PHI,'#3a3650',1]}[m||'a'];
+  const P=d=>{const a=(d+rot-90)*Math.PI/180;return [C+R*Math.cos(a),C+R*Math.sin(a)];};
+  let s=`<rect width="${S}" height="${S}" fill="${BG}"/><circle cx="${C}" cy="${C}" r="${R}" fill="none" stroke="${RS[1]}" stroke-width="${RS[0]}" opacity="${RS[2]}"/>`;
+  L.forEach(([a,b])=>{const[x1,y1]=P(a),[x2,y2]=P(b);s+=`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${ACC}" stroke-width="${G.line}" stroke-linecap="round"/>`;});
+  [...new Set(L.flat())].forEach(d=>{const[x,y]=P(d);s+=`<circle cx="${x}" cy="${y}" r="${BIG.includes(d)?G.big:G.small}" fill="${INK}"/>`;});
+  return s;
+}
+const icon=(r,size,g,m)=>`<svg class="ic" width="${size}" height="${size}" viewBox="0 0 ${S} ${S}">${draw(r,g,m)}</svg>`;
+document.getElementById('g').innerHTML=ROT.map(([r,t,d,g,m])=>`<div class="c"><h2>${t}</h2><p>${d}</p>
+  <div class="row">${icon(r,180,g,m)}${icon(r,60,g,m)}${icon(r,40,g,m)}${icon(r,29,g,m)}</div>
+  <div class="lock">${icon(r,32,g,m)}<span class="wm">Astro<b>verus</b></span></div></div>`).join('');
+</script></body></html>
