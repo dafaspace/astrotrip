@@ -20,7 +20,7 @@ h1{font:500 22px Literata,serif;margin:0 0 4px} p.sub{color:var(--ink2);margin:0
 /* The o-V pair: V's open top leaves a triangle of air after the o, and with V
    capitalised the word reads as two. Pulled in by hand, as type designers kern
    this pair. */
-.kv{margin-left:-.0325em;margin-right:-.0525em}  /* measured: equal white on both sides of V in the x-height band, 49.9 and 49.7 px at 200 px */
+.kv{margin-left:-.0625em;margin-right:-.0625em}  /* set by eye from a measured start (equal white, -.0325/-.0525): Astro and Varium closer by .03em, V closer to arium by .01em; Dafa, 20 Oct 2026 */
 .hdr{display:flex;align-items:center;gap:10px;padding:10px 16px;border-radius:12px;background:#100f17;border:1px solid var(--line)}
 .hdr .ver{font:400 11px Inter;color:#827e93;margin-left:4px;align-self:flex-start;margin-top:6px}
 </style></head><body>
@@ -47,6 +47,12 @@ const W={a:'Astrovarium',b:'Astro<span class="acc">varium</span>',c:'<span class
 const T={a:'Одним цветом',b:'«varium» цветом акцента',c:'A и V цветом, как в знаке'};
 document.getElementById('g').innerHTML=Object.keys(W).map(k=>`<div class="c"><h2>${T[k]}</h2>
   ${lock('light',64,W[k])}${lock('dark',64,W[k])}${lock('light',36,W[k])}</div>`).join('')
- +`<div class="c"><h2>Значок приложения</h2><div class="row">${mark(180)}${mark(120)}${mark(60)}${mark(40)}${mark(29)}</div></div>`
+ +`<div class="c"><h2>Кернинг V: сравнение</h2>${[
+   ['было: −0,0325 / −0,0525 em','-.0325em','-.0525em'],
+   ['шаг 1: Astro ближе к Varium на 0,02 em','-.0525em','-.0525em'],
+   ['шаг 2: и V ближе к arium ещё на 0,01 em','-.0525em','-.0625em'],
+   ['итог: и Varium ближе к Astro ещё на 0,01 em','-.0625em','-.0625em']
+ ].map(([t,ml,mr])=>`<div style="font:400 12px Inter;color:#9693a6;margin:6px 0 4px">${t}</div><div class="lock light" style="margin-bottom:6px"><span class="wm" style="font-size:56px"><span class="acc">A</span>stro<span class="acc" style="margin-left:${ml};margin-right:${mr}">V</span>arium</span></div>`).join('')}</div>`
++`<div class="c"><h2>Значок приложения</h2><div class="row">${mark(180)}${mark(120)}${mark(60)}${mark(40)}${mark(29)}</div></div>`
  +`<div class="c"><h2>Шапка приложения</h2><div class="hdr">${mark(30)}<span class="wm" style="font-size:24px"><span class="acc" style="color:#bc773a">A</span>stro<span class="acc kv" style="color:#bc773a">V</span>arium</span><span class="ver">3.20.0</span></div></div>`;
 </script></body></html>
