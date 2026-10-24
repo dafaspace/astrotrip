@@ -1541,6 +1541,9 @@ const STR = {
   xAngles:{ru:'УГЛЫ И КУСПИДЫ',en:'ANGLES AND CUSPS'},
   xPlacements:{ru:'ПОЛОЖЕНИЯ И СВЯЗИ',en:'PLACEMENTS AND LINKS'},
   xAspects:{ru:'АСПЕКТЫ',en:'ASPECTS'},
+  xRingPos:{ru:'ПОЛОЖЕНИЯ ВНЕШНЕГО КРУГА (по домам натала)',en:'OUTER RING POSITIONS (in the natal houses)'},
+  xRingContacts:{ru:'АСПЕКТЫ МЕЖДУ КРУГАМИ (первым назван внешний круг)',en:'ASPECTS BETWEEN THE RINGS (the outer ring named first)'},
+  xThirdPos:{ru:'ПОЛОЖЕНИЯ ТРЕТЬЕГО КРУГА',en:'THIRD RING POSITIONS'},
   xMidpoints:{ru:'СРЕДНИЕ ТОЧКИ',en:'MIDPOINTS'},
   xMidNote:{ru:'до {orb}°, по 90-градусному диску, самые тесные',en:'within {orb}°, on the 90-degree dial, the tightest'},
   xConfigs:{ru:'КОНФИГУРАЦИИ',en:'CONFIGURATIONS'},
@@ -1989,7 +1992,7 @@ Object.assign(I18N.es,{
   xChart:"Carta",
   xAngles:"ÁNGULOS Y CÚSPIDES",
   xPlacements:"POSICIONES Y VÍNCULOS",
-  xAspects:"ASPECTOS",
+  xAspects:"ASPECTOS", xRingPos:"POSICIONES DEL ANILLO EXTERIOR (en las casas natales)", xRingContacts:"ASPECTOS ENTRE LOS ANILLOS (primero el anillo exterior)", xThirdPos:"POSICIONES DEL TERCER ANILLO",
   xMidpoints:"PUNTOS MEDIOS",
   xMidNote:"hasta {orb}°, en el disco de 90 grados, los más cerrados",
   xConfigs:"CONFIGURACIONES",
@@ -2134,7 +2137,7 @@ Object.assign(I18N.fr,{
   xChart:"Carte",
   xAngles:"ANGLES ET CUSPIDES",
   xPlacements:"POSITIONS ET LIENS",
-  xAspects:"ASPECTS",
+  xAspects:"ASPECTS", xRingPos:"POSITIONS DU CERCLE EXTÉRIEUR (dans les maisons natales)", xRingContacts:"ASPECTS ENTRE LES CERCLES (le cercle extérieur nommé en premier)", xThirdPos:"POSITIONS DU TROISIÈME CERCLE",
   xMidpoints:"MI-POINTS",
   xMidNote:"jusqu’à {orb}°, sur le cadran de 90 degrés, les plus serrés",
   xConfigs:"CONFIGURATIONS",
@@ -2279,7 +2282,7 @@ Object.assign(I18N.de,{
   xChart:"Chart",
   xAngles:"ACHSEN UND HÄUSERSPITZEN",
   xPlacements:"STELLUNGEN UND VERBINDUNGEN",
-  xAspects:"ASPEKTE",
+  xAspects:"ASPEKTE", xRingPos:"STELLUNGEN DES ÄUSSEREN RINGS (in den Radix-Häusern)", xRingContacts:"ASPEKTE ZWISCHEN DEN RINGEN (der äußere Ring zuerst)", xThirdPos:"STELLUNGEN DES DRITTEN RINGS",
   xMidpoints:"HALBSUMMEN",
   xMidNote:"bis {orb}°, auf der 90-Grad-Scheibe, die engsten",
   xConfigs:"KONFIGURATIONEN",
@@ -2424,7 +2427,7 @@ Object.assign(I18N.it,{
   xChart:"Carta",
   xAngles:"ANGOLI E CUSPIDI",
   xPlacements:"POSIZIONI E LEGAMI",
-  xAspects:"ASPETTI",
+  xAspects:"ASPETTI", xRingPos:"POSIZIONI DEL CERCHIO ESTERNO (nelle case natali)", xRingContacts:"ASPETTI TRA I CERCHI (prima il cerchio esterno)", xThirdPos:"POSIZIONI DEL TERZO CERCHIO",
   xMidpoints:"PUNTI MEDI",
   xMidNote:"fino a {orb}°, sul disco a 90 gradi, i più stretti",
   xConfigs:"CONFIGURAZIONI",
@@ -2569,7 +2572,7 @@ Object.assign(I18N.uk,{
   xChart:"Карта",
   xAngles:"КУТИ Й КУСПІДИ",
   xPlacements:"ПОЛОЖЕННЯ Й ЗВ’ЯЗКИ",
-  xAspects:"АСПЕКТИ",
+  xAspects:"АСПЕКТИ", xRingPos:"ПОЛОЖЕННЯ ЗОВНІШНЬОГО КОЛА (за домами наталу)", xRingContacts:"АСПЕКТИ МІЖ КОЛАМИ (першим назване зовнішнє коло)", xThirdPos:"ПОЛОЖЕННЯ ТРЕТЬОГО КОЛА",
   xMidpoints:"СЕРЕДНІ ТОЧКИ",
   xMidNote:"до {orb}°, за 90-градусним диском, найтісніші",
   xConfigs:"КОНФІГУРАЦІЇ",
@@ -2714,7 +2717,7 @@ Object.assign(I18N.ka,{
   xChart:"რუკა",
   xAngles:"კუთხეები და კუსპიდები",
   xPlacements:"მდებარეობები და კავშირები",
-  xAspects:"ასპექტები",
+  xAspects:"ასპექტები", xRingPos:"გარე წრის მდებარეობები (ნატალურ სახლებში)", xRingContacts:"ასპექტები წრეებს შორის (პირველად დასახელებულია გარე წრე)", xThirdPos:"მესამე წრის მდებარეობები",
   xMidpoints:"შუა წერტილები",
   xMidNote:"{orb}°-მდე, 90-გრადუსიან დისკზე, ყველაზე მჭიდრო",
   xConfigs:"კონფიგურაციები",
@@ -6837,8 +6840,63 @@ function chartExportText(ch){
      whatever the setting, so with modern rulers on - the default - the block
      opened with "Rulers: modern" and closed by contradicting it, and the model
      writing the reading was handed both. */
+  L.push(...ringExportLines(ch,place));
   L.push(t('rulersBy_'+F.rulers)+' '+t('xFooter'));
   return L.join('\n');
+}
+/* The second chart, when one is drawn. Until 3.21 the block was the natal chart
+   alone in every mode, so a reader who opened transits or synastry to copy
+   them got the half they did not open the mode for, and nothing said so. The
+   section follows what the screen shows: the moment or the partner, the outer
+   ring's bodies in the natal houses, its angles where it has its own, and the
+   same contact list the hit list is built from, tightest first. */
+function ringExportLines(ch,place){
+  /* Only for the chart on screen: TR_CHART belongs to it, and a block asked for
+     another chart (the printed sheet, a test) must not borrow its second ring. */
+  if(typeof RING_MODE==='undefined'||RING_MODE==='none'||!TR_CHART||ch!==CURRENT) return [];
+  const L=[], tr=TR_CHART, syn=RING_MODE==='synastry';
+  const momUT=document.getElementById('momUT'), momLoc=document.getElementById('momLoc');
+  let head=t('ring_'+RING_MODE).toUpperCase();
+  if(syn) head+=': '+partnerName(partnerEntry());
+  else if(RING_MODE!=='composite'){
+    const when=[momUT&&momUT.textContent.trim(), momLoc&&momLoc.textContent.trim()].filter(Boolean).join(' · ');
+    if(when) head+=' · '+when;
+  }
+  L.push(head);
+  if(['solar','lunar','synastry','progressed','directed','composite'].includes(RING_MODE)&&!tr.timeUnknown&&tr.asc!=null)
+    L.push(`ASC ${place(tr.asc)}   MC ${place(tr.mc)}`);
+  L.push('');
+  /* The bodies drawn, plus anything the contact list names: the transiting
+     node is in the list but not on the wheel, and a contact whose body has no
+     position line cannot be checked. */
+  const used=new Set((TR_HITS||[]).map(h=>h.rev?null:h.tp).filter(Boolean));
+  const bodyLines=(c,cusps)=>WHEEL_BODIES.concat(FACT_POINTS.filter(p=>used.has(p)&&c===tr)).filter(p=>c.pos[p]).map(p=>{
+    const b=c.pos[p], bits=[`${PN(p)} ${place(b.lon)}`, t('houseNum').replace('{n}',houseOf(b.lon,cusps))];
+    if(b.retro) bits.push(t('retrograde'));
+    return bits.join(', ');
+  });
+  L.push(t('xRingPos'));
+  L.push(...bodyLines(tr,ch.houses.cusps));
+  L.push('');
+  if(typeof TR3_CHART!=='undefined'&&TR3_CHART){
+    L.push(t('xThirdPos')+' · '+t('ring_'+RING2_MODE));
+    L.push(...bodyLines(TR3_CHART,ch.houses.cusps));
+    L.push('');
+  }
+  const hits=(TR_HITS||[]).slice().sort((a,b)=>a.orb-b.orb);
+  L.push(t('xRingContacts')+` (${hits.length})`);
+  /* In synastry each body is named with its owner: a reversed contact is the
+     inner chart's body on the outer chart's angle, and without names the line
+     cannot say which way it runs. */
+  const who=outer=>syn?` (${ringOwner(outer)})`:'';
+  hits.forEach(h=>{
+    const tpOuter=!h.rev;
+    let line=`${PN(h.tp)}${who(tpOuter)} ${LX(ASPECT_NAME)[h.asp.name]} ${PN(h.np)}${who(!tpOuter)}, ${t('orb')} ${fmtOrb(h.orb)}`;
+    if(h.applying!=null) line+=', '+t(h.applying?'applying':'separating');
+    L.push(line);
+  });
+  L.push('');
+  return L;
 }
 
 /* The three blocks that are worth copying on their own, each generated rather
@@ -7737,7 +7795,7 @@ function renderTransits(ch){
        not found, the card's title already named the new mode while the last
        mode's transits stayed under it and read as synastry. */
     TR_HITS=[]; document.getElementById('transitlist').innerHTML=''; document.getElementById('daysyn').textContent='';
-    drawWheel(ch,null); renderGrid(ch,null); renderConfigurations(ch); renderLearned(); return; }
+    drawWheel(ch,null); renderGrid(ch,null); renderConfigurations(ch); renderLearned(); fillExport(); return; }
   const stat=STATIC_RING.includes(RING_MODE);
   const syn=RING_MODE==='synastry';
   /* Swapped, the partner's chart supplies the frame and the houses, and the
@@ -7772,6 +7830,9 @@ function renderTransits(ch){
      printed as "separating" because two identical orbs compared equal. */
   if(!stat) markApplying(ch,tr.pos,outerChart(ch,TR_MS+PROBE_MS[RING_MODE]).pos,hits);
   TR_HITS=hits;
+  /* The text block carries the second chart now, so it follows the ring and
+     the slider. It returns at once while its fold is closed. */
+  fillExport();
   drawWheel(inner,outer);
   renderGrid(inner,outer);
   renderConfigurations(ch);

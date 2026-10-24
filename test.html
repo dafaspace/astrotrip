@@ -5450,6 +5450,25 @@ function run(){
     if(r.brief.texts!==2||r.brief.dots) bad.push('краткие: подписей '+r.brief.texts+', точек '+r.brief.dots);
     return !bad.length||bad.join('; ');
   });
+  t('текст карты несёт второй круг: транзиты и синастрию с владельцами',()=>{
+    const r=ev(`(()=>{const k={m:RING_MODE,p:PARTNER,s:RING_SWAP};
+      const card=document.getElementById('exportCard'), was=card.open; card.open=true;
+      try{
+        RING_MODE='none'; renderTransits(CURRENT); fillExport();
+        const natal=document.getElementById('exportText').textContent;
+        RING_MODE='transit'; renderTransits(CURRENT);
+        const tr=document.getElementById('exportText').textContent, trN=TR_HITS.length;
+        const e=CHART_LIBRARY[0]; PARTNER={src:'lib',id:e.id}; RING_MODE='synastry'; RING_SWAP=false; renderTransits(CURRENT);
+        const syn=document.getElementById('exportText').textContent, who=partnerName(partnerEntry());
+        return {natalHas:natal.includes(t('xRingContacts')), trHas:tr.includes(t('xRingContacts')+' ('+trN+')'),
+          trPos:tr.includes(t('xRingPos')), synWho:syn.includes('('+who+')'), synHead:syn.includes(t('ring_synastry').toUpperCase()+': '+who)};
+      }finally{ RING_MODE=k.m; PARTNER=k.p; RING_SWAP=k.s; renderTransits(CURRENT); card.open=was; fillExport(); }})()`);
+    const bad=[];
+    if(r.natalHas) bad.push('в натале есть раздел второго круга');
+    if(!r.trHas||!r.trPos) bad.push('в транзитах нет раздела или число аспектов не то');
+    if(!r.synHead||!r.synWho) bad.push('в синастрии нет имени партнёра');
+    return !bad.length||bad.join('; ');
+  });
   /* REVIEW-2026-10-15-END */
 
   render();
