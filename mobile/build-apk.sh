@@ -23,7 +23,7 @@ echo "sdk.dir=$ANDROID_HOME" > android/local.properties
 VERSION=$(grep -o "const APP_VERSION='[0-9.]*'" ../index.html | head -1 | sed "s/.*='//;s/'//")
 IFS=. read -r MA MI PA <<< "$VERSION"
 BUILD=$(( MA*10000 + ${MI:-0}*100 + ${PA:-0} ))
-NAME="AstroTrip-${VERSION}-${BUILD}"
+NAME="Astrovarium-${VERSION}-${BUILD}"
 echo "=== ${NAME}.apk ==="
 
 ./sync-web.sh | grep -E "^\[(verify|sync)\]" | sed 's/^/  /'
