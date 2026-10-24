@@ -1,6 +1,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>AstroTrip</title>
+<title>Astrovarium</title>
 <script>
 /* Runs before any paint so the page never flashes the wrong theme. Until the
    switch is touched there is nothing stored and the system decides; after
@@ -13,11 +13,12 @@
 <!-- Browser chrome follows the active scheme, same as the UI itself -->
 <meta name="theme-color" content="#f9f7f3" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#100f17" media="(prefers-color-scheme: dark)">
-<link rel="icon" href="./icon-192.png">
+<link rel="icon" href="./favicon-32.png" sizes="32x32">
+<link rel="icon" href="./icon-192.png" sizes="192x192">
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="AstroTrip">
+<meta name="apple-mobile-web-app-title" content="Astrovarium">
 <style>
 @font-face{
   font-family:'Astro';
@@ -96,6 +97,11 @@ body{
 h1,h2,h3,.serif{font-family:'Literata',Georgia,"Times New Roman",serif;font-weight:500}
 /* 56 px on a phone: the 44 px buttons plus 6 above and below. */
 header{padding:calc(6px + env(safe-area-inset-top)) 20px 6px;max-width:760px;margin:0 auto;display:flex;align-items:center;gap:8px}
+/* The wordmark: A and V in the accent, as the mark draws them, and the o-V-a
+   pair kerned by eye from a measured start (brand/astrovarium.html), so that
+   AstroVarium reads as one word with V in the middle of its gap. */
+h1 .wmA,h1 .wmV{color:var(--accent)}
+h1 .wmV{margin-left:-.0625em;margin-right:-.0625em}
 header .ht{flex:1}
 header h1{font-size:26px;margin:0;letter-spacing:.2px}
 /* Version rides the title so it is obvious from a phone whether the build in
@@ -755,7 +761,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
      over the page, so neither pushes the form or the wheel down. -->
 <header>
   <div class="ht">
-    <h1>AstroTrip<span class="ver" id="ver"></span></h1>
+    <h1 aria-label="Astrovarium"><span class="wmA">A</span>stro<span class="wmV">V</span>arium<span class="ver" id="ver"></span></h1>
   </div>
   <button type="button" class="hbtn" id="libBtn" aria-haspopup="dialog">
     <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M4 4.5h4.5v15H4zM8.5 6.5H13v13H8.5zM14.2 6.9l4.1-1.4 4.2 12.6-4.1 1.4z"/></svg>
@@ -1163,9 +1169,9 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 </div>
 
 
-<script src="./ephemeris.js?v=3.20.0"></script>
-<script src="./planets.js?v=3.20.0"></script>
-<script src="./moon.js?v=3.20.0"></script>
+<script src="./ephemeris.js?v=3.21.0"></script>
+<script src="./planets.js?v=3.21.0"></script>
+<script src="./moon.js?v=3.21.0"></script>
 <script>
 "use strict";
 /* ============================================================
@@ -1174,7 +1180,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
 /* Bump together with CACHE in sw.js: the two are the same release, and the
    number on screen is how you tell from a phone which one you are looking at. */
-const APP_VERSION='3.20.0';
+const APP_VERSION='3.21.0';
 document.getElementById('ver').textContent=APP_VERSION;
 
 /* ---------- feature flags ----------
@@ -1469,7 +1475,7 @@ const STR = {
   importDone:{ru:'Загружено карт: ',en:'Charts imported: '},
   importBad:{ru:'Не удалось прочитать файл как CSV.',en:'Could not read that file as CSV.'},
   /* atlas */
-  learned:{ru:'Что AstroTrip узнал о вас',en:'What AstroTrip has learned about you'},
+  learned:{ru:'Что Astrovarium узнал о вас',en:'What Astrovarium has learned about you'},
   forget:{ru:'Забыть всё',en:'Forget everything'},
   landq:{ru:'Зашло?',en:'Did it land?'}, felt:{ru:'Ощущалось:',en:'Felt:'},
   orb:{ru:'орбис',en:'orb'}, weight:{ru:'личный вес',en:'personal weight'}, house:{ru:'дом',en:'house'},
@@ -8464,7 +8470,7 @@ function applyStatic(){
   document.getElementById('synaFind').placeholder=t('synaFind');
   renderRelocBrief();
   if(SELECTED_CITY) document.getElementById('city').value=cityLabel(SELECTED_CITY);
-  document.title='AstroTrip';
+  document.title='Astrovarium';
 }
 function todayStr(){
   const n=new Date(), p=x=>String(x).padStart(2,'0');
@@ -9892,7 +9898,7 @@ function buildReport(){
   const sets=Object.keys(ev).filter(k=>k.startsWith('set:')&&SET_LABEL[k.slice(4)]).sort((a,b)=>ev[b]-ev[a])
     .map(k=>[SET_LABEL[k.slice(4)](),ev[k]]);
   return [
-    `AstroTrip ${APP_VERSION} · ${t('reportTitle')}`,
+    `Astrovarium ${APP_VERSION} · ${t('reportTitle')}`,
     `${t('rpPeriod')}: ${fmtDay(u.since)} - ${fmtDay(Date.now())} · ${t('rpDays')}: ${u.days.length} · ${t('rpMinutes')}: ${u.min}`,
     `${t('rpCast')}: ${n('cast')} (${t('rpFromLib')}: ${n('library')}) · ${t('rpSaved')}: ${n('save')} · ${t('rpDeleted')}: ${n('delete')}`,
     `${t('rpTypes')}: ${list(rings)}`,

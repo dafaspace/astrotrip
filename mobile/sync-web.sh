@@ -89,7 +89,7 @@ for(const m of html.matchAll(/url\((\.\/[^)'"]+)\)/g)) add(m[1]);
 for(const m of html.matchAll(/fetch\(\s*'(\.\/[^']+)'/g)) add(m[1]);
 for(const m of html.matchAll(/'(\.\/[a-z0-9_.-]+\.js)\?v=/gi)) add(m[1]);
 // Loaded only by the web build, guarded by NATIVE in index.html.
-for(const webOnly of ['sw.js','manifest.json','icon-192.png','apple-touch-icon.png']) refs.delete(webOnly);
+for(const webOnly of ['sw.js','manifest.json','icon-192.png','favicon-32.png','apple-touch-icon.png']) refs.delete(webOnly);
 let bad=0;
 for(const dir of [www,pub,apub].filter(d=>fs.existsSync(d))){
   const missing=[...refs].filter(p=>!fs.existsSync(path.join(dir,p)));

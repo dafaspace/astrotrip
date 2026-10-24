@@ -12,7 +12,7 @@
    Bump CACHE on every deploy that changes a precached file, and keep it equal
    to APP_VERSION in index.html: the number shown next to the title is how a
    stale install is spotted, so it has to name the same release as this cache. */
-const CACHE = 'astrotrip-v3.20.0';
+const CACHE = 'astrotrip-v3.21.0';
 /* The engine files carry the version in their URL, as index.html asks for
    them. Unversioned, the first session after a release ran the new page on
    the previous engine: the page came from the network, the engine from the
@@ -38,6 +38,7 @@ const ASSETS = [
   './swe_reference.json',
   './manifest.json',
   './icon-192.png',
+  './favicon-32.png',
   './icon-512.png',
   './icon-maskable-512.png',
   './apple-touch-icon.png',

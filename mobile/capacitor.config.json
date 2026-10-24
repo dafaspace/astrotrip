@@ -1,6 +1,6 @@
 {
   "appId": "space.dafa.astrotrip",
-  "appName": "AstroTrip",
+  "appName": "Astrovarium",
   "webDir": "www",
   "ios": {
     "contentInset": "never"
