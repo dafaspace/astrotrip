@@ -61,7 +61,7 @@ not advertising channels.
 | step | date | who |
 |---|---|---|
 | Public proof: a page with the JPL Horizons check and the 18 Astro Gold time-zone cases, repeatable by a stranger | the week the domain serves | session |
-| "Tell me when it launches" signup on astrovarium.com | same page | session, after the email list decision in _HQ |
+| "Tell me when it launches" signup on astrovarium.com: Buttondown, tag `astrovarium` | same page | session, once Dafa creates the Buttondown account |
 | App Store Connect record, TestFlight build | **[open]**, was planned for 20 Oct | Dafa |
 | Apple featuring nomination (App Store Connect → Featuring → App Launch) | 2+ weeks before launch | Dafa, text from the session |
 | Google Play pre-registration | after the Play account exists: **there is none yet** (Dafa, 29 Oct) | Dafa |
@@ -84,9 +84,8 @@ fits Dafa's own channels.
 - **Live:** the App Store listing; the site with the free tier and the store link.
 - **Announced:** a personal letter to every beta tester; the places in section 3 that allow it;
   one line in Dafa's email list (one list for the portfolio).
-- **Tags:** one per place (`beta`, `reddit-adv`, `skyscript`, `tg-ru`, `site`), read in the
-  analytics _HQ chooses. Cloudflare Web Analytics does not log query strings, so the tags need the
-  method _HQ settles **[open in _HQ]**.
+- **Tags:** one short link per place on go.dafaspace.com (`beta`, `reddit-adv`, `skyscript`,
+  `tg-ru`, `site`); the Worker there counts each click (settled by _HQ, 29 Oct).
 - **Written to personally:** the testers, and the 3-5 astrologers who answered "yes" to paying.
 
 ## 8. Money asked
@@ -96,7 +95,9 @@ Ads search, cap $50, 7 days, keywords "natal chart" and "transit chart"; worth r
 brings at least one paid unlock per $25 spent.
 
 ## 9. One number and one date
-**How many of the 10-20 testers answer "yes" to paying $9.99 once, read on 15 Nov 2026.** Three or
+**How many of the 10-20 testers answer "yes" to paying $9.99 once, read on 15 Nov 2026, recorded as
+stated intent**, a weak signal (_HQ, 29 Oct). Where an act can be measured it outranks it: App Store
+pre-orders once the record exists, or a real payment through whichever path comes first. Three or
 more: the paid version and the store launch go ahead. Fewer: Astrovarium goes to the store free and
 earns feedback and the engine instead (Money block, point 4).
 
@@ -111,4 +112,5 @@ earns feedback and the engine instead (Money block, point 4).
 | 10-20 testers named | Dafa | before the 15 Nov reading, so in the next days |
 | Google Play developer account: none yet. $25 once; a new personal account must run a closed test of 12 testers for 14 days before production | Dafa | after iOS |
 | Community rules read (section 3) | Dafa or a session with Reddit access | before week 1 |
-| Analytics able to read tags | _HQ | **[open in _HQ]** |
+| Short links on go.dafaspace.com (dafaspace.com DNS to Cloudflare first) | _HQ | settled 29 Oct |
+| Buttondown account | Dafa | **[open]** |

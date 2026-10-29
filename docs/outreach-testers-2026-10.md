@@ -16,8 +16,11 @@ Ranked by how ready a person is to answer, warmest first. Everything below was f
 2. **TimePassages Pro "lifetime" owners.** A post on r/astrology describes a planned lawsuit
    against AstroGraph and links a Change.org petition: lifetime Pro buyers say they were moved to a
    subscription ($7.99 a month, $59.99 a year on the current App Store listing). Their complaint is
-   exactly what Astrovarium answers: a professional tool bought once. The thread itself is the
-   place to reply, inside the subreddit's rules. Not confirmed: whether any case was filed.
+   exactly what Astrovarium answers: a professional tool bought once. **How to reach them**
+   (corrected with _HQ, 29 Oct): not inside the lawsuit thread or the petition, and never by
+   running down TimePassages. A post of our own or a letter that says plainly "one payment, no
+   subscription, offline" lets the fact do the work; pitching inside someone's grievance reads as
+   opportunism in a small field that does not forget. Not confirmed: whether any case was filed.
    ([search result](https://axebps-redlib.hf.space/r/Astrology),
    [AstroGraph on LinkedIn](https://www.linkedin.com/company/astrograph-software),
    [App Store listing](https://apps.apple.com/us/app/timepassages-astrology/id488946918))

@@ -9,8 +9,9 @@ data), what differed, and what was done about it. A difference is a finding unti
 the other program's error or a setting, and then it says so.
 
 **The paying question**, asked once at the end of a week of use: "After a week with everything,
-would you pay $9.99 once for transits, progressions, returns and synastry?" Read on 15 Nov 2026:
-three or more "yes" and the paid version goes ahead (CLAUDE.md, Money, point 6).
+would you pay $9.99 once for transits, progressions, returns and synastry?" Read on 15 Nov 2026
+and recorded as **stated intent**, a weak signal: a pre-order or a real payment outranks it.
+Three or more "yes" and the paid version goes ahead (CLAUDE.md, Money, point 6).
 
 ## Testers
 
