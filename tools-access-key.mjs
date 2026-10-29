@@ -4,6 +4,7 @@
 
      node tools-access-key.mjs issue              a key for 7 days
      node tools-access-key.mjs issue 14 "Ольга"   14 days, and who it went to
+     node tools-access-key.mjs issue life "Ольга" for good: the testers' key (decided 29 Oct 2026)
      node tools-access-key.mjs init               once, ever: makes the key pair
 
    A key is 69 bytes, base64url: a version byte, the end date in seconds (4 bytes,
@@ -55,10 +56,13 @@ if (cmd === 'public') {
 if (cmd !== 'issue') { console.error('usage: issue [days] [name] | init | public'); process.exit(1); }
 if (!existsSync(PEM)) { console.error('no mobile/keys/access-key.pem - run init once'); process.exit(1); }
 
-const days = Number(args[0] || 7);
-if (!(days > 0 && days <= 90)) { console.error('days must be between 1 and 90'); process.exit(1); }
+/* "life" is the largest end date the four bytes hold, 7 Feb 2106; the app says
+   "for good" for anything past 2100. Otherwise 1 to 90 days. */
+const life = args[0] === 'life';
+const days = life ? 0 : Number(args[0] || 7);
+if (!life && !(days > 0 && days <= 90)) { console.error('days must be between 1 and 90, or life'); process.exit(1); }
 const who = args[1] || '';
-const until = Math.floor(Date.now() / 1000) + Math.round(days * 86400);
+const until = life ? 0xFFFFFFFF : Math.floor(Date.now() / 1000) + Math.round(days * 86400);
 
 const data = Buffer.alloc(5);
 data[0] = 1;                         // version

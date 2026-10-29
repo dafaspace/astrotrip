@@ -246,6 +246,9 @@ const frame=document.getElementById('app');
       out.foreign=await verifyAccessKey(await make(now+86400,other.privateKey));
       const tp=good.split(''); tp[3]=tp[3]==='A'?'B':'A'; out.tampered=await verifyAccessKey(tp.join(''));
       out.garbage=await verifyAccessKey('hello');
+      /* ключ тестера без срока: самая поздняя дата формата, 2106 */
+      const life=await make(0xFFFFFFFF,kp.privateKey); out.life=await verifyAccessKey(life);
+      { const keepU=ACCESS_UNTIL; ACCESS_UNTIL=out.life; renderAccess(); out.lifeText=document.getElementById('accessState').textContent; ACCESS_UNTIL=keepU; renderAccess(); }
       out.applied=await applyAccessKey(good,false,false);
       out.stored=localStorage.getItem(ACCESS_KEY)===good;
       /* #52: вся ссылка, вставленная в поле */
@@ -5468,6 +5471,11 @@ function run(){
     if(!r.trHas||!r.trPos) bad.push('в транзитах нет раздела или число аспектов не то');
     if(!r.synHead||!r.synWho) bad.push('в синастрии нет имени партнёра');
     return !bad.length||bad.join('; ');
+  });
+  t('ключ тестера без срока принимается и называется «навсегда», а не датой',()=>{
+    const r=ACCESS_CHECK; if(!r||r.error) return 'проверка ключей не запустилась';
+    if(r.life!==0xFFFFFFFF*1000) return 'ключ без срока не принят: '+r.life;
+    return (r.lifeText===ev("t('accessForever')"))||'в настройках написано: '+r.lifeText;
   });
   /* REVIEW-2026-10-15-END */
 

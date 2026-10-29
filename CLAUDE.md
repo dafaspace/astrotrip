@@ -44,7 +44,7 @@ What blocks it, in order:
   apps **[fact, MARKET.md, with sources]**. Russian-speaking testers in Russia bring feedback, not
   money; the paying strangers are outside Russia.
 - **Google Play** after iOS. A new personal account needs a closed test of 12 testers for 14 days
-  before production; whether the Play account exists and is paid is **[unknown]**.
+  before production; **there is no Play developer account yet** (Dafa, 29 Oct): $25 once.
 
 Target: the first paying stranger by 30 Nov 2026.
 

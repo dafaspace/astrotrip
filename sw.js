@@ -12,7 +12,7 @@
    Bump CACHE on every deploy that changes a precached file, and keep it equal
    to APP_VERSION in index.html: the number shown next to the title is how a
    stale install is spotted, so it has to name the same release as this cache. */
-const CACHE = 'astrotrip-v3.21.0';
+const CACHE = 'astrotrip-v3.21.1';
 /* The engine files carry the version in their URL, as index.html asks for
    them. Unversioned, the first session after a release ran the new page on
    the previous engine: the page came from the network, the engine from the

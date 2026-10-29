@@ -23,7 +23,7 @@ App Store search hints: the public endpoint returned nothing for any phrase, so 
 
 What follows:
 - **Store title** built on the phrase, the name second: "Astrovarium: Natal & Transits"
-  (29 of 30 characters). Subtitle: "Exact astrology, fully offline" (30).
+  (29 of 30 characters). Subtitle: "Exact astrology, fully offline" (30), confirmed by Dafa 29 Oct.
 - **The free tool search finds:** ephemeris pages for 2026 and 2027, then a natal chart
   calculator page. Not built yet.
 - **"astrology software for mac / pc"** is a real query and supports the desktop builds already in
@@ -54,8 +54,8 @@ not advertising channels.
   program. If anything does not match - a degree, a cusp, a house, an aspect - write to me."
 - **One question at the end of the week** (the Money block's number): "After a week with
   everything, would you pay $9.99 once for transits, progressions, returns and synastry?"
-- **Where answers are kept:** `docs/beta-feedback.md` in this repo, one entry per tester per week,
-  plus the usage reports they send from Settings → Report for the developer.
+- **Where answers are kept:** `docs/beta-feedback.md` in this repo (decided 29 Oct), one entry per
+  report, plus the usage reports they send from Settings → Report for the developer.
 
 ## 5. Warm-up steps with dates
 | step | date | who |
@@ -64,7 +64,7 @@ not advertising channels.
 | "Tell me when it launches" signup on astrovarium.com | same page | session, after the email list decision in _HQ |
 | App Store Connect record, TestFlight build | **[open]**, was planned for 20 Oct | Dafa |
 | Apple featuring nomination (App Store Connect → Featuring → App Launch) | 2+ weeks before launch | Dafa, text from the session |
-| Google Play pre-registration | after the Play account exists **[open]** | Dafa |
+| Google Play pre-registration | after the Play account exists: **there is none yet** (Dafa, 29 Oct) | Dafa |
 | First public showing of the real thing: the ephemeris 2026 page | when built | session |
 
 ## 6. Six weekly "works"
@@ -109,6 +109,6 @@ earns feedback and the engine instead (Money block, point 4).
 | Paid Applications agreement, tax and a bank Apple can pay (Georgia not confirmed) | Dafa | **[open]** |
 | The trial and the one-time unlock | session | 2-3 days after Dafa's word |
 | 10-20 testers named | Dafa | before the 15 Nov reading, so in the next days |
-| Google Play account exists and is paid | Dafa | **[open]** |
+| Google Play developer account: none yet. $25 once; a new personal account must run a closed test of 12 testers for 14 days before production | Dafa | after iOS |
 | Community rules read (section 3) | Dafa or a session with Reddit access | before week 1 |
 | Analytics able to read tags | _HQ | **[open in _HQ]** |
