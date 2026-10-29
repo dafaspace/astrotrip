@@ -49,7 +49,7 @@ not advertising channels.
   "lifetime" owners moved to a subscription; teachers at Kepler College, the Faculty of
   Astrological Studies, NCGR and ISAR; reviewers of astrology software; one community post.
   Details in `docs/outreach-testers-2026-10.md`.
-- **What they get:** full access for life, free (decided 29 Oct).
+- **What they get:** full access for the beta, free (decided 29 Oct); nothing promised beyond it.
 - **The one task:** "Build a chart whose data you know for certain and compare it with your own
   program. If anything does not match - a degree, a cusp, a house, an aspect - write to me."
 - **One question at the end of the week** (the Money block's number): "After a week with

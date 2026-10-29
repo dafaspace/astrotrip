@@ -109,9 +109,12 @@ Hours saved on his own work: none.
 - **Reputation - partly.** AstroTrip is on dafaspace.com as "Beta" with a link to the web app. A
   case with the JPL check and the store link comes after the listing.
 
-**Testers get full access for life, free.** **[decided 29 Oct]** The 10-20 astrologers asked to
-find a wrong fact keep the paid part for good: a renewed key on the web, an Apple or Google Play
-promo code for the one-time unlock once it exists. Where they come from and the letters to them:
+**Testers get full access for the beta, free.** **[decided 29 Oct, narrowed the same day]** Not
+"for life": whether testers keep the paid part when the app splits into free and paid is not
+decided, so nothing they see promises it. On the web a key with no end date (`issue life`), which
+the app calls "full access for the beta". In the App Store build a key may not unlock features
+(guideline 3.1.1); there it is an Apple offer code for the one-time unlock, tried in the sandbox
+first **[fact from _HQ, 29 Oct, not yet read on Apple's page by this session]**. Where they come from and the letters to them:
 `docs/outreach-testers-2026-10.md`.
 
 **6. The number and the date.**

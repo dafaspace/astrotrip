@@ -1169,9 +1169,9 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 </div>
 
 
-<script src="./ephemeris.js?v=3.21.1"></script>
-<script src="./planets.js?v=3.21.1"></script>
-<script src="./moon.js?v=3.21.1"></script>
+<script src="./ephemeris.js?v=3.21.2"></script>
+<script src="./planets.js?v=3.21.2"></script>
+<script src="./moon.js?v=3.21.2"></script>
 <script>
 "use strict";
 /* ============================================================
@@ -1180,7 +1180,7 @@ details.unit[open] .dt{animation:unitIn 240ms cubic-bezier(.2,.7,.2,1) both}
 
 /* Bump together with CACHE in sw.js: the two are the same release, and the
    number on screen is how you tell from a phone which one you are looking at. */
-const APP_VERSION='3.21.1';
+const APP_VERSION='3.21.2';
 document.getElementById('ver').textContent=APP_VERSION;
 
 /* ---------- feature flags ----------
@@ -1528,13 +1528,13 @@ const STR = {
   accessFree:{ru:'Бесплатно: одна карта и всё, что о ней. Транзиты, прогрессии, дирекции, возвраты, синастрия, композит и тройные карты входят в полный доступ. На неделю его открывает код от разработчика.',
     en:'Free: one chart and everything about it. Transits, progressions, directions, returns, synastry, the composite and the tri-wheels are full access. A key from the developer opens it for a week.'},
   accessUntil:{ru:'Полный доступ открыт до {d}.',en:'Full access is open until {d}.'},
-  accessForever:{ru:'Полный доступ открыт навсегда.',en:'Full access is open for good.'},
+  accessBeta:{ru:'Полный доступ на время беты.',en:'Full access for the beta.'},
   accessPh:{ru:'Код доступа',en:'Access key'},
   accessApply:{ru:'Открыть',en:'Open'},
   proNeeded:{ru:'Двойные и тройные карты входят в полный доступ',en:'Double and triple charts are full access'},
   enterCode:{ru:'Ввести код',en:'Enter key'},
   accessOpened:{ru:'Полный доступ открыт до {d}',en:'Full access open until {d}'},
-  accessOpenedForever:{ru:'Полный доступ открыт навсегда',en:'Full access open for good'},
+  accessOpenedBeta:{ru:'Полный доступ на время беты',en:'Full access for the beta'},
   accessBad:{ru:'Код не подходит или истёк',en:'This key is not valid or has expired'},
   proOnly:{ru:'полный доступ',en:'full access'},
   /* Phrases that were written into the code as ru-or-en branches, so every other
@@ -2017,7 +2017,7 @@ Object.assign(I18N.es,{
   accessApply:"Abrir",
   proNeeded:"Las cartas dobles y triples son acceso completo",
   enterCode:"Introducir clave",
-  accessOpened:"Acceso completo hasta el {d}", accessForever:"Acceso completo abierto para siempre.", accessOpenedForever:"Acceso completo para siempre",
+  accessOpened:"Acceso completo hasta el {d}", accessBeta:"Acceso completo durante la beta.", accessOpenedBeta:"Acceso completo durante la beta",
   accessBad:"La clave no es válida o ha caducado",
   proOnly:"acceso completo",
   reportTitle:"Informe para el desarrollador",
@@ -2162,7 +2162,7 @@ Object.assign(I18N.fr,{
   accessApply:"Ouvrir",
   proNeeded:"Les cartes doubles et triples font partie de l’accès complet",
   enterCode:"Saisir la clé",
-  accessOpened:"Accès complet jusqu’au {d}", accessForever:"Accès complet ouvert pour toujours.", accessOpenedForever:"Accès complet pour toujours",
+  accessOpened:"Accès complet jusqu’au {d}", accessBeta:"Accès complet pendant la bêta.", accessOpenedBeta:"Accès complet pendant la bêta",
   accessBad:"Cette clé n’est pas valide ou a expiré",
   proOnly:"accès complet",
   reportTitle:"Rapport pour le développeur",
@@ -2307,7 +2307,7 @@ Object.assign(I18N.de,{
   accessApply:"Öffnen",
   proNeeded:"Doppel- und Dreifachcharts gehören zum vollen Zugang",
   enterCode:"Schlüssel eingeben",
-  accessOpened:"Voller Zugang bis {d}", accessForever:"Voller Zugang dauerhaft geöffnet.", accessOpenedForever:"Voller Zugang dauerhaft",
+  accessOpened:"Voller Zugang bis {d}", accessBeta:"Voller Zugang während der Beta.", accessOpenedBeta:"Voller Zugang während der Beta",
   accessBad:"Der Schlüssel ist ungültig oder abgelaufen",
   proOnly:"voller Zugang",
   reportTitle:"Bericht für den Entwickler",
@@ -2452,7 +2452,7 @@ Object.assign(I18N.it,{
   accessApply:"Apri",
   proNeeded:"Le carte doppie e triple sono accesso completo",
   enterCode:"Inserisci chiave",
-  accessOpened:"Accesso completo fino al {d}", accessForever:"Accesso completo aperto per sempre.", accessOpenedForever:"Accesso completo per sempre",
+  accessOpened:"Accesso completo fino al {d}", accessBeta:"Accesso completo durante la beta.", accessOpenedBeta:"Accesso completo durante la beta",
   accessBad:"La chiave non è valida o è scaduta",
   proOnly:"accesso completo",
   reportTitle:"Rapporto per lo sviluppatore",
@@ -2597,7 +2597,7 @@ Object.assign(I18N.uk,{
   accessApply:"Відкрити",
   proNeeded:"Подвійні й потрійні карти входять до повного доступу",
   enterCode:"Ввести код",
-  accessOpened:"Повний доступ до {d}", accessForever:"Повний доступ відкрито назавжди.", accessOpenedForever:"Повний доступ назавжди",
+  accessOpened:"Повний доступ до {d}", accessBeta:"Повний доступ на час бети.", accessOpenedBeta:"Повний доступ на час бети",
   accessBad:"Код не підходить або закінчився",
   proOnly:"повний доступ",
   reportTitle:"Звіт для розробника",
@@ -2742,7 +2742,7 @@ Object.assign(I18N.ka,{
   accessApply:"გახსნა",
   proNeeded:"ორმაგი და სამმაგი რუკები სრულ წვდომაშია",
   enterCode:"კოდის შეყვანა",
-  accessOpened:"სრული წვდომა {d}-მდე", accessForever:"სრული წვდომა გახსნილია სამუდამოდ.", accessOpenedForever:"სრული წვდომა სამუდამოდ",
+  accessOpened:"სრული წვდომა {d}-მდე", accessBeta:"სრული წვდომა ბეტას განმავლობაში.", accessOpenedBeta:"სრული წვდომა ბეტას განმავლობაში",
   accessBad:"კოდი არ გამოდგება ან ვადა გაუვიდა",
   proOnly:"სრული წვდომა",
   reportTitle:"ანგარიში დეველოპერისთვის",
@@ -7183,10 +7183,11 @@ let RING2_MODE=RING2_MODES.includes(localStorage.getItem('astrarium_ring2'))
 const ACCESS_PUBKEYS=['MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEOrFKIA8r8CHQjcejyGXVUvFxAvpJ7h+UiTswM9smKMydoRHIxS1jlUIrGC6MQZ+67f/6Ye9/r8pNTv3zLOHM6w=='];
 const ACCESS_KEY='astrarium_access';
 let ACCESS_UNTIL=0;
-/* A tester's key never ends: tools-access-key.mjs signs the largest date the key
-   format holds (2106), and anything past 2100 is said as "for good" rather than
-   as a date eighty years away. */
-const accessForever=ms=>ms>=4102444800000;
+/* A beta tester's key carries no end that matters: tools-access-key.mjs signs the
+   largest date the format holds (2106). The person is told "for the beta", not
+   "for good": whether testers keep the paid part after the beta is not decided
+   (Dafa, 29 Oct 2026), and a date eighty years out would promise it. */
+const betaKey=ms=>ms>=4102444800000;
 function isPro(){ return inStoreShell()||ACCESS_UNTIL>Date.now(); }
 const fromB64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
 /* A key is 69 bytes: version, the end date in seconds (4 bytes, big-endian), and
@@ -7229,7 +7230,7 @@ async function applyAccessKey(code,announce,restore){
   try{ localStorage.setItem(ACCESS_KEY,keyPart(code)); }catch(e){}
   if(restore&&RING_MODE==='none'&&WANT_RING[0]!=='none'){ RING_MODE=WANT_RING[0]; RING2_MODE=WANT_RING[1]; }
   renderAccess(); renderReport(); renderRingSwitch(); if(CURRENT) renderTransits(CURRENT);
-  if(announce) toast(accessForever(until)?t('accessOpenedForever'):t('accessOpened').replace('{d}',fmtDay(until)));
+  if(announce) toast(betaKey(until)?t('accessOpenedBeta'):t('accessOpened').replace('{d}',fmtDay(until)));
   return true;
 }
 /* The week ends while the app is open, not only at the next launch: a paid
@@ -7256,7 +7257,7 @@ function renderAccess(){
   const sec=document.getElementById('accessSec'); if(!sec) return;
   sec.hidden=inStoreShell();
   document.getElementById('accessState').textContent=ACCESS_UNTIL>Date.now()
-    ? (accessForever(ACCESS_UNTIL)?t('accessForever'):t('accessUntil').replace('{d}',fmtDay(ACCESS_UNTIL))) : t('accessFree');
+    ? (betaKey(ACCESS_UNTIL)?t('accessBeta'):t('accessUntil').replace('{d}',fmtDay(ACCESS_UNTIL))) : t('accessFree');
   document.getElementById('accessCode').placeholder=t('accessPh');
 }
 const ringValue=()=>RING_MODE+(triOn()?'+'+RING2_MODE:'');

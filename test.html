@@ -5472,10 +5472,10 @@ function run(){
     if(!r.synHead||!r.synWho) bad.push('в синастрии нет имени партнёра');
     return !bad.length||bad.join('; ');
   });
-  t('ключ тестера без срока принимается и называется «навсегда», а не датой',()=>{
+  t('ключ тестера без срока принимается и называется «на время беты», а не датой',()=>{
     const r=ACCESS_CHECK; if(!r||r.error) return 'проверка ключей не запустилась';
     if(r.life!==0xFFFFFFFF*1000) return 'ключ без срока не принят: '+r.life;
-    return (r.lifeText===ev("t('accessForever')"))||'в настройках написано: '+r.lifeText;
+    return (r.lifeText===ev("t('accessBeta')"))||'в настройках написано: '+r.lifeText;
   });
   /* REVIEW-2026-10-15-END */
 

@@ -1,10 +1,12 @@
 # Finding 10-20 astrologer testers: places and letters
 
 Astrovarium session, 29 Oct 2026, for the first promotion stage (`docs/promo-stage-1.md`).
-Decided by Dafa the same day: **every tester gets full access for life, free.** On the web that is
-a key (the longest the script issues is 90 days, so it is renewed; a lifetime key needs a change
-to `tools-access-key.mjs`); in the stores, once the unlock exists, it is an Apple promo code or a
-Google Play promo code for the one-time purchase.
+Decided by Dafa the same day, then narrowed: **every tester gets full access for the beta, free.**
+Nothing is promised beyond the beta: whether testers keep the paid part when the app splits into
+free and paid is not decided (Dafa, 29 Oct), so no letter says "for life". On the web it is a key
+with no end date (`issue life`), which the app describes as "full access for the beta". In the App
+Store build a key may not unlock anything (guideline 3.1.1, per _HQ 29 Oct): there it will be an
+Apple offer code for the one-time purchase, to be tried in the sandbox before it is offered.
 
 ## Where the warm people are
 
@@ -57,7 +59,7 @@ leans on it.
 >
 > Before it goes to the App Store I am asking 15 astrologers for one thing: build a chart whose
 > data you know for certain, compare it with your own program, and tell me if anything does not
-> match - a degree, a cusp, a house, an aspect. In return you get full access for life, free.
+> match - a degree, a cusp, a house, an aspect. In return you get full access for the whole beta, free.
 >
 > If you think it could be useful to your students, I would be glad to send you a link.
 >
@@ -79,14 +81,14 @@ leans on it.
 > It is a one-time purchase, no subscription, and it works fully offline.
 >
 > I would value your eye more than anyone's: if you try it, the only thing I ask is to tell me
-> where it is wrong. Full access is yours for life, of course.
+> where it is wrong. Full access is yours for the whole beta, of course.
 >
 > Daniel Fainberg
 > [link] · [the published check]
 
 ## Letter 3: a community post
 
-> **Title:** Looking for 15 astrologers to find mistakes in a new chart app (free lifetime access)
+> **Title:** Looking for 15 astrologers to find mistakes in a new chart app (free full access during the beta)
 >
 > I have built a chart and forecasting app, Astrovarium, and before it goes to the stores I want
 > it checked by people who know charts better than I do.
@@ -99,7 +101,8 @@ leans on it.
 > systems, dispositor chains, receptions, midpoints. Offline, one-time purchase, no account. The
 > positions are checked against NASA JPL Horizons, and the check is published.
 >
-> Everyone who takes part gets full access for life. Comment or message me and I will send a link.
+> Everyone who takes part gets full access for the whole beta. Comment or message me and I will send
+> a link.
 
 *Check the subreddit's or forum's rules before posting; adapt or drop the post if self-promotion
 is not allowed there.*
