@@ -109,6 +109,11 @@ Hours saved on his own work: none.
 - **Reputation - partly.** AstroTrip is on dafaspace.com as "Beta" with a link to the web app. A
   case with the JPL check and the store link comes after the listing.
 
+**Testers get full access for life, free.** **[decided 29 Oct]** The 10-20 astrologers asked to
+find a wrong fact keep the paid part for good: a renewed key on the web, an Apple or Google Play
+promo code for the one-time unlock once it exists. Where they come from and the letters to them:
+`docs/outreach-testers-2026-10.md`.
+
 **6. The number and the date.**
 How many of the 10-20 invited astrologers answer yes to "after a week with everything, would you
 pay $9.99 once for transits, progressions, returns and synastry", checked on 15 Nov 2026. **[proposal]** Three or more: the paid version is built. Fewer: money is
